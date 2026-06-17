@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selaphum EMS - ระบบจัดการเครือข่ายกู้ชีพ</title>
+    
+    <script src="vendor/tailwindcss.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="vendor/vue.global.js"></script>
+    <script src="vendor/lucide.min.js"></script>
+
+    <style>
+        body { font-family: 'Kanit', sans-serif; }
+        /* ป้องกันหน้าจอกระพริบก่อน Vue โหลดเสร็จ */
+        [v-cloak] { display: none !important; } 
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden text-gray-800">
+
+    <div id="app" v-cloak class="flex w-full h-full">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-900 text-white flex flex-col shadow-xl z-20 shrink-0">
+            <div class="p-6 border-b border-gray-800">
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center">
+                    <i data-lucide="activity" class="mr-2 text-red-500"></i> Selaphum EMS
+                </h1>
+            </div>
+            <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+                <button v-for="menu in menus" :key="menu.id" @click="activeTab = menu.id"
+                    :class="['w-full flex items-center px-4 py-3 rounded-xl transition-colors font-medium text-sm', 
+                             activeTab === menu.id ? 'bg-red-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-800 hover:text-white']">
+                    <i :data-lucide="menu.icon" class="mr-3 w-5 h-5"></i> {{ menu.name }}
+                </button>
+            </nav>
+            
+            <!-- Developer Info -->
+            <div class="p-4 border-t border-gray-800 mt-auto bg-gray-900/50">
+                <div class="text-xs text-gray-400 font-light text-center space-y-1">
+                    <p>พัฒนาโดย</p>
+                    <p class="font-medium text-gray-200">นายทวี แสนสนอง</p>
+                    <p>หัวหน้า ER รพ.เสลภูมิ</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white h-16 border-b border-gray-200 flex items-center px-8 z-10 shrink-0">
+                <h2 class="text-lg font-bold text-gray-800">{{ currentMenuName }}</h2>
+                
+                <div class="ml-auto flex items-center">
+                    <span v-if="isSyncing" class="text-sm font-medium text-amber-600 flex items-center bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200">
+                        <i data-lucide="refresh-cw" class="mr-2 w-4 h-4 animate-spin"></i> กำลังซิงค์ข้อมูล...
+                    </span>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-x-hidden overflow-y-auto p-8 relative">
+                <div class="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
+                    
+                    <!-- Dashboard Tab -->
+                    <div v-show="activeTab === 'dashboard'" class="space-y-6">
+                        <div class="bg-gradient-to-r from-red-800 to-red-900 p-6 rounded-2xl shadow-lg border border-red-700 text-white flex flex-col lg:flex-row items-center gap-6">
+                            <div class="w-16 h-16 bg-white/10 text-white rounded-full flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.2)] border border-white/20">
+                                <i data-lucide="server" class="w-8 h-8"></i>
+                            </div>
+                            <div class="flex-1 w-full">
+                                <h3 class="text-lg font-bold flex items-center mb-1">
+                                    ฐานข้อมูลเครือข่ายพร้อมใช้งาน
+                                    <span class="ml-3 text-xs bg-green-500 text-white px-2 py-1 rounded-full flex items-center shadow-sm">
+                                        <i data-lucide="check" class="mr-1 w-3 h-3"></i> เชื่อมต่อเรียบร้อย
+                                    </span>
+                                </h3>
+                                <p class="text-red-100 text-sm mb-3">ระบบเชื่อมต่อกับ Google Apps Script (Live Database) เพื่อดึงข้อมูลหน่วยกู้ชีพ บุคลากร และยานพาหนะแบบ Real-time</p>
+                                <div class="inline-flex bg-black/30 border border-red-700/50 rounded-lg px-3 py-1.5 items-center">
+                                    <div class="w-2 h-2 rounded-full bg-green-400 mr-2 animate-pulse"></div>
+                                    <span class="text-xs text-red-100 font-mono select-all overflow-hidden text-ellipsis max-w-[200px] sm:max-w-md">
+                                        ...AKfycbzuK5IwLp-XdoSFHSIdpiW_dblPPll_2ozwHlawGvR3ThsNroRurl_FRD74Z-kmumhj/exec
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="shrink-0 w-full lg:w-auto">
+                                <button @click="fetchAllData" :disabled="isSyncing" class="w-full lg:w-auto flex items-center justify-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-md transition-all font-semibold text-sm disabled:opacity-70 disabled:cursor-not-allowed">
+                                    <i data-lucide="refresh-cw" :class="['mr-2 w-4 h-4', { 'animate-spin': isSyncing }]"></i> รีเฟรชข้อมูลทั้งหมด
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                            <div v-for="(stat, idx) in dashboardStats" :key="idx" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow flex flex-col justify-between">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div :class="`p-3 rounded-xl ${stat.bgColor} ${stat.textColor}`">
+                                        <i :data-lucide="stat.icon" class="w-5 h-5"></i>
+                                    </div>
+                                    <span class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full" v-html="stat.trend"></span>
+                                </div>
+                                <div>
+                                    <h3 class="text-3xl font-bold tracking-tight text-gray-800">{{ stat.value }}</h3>
+                                    <p class="text-sm font-medium text-gray-500 mt-1">{{ stat.title }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Tables Tab -->
+                    <div v-show="activeTab !== 'dashboard'" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                        
+                        <div class="p-6 border-b border-gray-200 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white sticky top-0 z-10">
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-800">ข้อมูล{{ currentMenuName }}</h2>
+                                <p class="text-sm text-gray-500">แสดงผล: <span class="font-semibold text-red-600">{{ filteredData.length }}</span> รายการ</p>
+                            </div>
+                            <div class="flex flex-wrap gap-3 items-center w-full xl:w-auto">
+                                <div class="relative w-full sm:w-56">
+                                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"></i>
+                                    <input type="text" v-model="searchQuery" placeholder="ค้นหาข้อมูล..."
+                                        class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-gray-50">
+                                </div>
+                                <button @click="fetchData(activeTab)" :disabled="isSyncing"
+                                    class="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-md transition-all font-semibold text-sm disabled:opacity-70 disabled:cursor-not-allowed">
+                                    <i data-lucide="refresh-cw" :class="['mr-2 w-4 h-4', { 'animate-spin': isSyncing }]"></i> อัปเดตหน้านี้
+                                </button>
+                                <button @click="exportToCSV" class="flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition font-semibold text-sm shadow-sm">
+                                    <i data-lucide="download" class="mr-2 text-gray-500 w-4 h-4"></i> ดาวน์โหลด
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-6 bg-gray-50/50 min-h-[400px]">
+                            
+                            <!-- Loading State -->
+                            <div v-if="isSyncing && filteredData.length === 0" class="text-center py-16 bg-white rounded-xl border border-gray-200">
+                                <i data-lucide="loader-2" class="mx-auto w-12 h-12 text-red-500 mb-3 animate-spin"></i>
+                                <p class="text-gray-500 font-medium">กำลังโหลดข้อมูลจาก Google Sheets...</p>
+                            </div>
+
+                            <!-- Empty State -->
+                            <div v-else-if="filteredData.length === 0" class="text-center py-16 bg-white rounded-xl border border-gray-200">
+                                <i data-lucide="search" class="mx-auto w-12 h-12 text-gray-300 mb-3"></i>
+                                <p class="text-gray-500 font-medium">ไม่พบข้อมูลที่คุณค้นหา</p>
+                            </div>
+
+                            <!-- Personnel View (Grouped) -->
+                            <template v-if="activeTab === 'personnel' && filteredData.length > 0">
+                                <div v-for="(members, unitName) in groupedPersonnel" :key="unitName" class="mb-6 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                    <div class="bg-gray-100 px-5 py-4 border-b border-gray-200 flex justify-between items-center">
+                                        <h3 class="text-lg font-bold flex items-center text-gray-800"><i data-lucide="map-pin" class="mr-2 text-red-600 w-5 h-5"></i> {{ unitName }}</h3>
+                                        <span class="bg-white border border-gray-300 text-gray-700 text-xs font-bold px-3 py-1 rounded-full">{{ members.length }} คน</span>
+                                    </div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left whitespace-nowrap text-sm">
+                                            <thead class="bg-white text-gray-500 text-xs uppercase border-b border-gray-200">
+                                                <tr>
+                                                    <th class="px-5 py-3 font-semibold text-center w-12">#</th>
+                                                    <th class="px-5 py-3 font-semibold">ชื่อ-สกุล</th>
+                                                    <th class="px-5 py-3 font-semibold">เลข ปชช. / ติดต่อ</th>
+                                                    <th class="px-5 py-3 font-semibold">คุณวุฒิ / สาขา</th>
+                                                    <th class="px-5 py-3 font-semibold text-center">สถานะ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                <tr v-for="(p, idx) in members" :key="idx" class="hover:bg-gray-50 transition-colors">
+                                                    <td class="px-5 py-4 text-center text-gray-400 font-medium">{{ idx + 1 }}</td>
+                                                    <td class="px-5 py-4">
+                                                        <div class="font-bold text-gray-800">{{ p.prefix || p['คำนำหน้า'] }} {{ p.firstName || p['ชื่อ'] }} {{ p.lastName || p['สกุล'] }}</div>
+                                                        <div class="text-xs text-gray-500 mt-0.5">การศึกษา: {{ p['การศึกษาขั้นสูงสุด'] || '-' }}</div>
+                                                    </td>
+                                                    <td class="px-5 py-4">
+                                                        <div class="flex items-center font-medium text-gray-700"><i data-lucide="credit-card" class="mr-1.5 w-3.5 h-3.5 text-gray-400"></i>{{ p.idCard || p['เลขประจำตัวประชาชน'] || '-' }}</div>
+                                                        <div class="flex items-center text-xs mt-1 text-gray-500"><i data-lucide="phone" class="mr-1.5 w-3.5 h-3.5 text-gray-400"></i>{{ p.phone || p['เบอร์โทรศัพท์'] || '-' }}</div>
+                                                    </td>
+                                                    <td class="px-5 py-4">
+                                                        <span class="inline-block bg-gray-100 border border-gray-200 text-gray-700 px-2.5 py-1 rounded-md text-xs font-bold">{{ p.role || p['คุณวุฒิ'] || '-' }}</span>
+                                                    </td>
+                                                    <td class="px-5 py-4 text-center">
+                                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+                                                            <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> พร้อมปฏิบัติงาน
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Units View (Grouped by Level) -->
+                            <template v-if="activeTab === 'units' && filteredData.length > 0">
+                                <div v-for="(unitsList, levelName) in groupedUnits" :key="levelName" class="mb-6 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                    <div class="bg-gray-100 px-5 py-4 border-b border-gray-200 flex justify-between items-center">
+                                        <h3 class="text-lg font-bold flex items-center text-gray-800">
+                                            <i data-lucide="award" class="mr-2 text-red-600 w-5 h-5"></i> ระดับ: {{ levelName }}
+                                        </h3>
+                                        <span class="bg-white border border-gray-300 text-gray-700 text-xs font-bold px-3 py-1 rounded-full">{{ unitsList.length }} หน่วย</span>
+                                    </div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left whitespace-nowrap text-sm">
+                                            <thead class="bg-gray-50 text-gray-600 text-xs uppercase border-b border-gray-200">
+                                                <tr>
+                                                    <th class="px-6 py-4 font-semibold text-center w-16">#</th>
+                                                    <th class="px-6 py-4 font-semibold">ชื่อหน่วยกู้ชีพ</th>
+                                                    <th class="px-6 py-4 font-semibold text-center">ระดับ</th>
+                                                    <th class="px-6 py-4 font-semibold">เบอร์โทร</th>
+                                                    <th class="px-6 py-4 font-semibold">ผู้ดูแล/ผู้บริหารหน่วย</th>
+                                                    <th class="px-6 py-4 font-semibold text-center">บุคลากร</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                <tr v-for="(item, idx) in unitsList" :key="idx" class="hover:bg-gray-50 transition-colors">
+                                                    <td class="px-6 py-4 text-center text-gray-400 font-medium">{{ item['ลำดับ'] || idx + 1 }}</td>
+                                                    <td class="px-6 py-4 font-bold text-gray-800">
+                                                        <div class="flex items-center"><i data-lucide="building" class="mr-2 w-4 h-4 text-red-600"></i>{{ item.name || item['ชื่อหน่วยกู้ชีพ'] || item['ชื่อหน่วย'] }}</div>
+                                                    </td>
+                                                    <td class="px-6 py-4 text-center">
+                                                        <span :class="['px-2.5 py-1 rounded-md text-xs font-bold border', getUnitLevel(item).toUpperCase().includes('ALS') || getUnitLevel(item).includes('ขั้นสูง') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200']">
+                                                            {{ getUnitLevel(item) }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-6 py-4 font-medium text-gray-700">{{ item.phone || item['เบอร์โทร'] || item['เบอร์โทรศัพท์'] || '-' }}</td>
+                                                    <td class="px-6 py-4 text-gray-600">{{ getManagerName(item) }}</td>
+                                                    <td class="px-6 py-4 text-center font-bold text-gray-800">{{ item.members || item['จำนวนคน'] || '-' }} คน</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Vehicles View (Grouped by Level) -->
+                            <template v-if="activeTab === 'vehicles' && filteredData.length > 0">
+                                <div v-for="(vehiclesList, levelName) in groupedVehicles" :key="levelName" class="mb-6 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                    <div class="bg-gray-100 px-5 py-4 border-b border-gray-200 flex justify-between items-center">
+                                        <h3 class="text-lg font-bold flex items-center text-gray-800">
+                                            <i data-lucide="truck" class="mr-2 text-blue-600 w-5 h-5"></i> ประเภท: {{ levelName }}
+                                        </h3>
+                                        <span class="bg-white border border-gray-300 text-gray-700 text-xs font-bold px-3 py-1 rounded-full">{{ vehiclesList.length }} คัน</span>
+                                    </div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left whitespace-nowrap text-sm">
+                                            <thead class="bg-gray-50 text-gray-600 text-xs uppercase border-b border-gray-200">
+                                                <tr>
+                                                    <th class="px-6 py-4 font-semibold text-center w-16">รถคันที่</th>
+                                                    <th class="px-6 py-4 font-semibold">ทะเบียนรถ</th>
+                                                    <th class="px-6 py-4 font-semibold">สังกัดหน่วย</th>
+                                                    <th class="px-6 py-4 font-semibold">ประเภท</th>
+                                                    <th class="px-6 py-4 font-semibold">พ.ร.บ.</th>
+                                                    <th class="px-6 py-4 font-semibold text-center">สติ๊กเกอร์</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                <tr v-for="(item, idx) in vehiclesList" :key="idx" class="hover:bg-gray-50 transition-colors">
+                                                    <td class="px-6 py-4 text-center text-gray-400 font-medium">{{ item['รถคันที่'] || item['ลำดับ'] || idx + 1 }}</td>
+                                                    <td class="px-6 py-4">
+                                                        <div class="font-bold text-gray-800">{{ item.plate || item['ทะเบียนรถ'] }}</div>
+                                                        <div class="text-xs text-gray-500 mt-1 font-normal">{{ item.province || item['จังหวัดทะเบียนรถ'] || '-' }}</div>
+                                                    </td>
+                                                    <td class="px-6 py-4 font-medium text-gray-700">
+                                                        <div class="flex items-center"><i data-lucide="map-pin" class="mr-1.5 w-3.5 h-3.5 text-red-500"></i>{{ item.unit || item['สังกัดหน่วย'] || item['สังกัด'] }}</div>
+                                                    </td>
+                                                    <td class="px-6 py-4 text-gray-600">{{ item.type || item['ประเภทพาหนะ'] || '-' }}</td>
+                                                    <td class="px-6 py-4 text-gray-700 font-medium">
+                                                        <div class="flex items-center" v-if="getActStatus(item) !== '-'">
+                                                            <i data-lucide="file-text" class="mr-1.5 w-3.5 h-3.5 text-blue-500"></i>{{ getActStatus(item) }}
+                                                        </div>
+                                                        <span v-else class="text-gray-400">-</span>
+                                                    </td>
+                                                    <td class="px-6 py-4 text-center">
+                                                        <span :class="['inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border', ['พร้อมใช้งาน', 'มี', 'Active'].includes(item['สติ๊กเกอร์'] || item['สถานะ']) ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200']">
+                                                            <i :data-lucide="['พร้อมใช้งาน', 'มี', 'Active'].includes(item['สติ๊กเกอร์'] || item['สถานะ']) ? 'check' : 'alert-triangle'" class="mr-1 w-3 h-3"></i> 
+                                                            {{ item['สติ๊กเกอร์'] || item['สถานะ'] || 'ไม่ระบุ' }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </template>
+
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Toast Notification -->
+        <div v-if="toast.show" class="fixed bottom-6 right-6 px-5 py-3 rounded-xl shadow-2xl flex items-center z-50 text-white font-semibold text-sm transition-all duration-300" 
+             :class="toast.isError ? 'bg-red-600' : 'bg-gray-800'">
+            <i :data-lucide="toast.isError ? 'alert-triangle' : 'check-circle'" class="mr-3 w-5 h-5" :class="toast.isError ? 'text-white' : 'text-green-400'"></i>
+            {{ toast.message }}
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, watch, nextTick, onMounted } = Vue;
+
+        const App = {
+            setup() {
+                // Initial State
+                const activeTab = ref('dashboard');
+                const searchQuery = ref('');
+                // URL API
+                const apiUrl = ref('https://script.google.com/macros/s/AKfycbzuK5IwLp-XdoSFHSIdpiW_dblPPll_2ozwHlawGvR3ThsNroRurl_FRD74Z-kmumhj/exec');
+                const isSyncing = ref(false);
+                
+                const toast = ref({ show: false, message: '', isError: false });
+
+                const menus = [
+                    { id: 'dashboard', name: 'ภาพรวมระบบ', icon: 'bar-chart-2' },
+                    { id: 'personnel', name: 'จัดการบุคลากร', icon: 'users' },
+                    { id: 'units', name: 'ข้อมูลหน่วยกู้ชีพ', icon: 'building' },
+                    { id: 'vehicles', name: 'ข้อมูลยานพาหนะ', icon: 'truck' }
+                ];
+
+                const currentMenuName = computed(() => menus.find(m => m.id === activeTab.value)?.name || '');
+
+                // Data Store
+                const dataStore = ref({
+                    personnel: [],
+                    units: [],
+                    vehicles: []
+                });
+
+                watch(activeTab, async () => {
+                    searchQuery.value = '';
+                    await nextTick();
+                    lucide.createIcons();
+                });
+
+                const showToast = (msg, isError = false) => {
+                    toast.value = { show: true, message: msg, isError };
+                    setTimeout(() => { toast.value.show = false; }, 4000);
+                };
+
+                // Fetch ข้อมูลรายชีท
+                const fetchData = async (sheetName, silent = false) => {
+                    try {
+                        const response = await fetch(`${apiUrl.value}?sheet=${sheetName}`);
+                        const result = await response.json();
+                        
+                        if (result.error) throw new Error(result.error);
+                        if (Array.isArray(result) && result.length > 0) {
+                            dataStore.value[sheetName] = result;
+                            if(!silent) showToast(`อัปเดตข้อมูล ${sheetName} สำเร็จ`);
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        if(!silent) showToast(`เชื่อมต่อ API ไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Google Apps Script`, true);
+                    }
+                };
+
+                // ดึงข้อมูลทั้งหมด
+                const fetchAllData = async () => {
+                    isSyncing.value = true;
+                    try {
+                        await Promise.all([
+                            fetchData('personnel', true),
+                            fetchData('units', true),
+                            fetchData('vehicles', true)
+                        ]);
+                        showToast('โหลดข้อมูลจากฐานข้อมูลเสร็จสมบูรณ์!');
+                    } catch(err) {
+                        showToast('เกิดข้อผิดพลาดในการดึงข้อมูลบางส่วน', true);
+                    } finally {
+                        isSyncing.value = false;
+                        await nextTick();
+                        lucide.createIcons();
+                    }
+                };
+
+                // Filter Logic
+                const filteredData = computed(() => {
+                    const list = dataStore.value[activeTab.value] || [];
+                    if (!searchQuery.value) return list;
+                    const query = searchQuery.value.toLowerCase();
+                    return list.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(query)));
+                });
+
+                // Group Personnel by Unit
+                const groupedPersonnel = computed(() => {
+                    if (activeTab.value !== 'personnel') return {};
+                    return filteredData.value.reduce((groups, person) => {
+                        const unitName = person.unit || person['สังกัดหน่วยงาน'] || person['สังกัดหน่วย'] || 'ไม่ระบุหน่วยงาน';
+                        if (!groups[unitName]) groups[unitName] = [];
+                        groups[unitName].push(person);
+                        return groups;
+                    }, {});
+                });
+
+                // Helper for getting Unit Level Robustly
+                const getUnitLevel = (unit) => {
+                    if (!unit) return 'BLS';
+                    // ค้นหาคอลัมน์ที่มีคำว่า 'ระดับ' หรือ 'level' เผื่อชื่อหัวคอลัมน์ในชีทพิมพ์ไม่ตรงเป๊ะ
+                    const key = Object.keys(unit).find(k => k.toLowerCase().includes('level') || k.includes('ระดับ'));
+                    return key && unit[key] ? String(unit[key]).trim() : 'BLS';
+                };
+
+                // Helper for getting Manager Name Robustly
+                const getManagerName = (item) => {
+                    if (!item) return '-';
+                    // ค้นหาคอลัมน์อัตโนมัติ เผื่อชื่อในชีทคือ ผู้บริหาร, หัวหน้า, ผู้ดูแล
+                    const key = Object.keys(item).find(k => 
+                        k.includes('ผู้ดูแล') || 
+                        k.includes('ผู้บริหาร') || 
+                        k.includes('หัวหน้า') || 
+                        k.toLowerCase().includes('manager')
+                    );
+                    return key && item[key] ? String(item[key]).trim() : '-';
+                };
+
+                // Helper for getting ACT/Insurance Date Robustly
+                const getActStatus = (item) => {
+                    if (!item) return '-';
+                    // ค้นหาคอลัมน์ พรบ. อัตโนมัติ เผื่อใช้คำอื่นๆ ในชีท
+                    const key = Object.keys(item).find(k => 
+                        k.includes('พรบ') || 
+                        k.includes('พ.ร.บ') || 
+                        k.includes('ภาษี') || 
+                        k.includes('ต่ออายุ')
+                    );
+                    return key && item[key] ? String(item[key]).trim() : '-';
+                };
+
+                // Group Units by ALS / BLS
+                const groupedUnits = computed(() => {
+                    if (activeTab.value !== 'units') return {};
+                    const groups = {
+                        'ALS (กู้ชีพขั้นสูง)': [],
+                        'BLS (กู้ชีพขั้นพื้นฐาน)': []
+                    };
+
+                    filteredData.value.forEach(unit => {
+                        const level = getUnitLevel(unit).toUpperCase();
+                        if (level.includes('ALS') || level.includes('ขั้นสูง')) {
+                            groups['ALS (กู้ชีพขั้นสูง)'].push(unit);
+                        } else {
+                            groups['BLS (กู้ชีพขั้นพื้นฐาน)'].push(unit);
+                        }
+                    });
+
+                    // Remove empty groups if there are no units in that level
+                    Object.keys(groups).forEach(key => {
+                        if (groups[key].length === 0) delete groups[key];
+                    });
+
+                    return groups;
+                });
+
+                // Group Vehicles by ALS / BLS
+                const groupedVehicles = computed(() => {
+                    if (activeTab.value !== 'vehicles') return {};
+                    const groups = {
+                        'ALS (กู้ชีพขั้นสูง)': [],
+                        'BLS (กู้ชีพขั้นพื้นฐาน)': []
+                    };
+
+                    filteredData.value.forEach(vehicle => {
+                        // ค้นหาคำว่า ALS หรือ ขั้นสูง จากข้อมูลทุกคอลัมน์ของรถคันนั้น
+                        const isALS = Object.values(vehicle).some(val => String(val).toUpperCase().includes('ALS') || String(val).includes('ขั้นสูง'));
+                        if (isALS) {
+                            groups['ALS (กู้ชีพขั้นสูง)'].push(vehicle);
+                        } else {
+                            groups['BLS (กู้ชีพขั้นพื้นฐาน)'].push(vehicle);
+                        }
+                    });
+
+                    // ลบกลุ่มที่ไม่มีข้อมูลออก
+                    Object.keys(groups).forEach(key => {
+                        if (groups[key].length === 0) delete groups[key];
+                    });
+
+                    return groups;
+                });
+
+                // Dashboard Stats
+                const dashboardStats = computed(() => {
+                    const personnelCount = dataStore.value.personnel.length;
+                    const unitsCount = dataStore.value.units.length;
+                    const vehiclesCount = dataStore.value.vehicles.length;
+                    
+                    // คำนวณจำนวน ALS/BLS ของหน่วยกู้ชีพ
+                    let alsUnits = 0;
+                    let blsUnits = 0;
+                    dataStore.value.units.forEach(u => {
+                        const level = getUnitLevel(u).toUpperCase();
+                        if (level.includes('ALS') || level.includes('ขั้นสูง')) alsUnits++;
+                        else blsUnits++;
+                    });
+
+                    // คำนวณจำนวน ALS/BLS ของยานพาหนะ
+                    let alsVehicles = 0;
+                    let blsVehicles = 0;
+                    dataStore.value.vehicles.forEach(v => {
+                        const isALS = Object.values(v).some(val => String(val).toUpperCase().includes('ALS') || String(val).includes('ขั้นสูง'));
+                        if (isALS) alsVehicles++;
+                        else blsVehicles++;
+                    });
+
+                    return [
+                        { title: 'บุคลากรทั้งหมด', value: personnelCount, trend: 'คน', icon: 'users', bgColor: 'bg-red-50', textColor: 'text-red-600' },
+                        { title: 'หน่วยกู้ชีพในเครือข่าย', value: unitsCount, trend: `ALS: ${alsUnits} | BLS: ${blsUnits}`, icon: 'building', bgColor: 'bg-green-50', textColor: 'text-green-600' },
+                        { title: 'ยานพาหนะปฏิบัติการ', value: vehiclesCount, trend: `ALS: ${alsVehicles} | BLS: ${blsVehicles}`, icon: 'truck', bgColor: 'bg-blue-50', textColor: 'text-blue-600' },
+                        { title: 'ใบรับรองต้องต่ออายุ', value: '0', trend: 'ภายใน 90 วัน', icon: 'alert-triangle', bgColor: 'bg-amber-50', textColor: 'text-amber-600' }
+                    ];
+                });
+
+                const exportToCSV = () => {
+                    const list = filteredData.value;
+                    if (!list.length) return showToast('ไม่มีข้อมูลสำหรับส่งออก', true);
+                    
+                    const headers = Array.from(new Set(list.flatMap(Object.keys)));
+                    const csvContent = [
+                        headers.join(','),
+                        ...list.map(row => headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(','))
+                    ].join('\n');
+
+                    const blob = new Blob(["\ufeff", csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `ข้อมูล_${activeTab.value}_${new Date().toISOString().split('T')[0]}.csv`;
+                    link.click();
+                    showToast(`ดาวน์โหลดไฟล์สำเร็จ!`);
+                };
+
+                // เริ่มต้นทำงาน
+                onMounted(() => {
+                    lucide.createIcons();
+                    fetchAllData();
+                });
+
+                return {
+                    activeTab, menus, currentMenuName, apiUrl, isSyncing, searchQuery,
+                    toast, dashboardStats, filteredData, groupedPersonnel, groupedUnits, groupedVehicles,
+                    fetchData, fetchAllData, exportToCSV, getUnitLevel, getManagerName, getActStatus
+                };
+            }
+        };
+
+        createApp(App).mount('#app');
+    </script>
+</body>
+</html>

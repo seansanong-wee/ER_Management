@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ER KPI Dashboard (Editable & AI Powered)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="vendor/tailwindcss.js"></script>
+    
+    <!-- FontAwesome for Icons -->
+    <script src="vendor/fontawesome-all.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="vendor/chart.umd.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+        /* ซ่อน scrollbar สำหรับ sidebar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        html { scroll-behavior: smooth; }
+        
+        /* Loading Spinner */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Print Styles สำหรับ A4 แผ่นเดียวแนวตั้ง */
+        .print-only { display: none; }
+        @page { size: A4 portrait; margin: 10mm; }
+        @media print {
+            html, body { 
+                height: 100% !important; 
+                overflow: hidden !important; 
+                background-color: white !important; 
+                font-size: 11px !important; /* ลดขนาดฟอนต์รวม */
+            }
+            main, #dashboardContainer { 
+                overflow: hidden !important; 
+                height: 100% !important; 
+                display: block !important; 
+                padding: 0 !important; 
+                margin: 0 !important;
+            }
+            
+            /* ซ่อนสิ่งที่ไม่ได้ใช้พิมพ์ */
+            #sidebar, header, button, .admin-only, #adminNotice, .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            
+            /* ปรับกล่องข้อมูลให้ไม่มีเงาและชิดกันมากขึ้น */
+            .shadow-sm, .shadow-md { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+            .bg-white { background-color: white !important; }
+            
+            /* Print Header */
+            .print-header { 
+                margin-bottom: 0.5rem; 
+                border-bottom: 2px solid #1e293b; 
+                padding-bottom: 0.5rem; 
+                text-align: center; 
+            }
+            .print-header h1 { font-size: 1.25rem !important; margin-bottom: 0.25rem; }
+            .print-header h2, .print-header p { font-size: 0.85rem !important; margin: 0; }
+            
+            /* KPI Cards ย่อขนาด */
+            #kpiCards { gap: 0.5rem !important; margin-bottom: 1rem !important; }
+            #kpiCards > div { padding: 0.5rem !important; }
+            #kpiCards h3 { font-size: 1.25rem !important; }
+            #kpiCards p, #kpiCards span { font-size: 0.75rem !important; }
+            #kpiCards i { font-size: 1rem !important; }
+            
+            /* Charts บังคับให้อยู่บรรทัดเดียวกันและลดความสูง */
+            .chart-container { 
+                display: flex !important; 
+                flex-direction: row !important; 
+                gap: 0.5rem !important; 
+                margin-bottom: 1rem !important; 
+            }
+            #section-fasttrack { width: 65% !important; padding: 0.5rem !important; margin-bottom: 0 !important; }
+            #section-triage { width: 35% !important; padding: 0.5rem !important; margin-bottom: 0 !important; }
+            .chart-container h3 { font-size: 0.85rem !important; margin-bottom: 0.25rem !important; }
+            canvas { max-height: 160px !important; width: 100% !important; }
+            #totalPatientsDisplay { font-size: 1.25rem !important; }
+            
+            /* MOU Section */
+            #section-mou { margin-top: 0 !important; }
+            #section-mou > div:first-child { margin-bottom: 0.5rem !important; }
+            #section-mou h3.border-l-4 { font-size: 1rem !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+            #mouProgressCards { display: none !important; } /* ซ่อนการ์ด Progress เพื่อประหยัดพื้นที่กระดาษ */
+            
+            /* MOU Table ย่อขนาด */
+            #section-mou .bg-white.rounded-xl { margin-bottom: 0.5rem !important; border: 1px solid #cbd5e1 !important; }
+            #section-mou .px-6.py-5 { padding: 0.5rem !important; }
+            table { width: 100% !important; min-width: auto !important; }
+            th, td { padding: 0.25rem 0.5rem !important; font-size: 0.75rem !important; }
+            
+            /* บังคับพิมพ์สี */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="bg-slate-900 text-white w-64 flex-shrink-0 flex flex-col transition-all duration-300 hidden md:flex">
+        <div class="h-16 flex items-center justify-center border-b border-slate-700 px-4 cursor-pointer" onclick="scrollToSection('overview', document.getElementById('nav-overview'))">
+            <i class="fas fa-heartbeat text-rose-500 text-2xl"></i>
+            <span class="ml-3 font-bold text-lg tracking-wide">ER Dashboard</span>
+        </div>
+        <div class="flex-1 py-6 overflow-y-auto no-scrollbar">
+            <nav class="space-y-1 px-3">
+                <a href="#overview" id="nav-overview" onclick="scrollToSection('overview', this)" class="nav-item flex items-center px-3 py-3 bg-blue-600 rounded-lg text-white group">
+                    <i class="fas fa-border-all w-5 text-center"></i>
+                    <span class="ml-3 font-medium">ภาพรวม (Overview)</span>
+                </a>
+                <a href="#mou" id="nav-mou" onclick="scrollToSection('mou', this)" class="nav-item flex items-center px-3 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition-colors">
+                    <i class="fas fa-bullseye w-5 text-center"></i>
+                    <span class="ml-3 font-medium">ผลงาน MOU 69</span>
+                </a>
+                <a href="#fasttrack" id="nav-fasttrack" onclick="scrollToSection('fasttrack', this)" class="nav-item flex items-center px-3 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition-colors">
+                    <i class="fas fa-wave-square w-5 text-center"></i>
+                    <span class="ml-3 font-medium">ระบบ Fast Track</span>
+                </a>
+                <a href="#triage" id="nav-triage" onclick="scrollToSection('triage', this)" class="nav-item flex items-center px-3 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition-colors">
+                    <i class="fas fa-users w-5 text-center"></i>
+                    <span class="ml-3 font-medium">ข้อมูลผู้รับบริการ</span>
+                </a>
+                <div class="pt-4 mt-4 border-t border-slate-800">
+                    <a href="#" onclick="openTriageAIModal()" class="flex items-center px-3 py-3 text-amber-300 hover:bg-slate-800 rounded-lg transition-colors">
+                        <i class="fas fa-robot w-5 text-center"></i>
+                        <span class="ml-3 font-medium">✨ ผู้ช่วย Triage AI</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        
+        <!-- Top Navbar -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 z-10 flex-shrink-0">
+            <div class="flex items-center">
+                <button onclick="toggleSidebar()" class="text-slate-500 hover:text-slate-700 focus:outline-none md:hidden mr-4">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <h1 id="pageTitle" class="text-xl font-semibold text-slate-800 truncate">สรุปตัวชี้วัด ER (ภาพรวม)</h1>
+            </div>
+            
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <button onclick="openTriageAIModal()" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-medium shadow-sm">
+                    <i class="fas fa-robot"></i>
+                    <span>✨ ประเมิน Triage ด้วย AI</span>
+                </button>
+
+                <!-- ปุ่มหน้าต่างแก้ไขข้อมูลกราฟ (เฉพาะ Admin) -->
+                <button id="manageDataBtn" onclick="openManageDataModal()" class="hidden items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium shadow-sm">
+                    <i class="fas fa-database"></i>
+                    <span class="hidden sm:inline">จัดการข้อมูลกราฟ</span>
+                </button>
+
+                <!-- Login/Logout Button -->
+                <button id="authBtn" onclick="toggleAuth()" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span id="authBtnText">เข้าสู่ระบบ (Admin)</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 relative" id="dashboardContainer">
+            
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 no-print">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">ภาพรวมผลการดำเนินงาน</h2>
+                    <p class="text-slate-500 text-sm mt-1">อัปเดตข้อมูลล่าสุด: <span id="lastUpdate">วันนี้ 08:00 น.</span></p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="generateAIInsights()" class="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white rounded-lg hover:from-violet-600 hover:to-fuchsia-600 transition-all shadow-sm text-sm font-medium">
+                        <i class="fas fa-magic"></i>
+                        <span>✨ สรุปผลผู้บริหารด้วย AI</span>
+                    </button>
+                    <!-- ปุ่มพิมพ์รายงาน (เรียกใช้ฟังก์ชันแบบดีเลย์) -->
+                    <button onclick="printReport()" class="hidden sm:flex items-center space-x-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors shadow-sm text-sm font-medium">
+                        <i class="fas fa-print"></i>
+                        <span>พิมพ์รายงานผู้บริหาร</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Print Header (ซ่อนอยู่ จะแสดงเฉพาะตอนกดพิมพ์) -->
+            <div class="print-header print-only">
+                <h1 class="font-bold text-slate-900 leading-tight">รายงานสรุปผลการดำเนินงาน ตัวชี้วัดและ MOU</h1>
+                <h2 class="font-bold text-slate-800">แผนกอุบัติเหตุและฉุกเฉิน (ER) ประจำปีงบประมาณ 2569</h2>
+                <p class="text-slate-600 font-medium">รอบประเมิน: 6 เดือนแรก (ตุลาคม 2568 - มีนาคม 2569)</p>
+            </div>
+
+            <!-- Admin Notice -->
+            <div id="adminNotice" class="hidden mb-6 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg flex items-center no-print">
+                <i class="fas fa-shield-alt text-amber-500 mr-3 text-lg"></i>
+                <div>
+                    <strong class="font-bold">โหมดผู้ดูแลระบบ:</strong>
+                    <span class="block sm:inline"> คุณสามารถคลิกปุ่ม "แก้ไข" ที่การ์ดเป้าหมายเพื่ออัปเดตข้อมูลได้</span>
+                </div>
+            </div>
+
+            <!-- Section: OVERVIEW -->
+            <div id="section-overview" class="scroll-mt-6">
+                <!-- Stat Cards -->
+                <div id="kpiCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Rendered via JS -->
+                </div>
+            </div>
+
+            <!-- Section: FAST TRACK & TRIAGE (CHARTS) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12 chart-container">
+                <!-- Line Chart: Fast Track -->
+                <div id="section-fasttrack" class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 lg:col-span-2 scroll-mt-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-wave-square text-pink-500 mr-2"></i> สถิติผู้ป่วย Fast Track และผู้ป่วย Stroke (รายเดือน)</h3>
+                    </div>
+                    <div class="h-72 w-full relative">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Pie Chart: Triage -->
+                <div id="section-triage" class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 scroll-mt-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6"><i class="fas fa-users text-emerald-500 mr-2"></i> สัดส่วนผู้ป่วยแยกตาม Triage</h3>
+                    <div class="h-64 w-full relative flex justify-center">
+                        <canvas id="triageChart"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style="top: -20px;">
+                            <span class="text-2xl font-bold text-slate-700" id="totalPatientsDisplay">11.3k</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: MOU 69 -->
+            <div id="section-mou" class="pt-2 scroll-mt-6">
+                <div class="mb-6 no-print">
+                    <h3 class="text-2xl font-bold text-slate-800 border-l-4 border-blue-500 pl-4 py-1">รายละเอียดผลงานตัวชี้วัด MOU ประจำปี 2569</h3>
+                    <p class="text-slate-500 text-sm mt-2">แสดงความคืบหน้าเปรียบเทียบกับเป้าหมายที่ตั้งไว้ (สามารถแก้ไขได้ในโหมด Admin)</p>
+                </div>
+
+                <!-- MOU Progress Cards (Dynamic Generated) -->
+                <div id="mouProgressCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Rendered via JS -->
+                </div>
+
+                <!-- MOU Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden mb-8">
+                    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center">
+                            <i class="fas fa-table mr-2 text-slate-400"></i>
+                            ตารางสรุปผลดำเนินงาน MOU
+                        </h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider border-b border-slate-200">
+                                    <th class="px-6 py-4 font-semibold">ตัวชี้วัด (KPI / MOU)</th>
+                                    <th class="px-6 py-4 font-semibold">ประเภท</th>
+                                    <th class="px-6 py-4 font-semibold text-center">เป้าหมาย</th>
+                                    <th class="px-6 py-4 font-semibold text-center">ผลงานจริง</th>
+                                    <th class="px-6 py-4 font-semibold text-center">สถานะ</th>
+                                    <th class="px-6 py-4 font-semibold text-center admin-only hidden no-print">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mouTableBody" class="divide-y divide-slate-100 text-sm">
+                                <!-- Rendered via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Executive Recommendations (UI Input) -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mb-12 no-print">
+                <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center justify-between">
+                    <span><i class="fas fa-comment-dots text-blue-500 mr-2"></i> ข้อเสนอแนะผู้บริหาร (สำหรับพิมพ์รายงาน)</span>
+                    <button onclick="saveRecommendation()" class="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 transition-colors">บันทึกข้อความ</button>
+                </h3>
+                <textarea id="recommendationInput" rows="3" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none" placeholder="พิมพ์สรุปข้อเสนอแนะหรือปัญหาอุปสรรคเพื่อนำเสนอผู้อำนวยการ..."></textarea>
+            </div>
+
+            <!-- Section: Print Footer (ปรากฏเฉพาะตอนพิมพ์) -->
+            <div class="print-only mt-4 pt-2 border-t border-slate-800">
+                <div class="mb-6">
+                    <p class="font-bold text-slate-900 underline mb-2 text-sm">ข้อเสนอแนะ / สรุปผลการดำเนินงาน:</p>
+                    <p id="printRecommendation" class="text-slate-800 text-sm leading-relaxed min-h-[40px]"></p>
+                </div>
+                
+                <div class="text-right mt-8 pr-12">
+                    <p class="mb-8 text-sm text-slate-900">จึงเรียนมาเพื่อโปรดทราบ</p>
+                    <p class="font-bold text-sm text-slate-900">(นายทวี แสนสนอง)</p>
+                    <p class="text-sm text-slate-900">หัวหน้างานการพยาบาลอุบัติเหตุฉุกเฉินและนิติเวช</p>
+                    <p class="mt-2 text-sm text-slate-900">วันที่ .......................................................</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 flex items-center justify-center hidden z-50 no-print">
+        <div class="bg-white rounded-xl shadow-xl w-96 p-8 transform transition-all scale-95 opacity-0" id="loginModalContent">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">เข้าสู่ระบบผู้ดูแล</h3>
+                <p class="text-sm text-slate-500 mt-1">กรุณาใส่ Username และ Password</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                    <input type="text" id="username" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="admin">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="1234">
+                </div>
+                <div id="loginError" class="text-red-500 text-sm text-center hidden">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง!</div>
+                <button onclick="processLogin()" class="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors mt-4">
+                    เข้าสู่ระบบ
+                </button>
+                <button onclick="closeLoginModal()" class="w-full bg-slate-100 text-slate-600 font-medium py-2 rounded-lg hover:bg-slate-200 transition-colors mt-2">
+                    ยกเลิก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 flex items-center justify-center hidden z-50 no-print">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 m-4" id="editModalContent">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-800" id="editModalTitle">แก้ไขข้อมูล</h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <form id="editForm" onsubmit="saveData(event)">
+                <input type="hidden" id="editType">
+                <input type="hidden" id="editId">
+                <div id="dynamicFields" class="space-y-4"></div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- หน้าต่างใหม่: จัดการข้อมูลเชิงลึก (Manage Data Modal สำหรับกราฟและ Triage) -->
+    <div id="manageDataModal" class="fixed inset-0 bg-slate-900 bg-opacity-60 flex items-center justify-center hidden z-50 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-0 m-4 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-emerald-600 p-5 text-white flex justify-between items-center flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-database text-2xl text-emerald-200"></i>
+                    <h3 class="text-xl font-bold">แก้ไขข้อมูลกราฟและสถิติส่วนกลาง</h3>
+                </div>
+                <button onclick="closeManageDataModal()" class="text-white hover:text-emerald-200 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50">
+                <form id="manageDataForm" class="space-y-6">
+                    <!-- Trends Data -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <h4 class="font-bold text-slate-800 mb-3 border-b pb-2"><i class="fas fa-chart-line text-blue-500 mr-2"></i> ข้อมูลกราฟแนวโน้ม (คั่นด้วยลูกน้ำ ,)</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">เดือน (Labels)</label>
+                                <input type="text" id="mdLabels" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Stroke Fast Track (คน)</label>
+                                <input type="text" id="mdStroke" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">STEMI Fast Track (คน)</label>
+                                <input type="text" id="mdStemi" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">ผู้ป่วย Stroke ทั้งหมด (คน)</label>
+                                <input type="text" id="mdTotalStroke" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-emerald-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Triage Data -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <h4 class="font-bold text-slate-800 mb-3 border-b pb-2"><i class="fas fa-chart-pie text-emerald-500 mr-2"></i> จำนวนผู้ป่วยแยกตาม Triage (คน)</h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-700 mb-1">🔴 Resuscitation</label>
+                                <input type="number" id="mdTriage1" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-700 mb-1">ชมพู Emergency</label>
+                                <input type="number" id="mdTriage2" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-700 mb-1">🟡 Urgency</label>
+                                <input type="number" id="mdTriage3" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-700 mb-1">🟢 Semi-Urgency</label>
+                                <input type="number" id="mdTriage4" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-700 mb-1">⚪ Non-Urgency</label>
+                                <input type="number" id="mdTriage5" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-emerald-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="p-4 border-t border-slate-200 bg-white flex justify-end space-x-3 flex-shrink-0">
+                <button type="button" onclick="closeManageDataModal()" class="px-5 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors">
+                    ยกเลิก
+                </button>
+                <button type="button" onclick="saveManageData(event)" class="px-5 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
+                    บันทึกข้อมูลสถิติ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Insights Modal -->
+    <div id="aiInsightModal" class="fixed inset-0 bg-slate-900 bg-opacity-60 flex items-center justify-center hidden z-50 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-0 m-4 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-gradient-to-r from-violet-600 to-fuchsia-600 p-6 text-white flex justify-between items-center flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-magic text-2xl text-violet-200"></i>
+                    <h3 class="text-xl font-bold">✨ AI Executive Summary</h3>
+                </div>
+                <button onclick="closeAIInsightModal()" class="text-white hover:text-violet-200 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50" id="aiInsightContent">
+                <div id="aiInsightLoading" class="flex flex-col items-center justify-center py-12 space-y-4">
+                    <div class="loader"></div>
+                    <p class="text-slate-600 font-medium">Gemini AI กำลังวิเคราะห์ข้อมูลและดึง Insight...</p>
+                </div>
+                <div id="aiInsightResult" class="hidden text-slate-700 leading-relaxed space-y-4 prose prose-slate"></div>
+            </div>
+            
+            <div class="p-4 border-t border-slate-200 bg-white flex justify-end flex-shrink-0">
+                <button onclick="closeAIInsightModal()" class="px-6 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Triage Assistant Modal -->
+    <div id="aiTriageModal" class="fixed inset-0 bg-slate-900 bg-opacity-60 flex items-center justify-center hidden z-50 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-0 m-4 overflow-hidden flex flex-col">
+            <div class="bg-indigo-600 p-5 text-white flex justify-between items-center flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-robot text-2xl text-indigo-200"></i>
+                    <h3 class="text-xl font-bold">✨ ผู้ช่วยประเมิน Triage ด้วย AI</h3>
+                </div>
+                <button onclick="closeAITriageModal()" class="text-white hover:text-indigo-200 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 bg-slate-50">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">พิมพ์อาการของผู้ป่วยเพื่อรับการแนะนำระดับ Triage:</label>
+                <textarea id="triageSymptoms" rows="4" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none shadow-inner text-slate-700" placeholder="เช่น ผู้ป่วยชาย 50 ปี มีอาการเจ็บหน้าอกร้าวไปแขนซ้าย เหงื่อแตก หายใจหอบเหนื่อย เริ่มเป็นมา 30 นาที..."></textarea>
+                
+                <button onclick="analyzeTriage()" class="mt-4 w-full flex items-center justify-center space-x-2 px-4 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-md">
+                    <i class="fas fa-stethoscope"></i>
+                    <span>✨ วิเคราะห์ระดับ Triage</span>
+                </button>
+
+                <div id="triageResultContainer" class="mt-6 hidden">
+                    <div class="p-4 rounded-xl border" id="triageResultBox">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <div id="triageColorDot" class="w-4 h-4 rounded-full"></div>
+                            <h4 class="font-bold text-lg" id="triageLevelTitle">ระดับ Triage</h4>
+                        </div>
+                        <div id="triageReason" class="text-sm text-slate-600 mt-2"></div>
+                    </div>
+                </div>
+
+                <div id="triageLoading" class="mt-6 flex-col items-center justify-center space-y-3 hidden">
+                    <div class="loader !border-indigo-200 !border-t-indigo-600 mx-auto"></div>
+                    <p class="text-indigo-600 font-medium text-sm text-center">AI กำลังวิเคราะห์อาการและประเมินระดับ Triage...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Initial Data Setup ---
+        const defaultData = {
+            kpiSummary: [
+                { id: 1, title: 'ผู้ป่วย ER สะสม 6 เดือน (คน)', value: '11,325', trend: 'รอบ ต.ค. 68 - มี.ค. 69', isPositive: true, icon: 'fa-users', color: 'text-blue-600', bg: 'bg-blue-100' },
+                { id: 2, title: 'Under Triage (ระดับ E ขึ้นไป)', value: '0.18%', trend: 'ผ่านเป้าหมาย ≤ 3%', isPositive: true, icon: 'fa-exclamation-circle', color: 'text-green-600', bg: 'bg-green-100' },
+                { id: 3, title: 'Re-visit พยาบาลตรวจ', value: '0.61%', trend: 'จากผู้ป่วย 655 ราย', isPositive: true, icon: 'fa-user-nurse', color: 'text-emerald-600', bg: 'bg-emerald-100' },
+                { id: 4, title: 'ความคลาดเคลื่อนทางยา (≥ D)', value: '0.008%', trend: 'ผ่านเป้าหมาย ≤ 5%', isPositive: true, icon: 'fa-pills', color: 'text-green-600', bg: 'bg-green-100' }
+            ],
+            monthlyTrends: {
+                labels: ['ต.ค. 68', 'พ.ย. 68', 'ธ.ค. 68', 'ม.ค. 69', 'ก.พ. 69', 'มี.ค. 69'],
+                stroke: [3, 15, 10, 19, 7, 0],
+                stemi: [1, 2, 3, 4, 2, 0],
+                totalStroke: [14, 29, 32, 30, 18, 0]
+            },
+            triage: [
+                { level: 'Resuscitation (สีแดง)', count: 400, color: '#ef4444' },
+                { level: 'Emergency (สีชมพู)', count: 1100, color: '#ec4899' },
+                { level: 'Urgency (สีเหลือง)', count: 3200, color: '#eab308' },
+                { level: 'Semi-Urgency (สีเขียว)', count: 4400, color: '#22c55e' },
+                { level: 'Non-Urgency (สีขาว)', count: 2225, color: '#cbd5e1' }
+            ],
+            mouTable: [
+                { id: 1, kpi: 'ร้อยละการคัดแยก Under Triage คลาดเคลื่อน ระดับ E ขึ้นไป', target: '≤ 3%', actual: '0.18%', status: 'ผ่าน', type: 'KPI ER' },
+                { id: 2, kpi: 'ร้อยละข้อผิดพลาดจากการบริหารยา ระดับ D ขึ้นไป', target: '≤ 5%', actual: '0.008%', status: 'ผ่าน', type: 'KPI ER' },
+                { id: 3, kpi: 'ร้อยละผู้ป่วย STEMI ได้รับการทำ EKG ภายใน 10 นาที', target: '≥ 95%', actual: '100%', status: 'ผ่าน', type: 'KPI ER' },
+                { id: 4, kpi: 'ร้อยละผู้ป่วย Stroke Fast Track ได้รับการดูแลตามมาตรฐาน', target: '≥ 95%', actual: '100%', status: 'ผ่าน', type: 'KPI ER' },
+                { id: 5, kpi: 'อัตรา Re-visit (พยาบาลตรวจ)', target: '< 1%', actual: '0.61%', status: 'ผ่าน', type: 'KPI ภายใน' },
+                { id: 6, kpi: 'ผู้ป่วย STEMI ได้รับยา Streptokinase ภายใน 30 นาที', target: '≥ 95%', actual: '100%', status: 'ผ่าน', type: 'KPI ภายใน' }
+            ],
+            recommendation: '' // เพิ่มฟิลด์สำหรับเก็บข้อเสนอแนะ
+        };
+
+        let appData = JSON.parse(localStorage.getItem('erDashboardData')) || defaultData;
+        let isAdmin = sessionStorage.getItem('isAdmin') === 'true';
+
+        let trendChartInstance = null;
+        let triageChartInstance = null;
+
+        // --- Navigation Scroll Logic ---
+        function scrollToSection(sectionId, element) {
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-blue-600', 'text-white');
+                el.classList.add('text-slate-300', 'hover:bg-slate-800');
+            });
+            if (element) {
+                element.classList.remove('text-slate-300', 'hover:bg-slate-800');
+                element.classList.add('bg-blue-600', 'text-white');
+            }
+
+            const titles = {
+                'overview': 'สรุปตัวชี้วัด ER (ภาพรวม)',
+                'mou': 'ผลการดำเนินงาน MOU 69',
+                'fasttrack': 'สถิติระบบ Fast Track',
+                'triage': 'ข้อมูลผู้รับบริการ & Triage'
+            };
+            document.getElementById('pageTitle').innerText = titles[sectionId] || 'ER Dashboard';
+
+            const target = document.getElementById('section-' + sectionId);
+            const container = document.getElementById('dashboardContainer');
+            if (target && container) {
+                container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' });
+            }
+
+            if (window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                if(!sidebar.classList.contains('hidden')) toggleSidebar();
+            }
+        }
+
+        // --- 2. Render Functions ---
+        function renderKPI() {
+            const container = document.getElementById('kpiCards');
+            container.innerHTML = '';
+            
+            appData.kpiSummary.forEach((stat, index) => {
+                const trendColor = stat.isPositive ? 'text-green-600' : 'text-red-600';
+                const editBtn = isAdmin 
+                    ? `<button onclick="openEditModal('kpi', ${index})" class="absolute top-4 right-4 text-slate-400 hover:text-blue-600 bg-white shadow-sm border border-slate-200 rounded p-1.5 text-xs transition-colors no-print"><i class="fas fa-edit"></i> แก้ไข</button>` 
+                    : '';
+
+                container.innerHTML += `
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col relative group hover:shadow-md transition-shadow">
+                        ${editBtn}
+                        <div class="flex justify-between items-start">
+                            <div class="pr-8">
+                                <p class="text-sm font-medium text-slate-500 mb-1">${stat.title}</p>
+                                <h3 class="text-3xl font-bold text-slate-800">${stat.value}</h3>
+                            </div>
+                            <div class="p-3 rounded-lg ${stat.bg}">
+                                <i class="fas ${stat.icon} text-xl ${stat.color}"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center">
+                            <span class="text-sm font-medium flex items-center ${trendColor}">
+                                <i class="fas ${stat.isPositive ? 'fa-check-circle' : 'fa-info-circle'} mr-1.5"></i> ${stat.trend}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderMOUProgress() {
+            const container = document.getElementById('mouProgressCards');
+            if (!container) return;
+            container.innerHTML = '';
+
+            appData.mouTable.forEach((row, index) => {
+                let actualStr = String(row.actual).replace('%', '').trim();
+                let targetStr = String(row.target).replace(/[^0-9.]/g, '').trim();
+                let actualNum = parseFloat(actualStr) || 0;
+                let targetNum = parseFloat(targetStr) || 100;
+                let percent = 0;
+                let barColor = row.status === 'ผ่าน' ? 'bg-green-500' : (row.status === 'เฝ้าระวัง' ? 'bg-amber-500' : 'bg-red-500');
+
+                if (row.target.includes('≤') || row.target.includes('<')) {
+                    percent = Math.min((actualNum / targetNum) * 100, 100);
+                } else {
+                    percent = Math.min((actualNum / 100) * 100, 100); 
+                    if (targetNum > 100) percent = Math.min((actualNum / targetNum) * 100, 100);
+                }
+
+                const editBtn = isAdmin 
+                    ? `<button onclick="openEditModal('mou', ${index})" class="absolute top-3 right-3 text-slate-400 hover:text-blue-600 bg-slate-50 p-1.5 rounded text-xs hidden group-hover:block transition-all"><i class="fas fa-edit"></i></button>` 
+                    : '';
+
+                container.innerHTML += `
+                    <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative group">
+                        ${editBtn}
+                        <div class="flex items-center space-x-2 mb-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ${row.type === 'KPI ER' ? 'bg-indigo-50 text-indigo-600' : 'bg-pink-50 text-pink-600'}">${row.type}</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${row.status === 'ผ่าน' ? 'bg-green-50 text-green-600' : (row.status === 'เฝ้าระวัง' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600')}">${row.status}</span>
+                        </div>
+                        <h4 class="text-sm font-semibold text-slate-800 mb-4 h-10 line-clamp-2 leading-snug" title="${row.kpi}">${row.kpi}</h4>
+                        <div class="flex justify-between items-end mb-2">
+                            <div>
+                                <span class="text-xs text-slate-500 block mb-0.5">ผลงานจริง</span>
+                                <span class="text-2xl font-bold ${row.status === 'ผ่าน' ? 'text-green-600' : 'text-red-600'}">${row.actual}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs text-slate-500 block mb-0.5">เป้าหมาย</span>
+                                <span class="text-sm font-bold text-slate-700">${row.target}</span>
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2 mt-1 overflow-hidden" title="ใช้งานไป ${percent.toFixed(1)}%">
+                            <div class="${barColor} h-2 rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('mouTableBody');
+            tbody.innerHTML = '';
+
+            appData.mouTable.forEach((row, index) => {
+                let statusClass = '', statusIcon = '';
+                if (row.status === 'ผ่าน') { statusClass = 'bg-green-50 text-green-700 border-green-200'; statusIcon = '<span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>'; }
+                else if (row.status === 'เฝ้าระวัง') { statusClass = 'bg-yellow-50 text-yellow-700 border-yellow-200'; statusIcon = '<span class="w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1.5"></span>'; }
+                else { statusClass = 'bg-red-50 text-red-700 border-red-200'; statusIcon = '<span class="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5"></span>'; }
+
+                const editBtn = isAdmin 
+                    ? `<td class="px-6 py-4 text-center admin-only no-print"><button onclick="openEditModal('mou', ${index})" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded border border-blue-100"><i class="fas fa-pen text-xs mr-1"></i> แก้ไข</button></td>`
+                    : '<td class="px-6 py-4 text-center admin-only hidden no-print"></td>';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 font-medium text-slate-800">${row.kpi}</td>
+                        <td class="px-6 py-4 text-slate-500">${row.type}</td>
+                        <td class="px-6 py-4 text-slate-600 text-center">${row.target}</td>
+                        <td class="px-6 py-4 font-bold text-slate-800 text-center">${row.actual}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusClass}">
+                                ${statusIcon} ${row.status}
+                            </span>
+                        </td>
+                        ${editBtn}
+                    </tr>
+                `;
+            });
+
+            const adminCols = document.querySelectorAll('.admin-only');
+            adminCols.forEach(col => isAdmin ? col.classList.remove('hidden') : col.classList.add('hidden'));
+        }
+
+        function renderCharts() {
+            const ctxTrend = document.getElementById('trendChart').getContext('2d');
+            if (trendChartInstance) trendChartInstance.destroy();
+            trendChartInstance = new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: appData.monthlyTrends.labels,
+                    datasets: [
+                        { label: 'Stroke Fast Track (คน)', data: appData.monthlyTrends.stroke, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.4, borderWidth: 3 },
+                        { label: 'STEMI Fast Track (คน)', data: appData.monthlyTrends.stemi, borderColor: '#ec4899', backgroundColor: '#ec4899', tension: 0.4, borderWidth: 3 },
+                        { label: 'ผู้ป่วย Stroke ทั้งหมด (คน)', data: appData.monthlyTrends.totalStroke, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.4, borderWidth: 3 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 10 } } }, scales: { y: { min: 0, grid: { borderDash: [5, 5] } }, x: { grid: { display: false } } } }
+            });
+
+            const ctxTriage = document.getElementById('triageChart').getContext('2d');
+            if (triageChartInstance) triageChartInstance.destroy();
+            const triageLabels = appData.triage.map(t => t.level);
+            const triageData = appData.triage.map(t => t.count);
+            const triageColors = appData.triage.map(t => t.color);
+            triageChartInstance = new Chart(ctxTriage, {
+                type: 'doughnut',
+                data: { labels: triageLabels, datasets: [{ data: triageData, backgroundColor: triageColors, borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, padding: 10, boxWidth: 6, font: {size: 10} } } } }
+            });
+
+            const total = appData.triage.reduce((sum, item) => sum + item.count, 0);
+            document.getElementById('totalPatientsDisplay').innerText = (total / 1000).toFixed(1) + 'k';
+        }
+
+        function updateUI() {
+            renderKPI();
+            renderMOUProgress(); 
+            renderTable();
+            renderCharts();
+            
+            // โหลดข้อมูล Recommendation
+            document.getElementById('recommendationInput').value = appData.recommendation || '';
+
+            const authBtn = document.getElementById('authBtn');
+            const adminNotice = document.getElementById('adminNotice');
+            const manageDataBtn = document.getElementById('manageDataBtn');
+
+            if (isAdmin) {
+                authBtn.classList.replace('bg-blue-600', 'bg-red-500');
+                authBtn.classList.replace('hover:bg-blue-700', 'hover:bg-red-600');
+                authBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i><span class="ml-2">ออกจากระบบ</span>';
+                adminNotice.classList.remove('hidden');
+                
+                manageDataBtn.classList.remove('hidden');
+                manageDataBtn.classList.add('flex');
+            } else {
+                authBtn.classList.replace('bg-red-500', 'bg-blue-600');
+                authBtn.classList.replace('hover:bg-red-600', 'hover:bg-blue-700');
+                authBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i><span class="ml-2">เข้าสู่ระบบ (Admin)</span>';
+                adminNotice.classList.add('hidden');
+                
+                manageDataBtn.classList.add('hidden');
+                manageDataBtn.classList.remove('flex');
+            }
+        }
+
+        // ฟังก์ชันบันทึกข้อเสนอแนะแบบแยกต่างหาก
+        function saveRecommendation() {
+            const text = document.getElementById('recommendationInput').value;
+            appData.recommendation = text;
+            localStorage.setItem('erDashboardData', JSON.stringify(appData));
+            alert('บันทึกข้อเสนอแนะสำหรับการพิมพ์เรียบร้อยแล้ว');
+        }
+
+        // ฟังก์ชันสั่งพิมพ์รายงาน
+        function printReport() {
+            // ดึงข้อความจาก Input มาใส่ใน Element ที่ใช้แสดงตอนพิมพ์
+            const recText = document.getElementById('recommendationInput').value;
+            
+            // ใช้ regex เพื่อให้ขึ้นบรรทัดใหม่ตามที่พิมพ์มา
+            document.getElementById('printRecommendation').innerHTML = recText 
+                ? recText.replace(/\n/g, '<br>') 
+                : '<span class="text-slate-400 italic">ไม่มีข้อเสนอแนะเพิ่มเติม...</span>';
+
+            // Resize Chart ให้เล็กลงเพื่อให้พอดี 1 หน้ากระดาษ
+            if (trendChartInstance) trendChartInstance.resize();
+            if (triageChartInstance) triageChartInstance.resize();
+            
+            // รอเบราว์เซอร์จัดหน้าก่อนสั่งพิมพ์
+            setTimeout(() => {
+                window.focus();
+                window.print();
+            }, 300);
+        }
+
+        // --- 3. Auth & Modal Handlers ---
+        function toggleAuth() {
+            if (isAdmin) { isAdmin = false; sessionStorage.removeItem('isAdmin'); updateUI(); }
+            else {
+                const modal = document.getElementById('loginModal');
+                const content = document.getElementById('loginModalContent');
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('loginError').classList.add('hidden');
+                modal.classList.remove('hidden');
+                setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+            }
+        }
+
+        function closeLoginModal() {
+            const modal = document.getElementById('loginModal');
+            const content = document.getElementById('loginModalContent');
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => { modal.classList.add('hidden'); }, 200);
+        }
+
+        function processLogin() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if (user === 'admin' && pass === '1234') { isAdmin = true; sessionStorage.setItem('isAdmin', 'true'); closeLoginModal(); updateUI(); }
+            else { document.getElementById('loginError').classList.remove('hidden'); }
+        }
+
+        function openEditModal(type, index) {
+            const modal = document.getElementById('editModal');
+            document.getElementById('editType').value = type;
+            document.getElementById('editId').value = index;
+            const fieldsContainer = document.getElementById('dynamicFields');
+            
+            if (type === 'kpi') {
+                const item = appData.kpiSummary[index];
+                document.getElementById('editModalTitle').innerText = `แก้ไข: ${item.title}`;
+                fieldsContainer.innerHTML = `
+                    <div><label class="block text-sm font-medium mb-1">ค่าปัจจุบัน</label><input type="text" id="editValue" value="${item.value}" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 outline-none"></div>
+                    <div><label class="block text-sm font-medium mb-1">แนวโน้ม</label><input type="text" id="editTrend" value="${item.trend}" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 outline-none"></div>
+                    <div><label class="block text-sm font-medium mb-1">ผลประเมิน</label><select id="editIsPositive" class="w-full px-4 py-2 border rounded-lg"><option value="true" ${item.isPositive ? 'selected' : ''}>เป็นผลดี (สีเขียว)</option><option value="false" ${!item.isPositive ? 'selected' : ''}>เป็นผลเสีย (สีแดง)</option></select></div>
+                `;
+            } else if (type === 'mou') {
+                const item = appData.mouTable[index];
+                document.getElementById('editModalTitle').innerText = `อัปเดต: ${item.kpi}`;
+                fieldsContainer.innerHTML = `
+                    <div><label class="block text-sm font-medium mb-1">ผลงานจริง</label><input type="text" id="editActual" value="${item.actual}" class="w-full px-4 py-2 border rounded-lg outline-none"></div>
+                    <div><label class="block text-sm font-medium mb-1">สถานะ</label><select id="editStatus" class="w-full px-4 py-2 border rounded-lg"><option value="ผ่าน" ${item.status === 'ผ่าน' ? 'selected' : ''}>ผ่าน</option><option value="เฝ้าระวัง" ${item.status === 'เฝ้าระวัง' ? 'selected' : ''}>เฝ้าระวัง</option><option value="ไม่ผ่าน" ${item.status === 'ไม่ผ่าน' ? 'selected' : ''}>ไม่ผ่าน</option></select></div>
+                `;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
+
+        function openManageDataModal() {
+            document.getElementById('mdLabels').value = appData.monthlyTrends.labels.join(', ');
+            document.getElementById('mdStroke').value = appData.monthlyTrends.stroke.join(', ');
+            document.getElementById('mdStemi').value = appData.monthlyTrends.stemi.join(', ');
+            document.getElementById('mdTotalStroke').value = appData.monthlyTrends.totalStroke.join(', ');
+            
+            document.getElementById('mdTriage1').value = appData.triage[0].count;
+            document.getElementById('mdTriage2').value = appData.triage[1].count;
+            document.getElementById('mdTriage3').value = appData.triage[2].count;
+            document.getElementById('mdTriage4').value = appData.triage[3].count;
+            document.getElementById('mdTriage5').value = appData.triage[4].count;
+            
+            document.getElementById('manageDataModal').classList.remove('hidden');
+        }
+
+        function closeManageDataModal() {
+            document.getElementById('manageDataModal').classList.add('hidden');
+        }
+
+        function saveManageData(e) {
+            e.preventDefault();
+            const parseNumArray = (str) => str.split(',').map(item => parseFloat(item.trim()) || 0);
+            const parseStrArray = (str) => str.split(',').map(item => item.trim());
+
+            appData.monthlyTrends.labels = parseStrArray(document.getElementById('mdLabels').value);
+            appData.monthlyTrends.stroke = parseNumArray(document.getElementById('mdStroke').value);
+            appData.monthlyTrends.stemi = parseNumArray(document.getElementById('mdStemi').value);
+            appData.monthlyTrends.totalStroke = parseNumArray(document.getElementById('mdTotalStroke').value);
+
+            appData.triage[0].count = parseInt(document.getElementById('mdTriage1').value) || 0;
+            appData.triage[1].count = parseInt(document.getElementById('mdTriage2').value) || 0;
+            appData.triage[2].count = parseInt(document.getElementById('mdTriage3').value) || 0;
+            appData.triage[3].count = parseInt(document.getElementById('mdTriage4').value) || 0;
+            appData.triage[4].count = parseInt(document.getElementById('mdTriage5').value) || 0;
+
+            localStorage.setItem('erDashboardData', JSON.stringify(appData));
+            updateUI();
+            closeManageDataModal();
+        }
+
+        function saveData(e) {
+            e.preventDefault();
+            const type = document.getElementById('editType').value;
+            const index = document.getElementById('editId').value;
+
+            if (type === 'kpi') {
+                appData.kpiSummary[index].value = document.getElementById('editValue').value;
+                appData.kpiSummary[index].trend = document.getElementById('editTrend').value;
+                appData.kpiSummary[index].isPositive = document.getElementById('editIsPositive').value === 'true';
+            } else if (type === 'mou') {
+                appData.mouTable[index].actual = document.getElementById('editActual').value;
+                appData.mouTable[index].status = document.getElementById('editStatus').value;
+            }
+            localStorage.setItem('erDashboardData', JSON.stringify(appData));
+            updateUI(); closeEditModal();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('absolute'); sidebar.classList.toggle('z-40'); sidebar.classList.toggle('h-full'); sidebar.classList.toggle('shadow-2xl');
+        }
+
+        // --- 4. Gemini API Integration (LLM Powered Features) ---
+        
+        // ⚠️ สำคัญมาก: หากนำไฟล์นี้ไปเปิดใช้งานเองที่เครื่องของคุณ 
+        // คุณจะต้องนำ API Key ของ Gemini มาใส่ในเครื่องหมาย "" ด้านล่างนี้ (รับฟรีที่ aistudio.google.com)
+        const apiKey = "AIzaSyCCsdGG4SkbHocHV54-eksrnEmrlqRxlkE"; 
+        
+        async function fetchGeminiData(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            
+            for (let attempt = 0; attempt < 6; attempt++) {
+                try {
+                    const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(`API Error ${response.status}: ${errData.error?.message || 'โปรดตรวจสอบ API Key'}`);
+                    }
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                } catch (error) {
+                    if (attempt === 5) throw error;
+                    await new Promise(r => setTimeout(r, delays[attempt]));
+                }
+            }
+        }
+
+        function parseMarkdown(text) {
+            let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            html = html.replace(/\n\n/g, '</p><p class="mb-3">');
+            html = html.replace(/\n/g, '<br>');
+            html = html.replace(/\- (.*?)(<br>|$)/g, '<li class="ml-4 list-disc">$1</li>');
+            return `<p class="mb-3">${html}</p>`;
+        }
+
+        // Feature 1: AI Executive Summary
+        function generateAIInsights() {
+            const modal = document.getElementById('aiInsightModal');
+            const loading = document.getElementById('aiInsightLoading');
+            const resultBox = document.getElementById('aiInsightResult');
+            
+            modal.classList.remove('hidden');
+            loading.classList.remove('hidden');
+            resultBox.classList.add('hidden');
+            resultBox.innerHTML = '';
+
+            const prompt = `คุณเป็นที่ปรึกษาด้านการบริหารจัดการโรงพยาบาล โปรดวิเคราะห์ข้อมูลภาพรวม KPI ของห้องฉุกเฉิน (ER) ประจำปี 2569 ข้อมูลมีดังนี้:
+            1. ตัวชี้วัดภาพรวม: ${JSON.stringify(appData.kpiSummary.map(k => `${k.title} = ${k.value} (${k.trend})`))}
+            2. ข้อมูลผลงาน MOU: ${JSON.stringify(appData.mouTable.map(m => `${m.kpi} เป้าหมาย ${m.target} ทำได้ ${m.actual} (สถานะ: ${m.status})`))}
+            
+            จงเขียน "สรุปสำหรับผู้บริหารระดับสูง (Executive Summary)" เป็นภาษาไทย โดยจัดรูปแบบ:
+            1. สรุปภาพรวมความสำเร็จที่โดดเด่น (สั้นๆ กระชับ)
+            2. จุดที่ควรเฝ้าระวัง หรือ ต้องปรับปรุง
+            3. ข้อเสนอแนะเชิงกลยุทธ์ 1-3 ข้อ เพื่อยกระดับบริการ ER
+            ขอความยาวประมาณ 10-15 บรรทัด มีความเป็นมืออาชีพ และอ่านง่าย`;
+
+            fetchGeminiData(prompt).then(text => {
+                loading.classList.add('hidden');
+                if (!text) throw new Error("ระบบ AI ไม่ได้ส่งข้อความกลับมา");
+                
+                resultBox.innerHTML = parseMarkdown(text);
+                resultBox.classList.remove('hidden');
+                
+                // นำผลลัพธ์มาใส่ในช่องข้อเสนอแนะเตรียมปริ้นท์ด้วย
+                const plainText = text.replace(/\*\*/g, '').replace(/\*/g, '');
+                document.getElementById('recommendationInput').value = plainText;
+                
+            }).catch(error => {
+                loading.classList.add('hidden');
+                
+                // ระบบจำลอง (Mock Data) กรณีไม่มี API Key หรือเชื่อมต่อไม่ได้ (เพื่อให้นำไปพรีเซนต์ได้)
+                const mockText = `**สรุปสำหรับผู้บริหารระดับสูง (ข้อมูลจำลอง)**\n\n1. **ความสำเร็จที่โดดเด่น:** ผลการดำเนินงานตัวชี้วัดสำคัญส่วนใหญ่บรรลุเป้าหมาย โดยเฉพาะระบบ Fast Track (Stroke & STEMI) ทำได้ 100% รวมถึงการจัดการข้อผิดพลาดทางยาและ Under Triage อยู่ในเกณฑ์ดีมาก\n2. **จุดที่ควรเฝ้าระวัง:** อัตราการ Re-visit ภายใน 48 ชั่วโมง ยังอยู่ที่ 0.61% แม้จะผ่านเกณฑ์ แต่เป็นจุดที่ต้องติดตามเพื่อป้องกันภาวะแทรกซ้อน\n3. **ข้อเสนอแนะเชิงกลยุทธ์:** \n- ควรจัดอบรมทบทวนทักษะการคัดกรอง (Triage) เป็นระยะ \n- นำเทคโนโลยีติดตามผู้ป่วยกลุ่มเสี่ยงหลังจำหน่าย (Follow-up) มาใช้`;
+                
+                resultBox.innerHTML = parseMarkdown(mockText) + `<div class="mt-4 p-3 bg-amber-50 text-amber-700 rounded-lg text-xs border border-amber-200"><i class="fas fa-info-circle mr-1"></i> <b>หมายเหตุ:</b> นี่คือข้อความจำลองสำหรับทดสอบระบบ เนื่องจากตรวจไม่พบการเชื่อมต่อ API Key ของ AI</div>`;
+                resultBox.classList.remove('hidden');
+                
+                const plainText = mockText.replace(/\*\*/g, '').replace(/\*/g, '');
+                document.getElementById('recommendationInput').value = plainText;
+            });
+        }
+
+        function closeAIInsightModal() {
+            document.getElementById('aiInsightModal').classList.add('hidden');
+        }
+
+        // Feature 2: Triage Assistant
+        function openTriageAIModal() {
+            document.getElementById('aiTriageModal').classList.remove('hidden');
+            document.getElementById('triageSymptoms').value = '';
+            document.getElementById('triageResultContainer').classList.add('hidden');
+            document.getElementById('triageLoading').classList.add('hidden');
+        }
+
+        function closeAITriageModal() {
+            document.getElementById('aiTriageModal').classList.add('hidden');
+        }
+
+        function analyzeTriage() {
+            const symptoms = document.getElementById('triageSymptoms').value.trim();
+            if(!symptoms) return alert("กรุณาระบุอาการของผู้ป่วยก่อนวิเคราะห์");
+
+            const loading = document.getElementById('triageLoading');
+            const resultContainer = document.getElementById('triageResultContainer');
+            
+            resultContainer.classList.add('hidden');
+            loading.classList.remove('hidden');
+            loading.classList.add('flex');
+
+            const prompt = `ประเมินระดับ Triage ผู้ป่วยฉุกเฉินจากอาการต่อไปนี้: "${symptoms}"
+            ระดับ Triage ของไทยแบ่งเป็น 5 ระดับ:
+            1. Res Resuscitation (วิกฤต/สีแดง) - ต้องช่วยชีวิตทันที
+            2. Emergency (ฉุกเฉินมาก/สีชมพู) - รอไม่ได้นาน อาจมีผลต่อชีวิต
+            3. Urgency (ฉุกเฉิน/สีเหลือง) - รอได้บ้าง แต่ควรตรวจเร็ว
+            4. Semi-Urgency (กึ่งฉุกเฉิน/สีเขียว) - เจ็บป่วยทั่วไป รอได้
+            5. Non-Urgency (ไม่ฉุกเฉิน/สีขาว) - มารับบริการอื่น หรืออาการเล็กน้อย
+            
+            ตอบกลับในรูปแบบ JSON ตาม Format นี้เท่านั้น ห้ามมีคำอธิบายอื่น:
+            {"level": "ชื่อระดับภาษาอังกฤษ", "colorCode": "รหัสสี (red, pink, yellow, green, white)", "reason": "เหตุผลสั้นๆ 1-2 ประโยคว่าทำไมถึงจัดในกลุ่มนี้"}`;
+
+            fetchGeminiData(prompt).then(text => {
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
+                
+                if (!text) throw new Error("ระบบ AI ไม่ได้ส่งข้อความกลับมา");
+                
+                try {
+                    const jsonMatch = text.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) throw new Error("ไม่สามารถอ่านผลลัพธ์จาก AI ได้");
+                    const result = JSON.parse(jsonMatch[0]);
+                    
+                    const box = document.getElementById('triageResultBox');
+                    const dot = document.getElementById('triageColorDot');
+                    const title = document.getElementById('triageLevelTitle');
+                    const reason = document.getElementById('triageReason');
+                    
+                    let bg, border, dotColor, levelName;
+                    
+                    switch(result.colorCode.toLowerCase()) {
+                        case 'red': bg = 'bg-red-50'; border = 'border-red-200'; dotColor = 'bg-red-500'; levelName = 'Resuscitation (วิกฤต/สีแดง)'; break;
+                        case 'pink': bg = 'bg-pink-50'; border = 'border-pink-200'; dotColor = 'bg-pink-500'; levelName = 'Emergency (ฉุกเฉินมาก/สีชมพู)'; break;
+                        case 'yellow': bg = 'bg-yellow-50'; border = 'border-yellow-200'; dotColor = 'bg-yellow-400'; levelName = 'Urgency (ฉุกเฉิน/สีเหลือง)'; break;
+                        case 'green': bg = 'bg-green-50'; border = 'border-green-200'; dotColor = 'bg-green-500'; levelName = 'Semi-Urgency (กึ่งฉุกเฉิน/สีเขียว)'; break;
+                        default: bg = 'bg-slate-100'; border = 'border-slate-300'; dotColor = 'bg-white border-2 border-slate-300'; levelName = 'Non-Urgency (ไม่ฉุกเฉิน/สีขาว)'; break;
+                    }
+
+                    box.className = `p-4 rounded-xl border ${bg} ${border}`;
+                    dot.className = `w-4 h-4 rounded-full ${dotColor}`;
+                    title.innerText = levelName;
+                    reason.innerText = result.reason;
+
+                    resultContainer.classList.remove('hidden');
+
+                } catch(e) {
+                    alert("เกิดข้อผิดพลาดในการประมวลผลข้อมูล: " + e.message);
+                }
+            }).catch(error => {
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
+                
+                // ระบบจำลอง (Mock Data) กรณีเปิดบนเครื่องตัวเองโดยไม่มี API Key
+                const box = document.getElementById('triageResultBox');
+                const dot = document.getElementById('triageColorDot');
+                const title = document.getElementById('triageLevelTitle');
+                const reason = document.getElementById('triageReason');
+                
+                box.className = `p-4 rounded-xl border bg-pink-50 border-pink-200`;
+                dot.className = `w-4 h-4 rounded-full bg-pink-500`;
+                title.innerText = 'Emergency (ฉุกเฉินมาก/สีชมพู) - ข้อมูลจำลอง';
+                reason.innerText = 'ระบบจำลอง: ประเมินเบื้องต้นจากอาการที่ระบุ ผู้ป่วยมีภาวะฉุกเฉิน ควรได้รับการประเมินซ้ำโดยพยาบาลคัดกรองโดยเร็วที่สุด (ข้อความจำลองทดแทนเนื่องจากไม่มีการเชื่อมต่อ API)';
+                
+                resultContainer.classList.remove('hidden');
+            });
+        }
+
+        window.onload = () => {
+            updateUI();
+            document.getElementById('password').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') processLogin();
+            });
+        };
+    </script>
+</body>
+</html>

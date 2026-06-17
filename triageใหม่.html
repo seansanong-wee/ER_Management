@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Thai Triage Pro Enterprise | Red 3D System</title>
+    
+    <!-- Fonts: Sarabun & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="vendor/tailwindcss.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                        mono: ['Inter', 'monospace'],
+                    },
+                    colors: {
+                        // Redefined 'medical' to be the new Primary Red Theme
+                        medical: {
+                            50: '#fff1f2',  // rose-50
+                            100: '#ffe4e6', // rose-100
+                            200: '#fecdd3', // rose-200
+                            500: '#f43f5e', // rose-500
+                            600: '#e11d48', // rose-600
+                            700: '#be123c', // rose-700
+                            800: '#9f1239', // rose-800
+                            900: '#881337', // rose-900
+                        },
+                        // Secondary accent for 3D effects
+                        warm: {
+                            500: '#f97316', // orange-500
+                        }
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'slide-in': 'slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        slideIn: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    },
+                    boxShadow: {
+                        '3d': '0 10px 20px -5px rgba(225, 29, 72, 0.3), 0 8px 10px -6px rgba(225, 29, 72, 0.1)',
+                        '3d-hover': '0 20px 25px -5px rgba(225, 29, 72, 0.4), 0 10px 10px -5px rgba(225, 29, 72, 0.2)',
+                        'inner-light': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- React & ReactDOM -->
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <script src="vendor/babel.min.js"></script>
+    <script src="vendor/lucide.min.js"></script>
+
+    <style>
+        body { 
+            background-color: #fdf2f8; /* Very light pink/warm background */
+            background-image: radial-gradient(at 0% 0%, hsla(350,100%,96%,1) 0, transparent 50%), radial-gradient(at 50% 100%, hsla(20,100%,96%,1) 0, transparent 50%);
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* 3D Glassmorphism */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9); /* Increased opacity for better readability */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-bottom: 3px solid rgba(226, 232, 240, 0.6); /* 3D bottom edge */
+            box-shadow: 0 10px 30px -10px rgba(190, 18, 60, 0.15);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 1);
+            border-color: #f43f5e;
+            box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.15), inset 0 1px 2px rgba(0,0,0,0.05);
+            transform: translateY(-1px);
+        }
+
+        /* 3D Button Style */
+        .btn-3d {
+            transition: all 0.1s;
+            box-shadow: 0 4px 0 0 rgba(136, 19, 55, 0.2); /* Dark red shadow */
+            transform: translateY(0);
+        }
+        .btn-3d:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 0 rgba(136, 19, 55, 0);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #fda4af; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #f43f5e; }
+
+        /* Print Styles */
+        @media print {
+            body * { visibility: hidden; }
+            #print-section, #print-section * { visibility: visible; }
+            #print-section { position: absolute; left: 0; top: 0; width: 100%; }
+            @page { size: auto; margin: 0mm; }
+        }
+
+        /* Triage Levels - kept standard colors for medical safety, but enhanced visuals */
+        .level-card-1 { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; box-shadow: 0 10px 20px rgba(220, 38, 38, 0.4); border: 2px solid #ef4444; }
+        .level-card-2 { background: linear-gradient(135deg, #db2777 0%, #be185d 100%); color: white; box-shadow: 0 10px 20px rgba(219, 39, 119, 0.4); border: 2px solid #ec4899; }
+        .level-card-3 { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: white; box-shadow: 0 10px 20px rgba(217, 119, 6, 0.4); border: 2px solid #f59e0b; }
+        .level-card-4 { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; box-shadow: 0 10px 20px rgba(5, 150, 105, 0.4); border: 2px solid #10b981; }
+        .level-card-5 { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); color: #475569; border: 2px solid #cbd5e1; }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Sarabun','Segoe UI',Tahoma,sans-serif;background:#fff1f2;color:#0f172a;">
+            <div style="max-width:520px;width:100%;background:#fff;border:1px solid #fecdd3;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(190,18,60,.14);">
+                <div style="font-size:13px;font-weight:800;color:#e11d48;letter-spacing:.08em;text-transform:uppercase;">Loading Thai Triage Pro</div>
+                <h1 style="margin:10px 0 8px;font-size:24px;line-height:1.25;">กำลังเปิดระบบคัดกรอง</h1>
+                <p style="margin:0;color:#64748b;line-height:1.7;">หากหน้านี้ไม่เปลี่ยนเป็นระบบหลัก แสดงว่า React/Babel หรือไฟล์จาก CDN ยังโหลดไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรช หรือเปิดไฟล์นี้ในแท็บใหม่</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Shim -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, where, deleteDoc, doc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        window.firebaseModules = {
+            initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut,
+            getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, where, deleteDoc, doc, updateDoc, getDocs
+        };
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
+
+    <!-- Application Code -->
+    <script type="text/plain" id="app-source">
+        /** @jsxRuntime classic */
+        // --- Components & Icons ---
+        const LucideIcon = ({ name, size = 20, className, ...props }) => {
+            const ref = React.useRef(null);
+            React.useEffect(() => {
+                if (window.lucide && window.lucide.icons[name]) {
+                    const elem = window.lucide.createElement(window.lucide.icons[name], { size, class: className, ...props });
+                    if (ref.current) { ref.current.innerHTML = ''; ref.current.appendChild(elem); }
+                }
+            }, [name, size, className, props]);
+            return <span ref={ref} className={`inline-flex items-center justify-center ${className || ''}`} style={{width: size, height: size}}></span>;
+        };
+
+        const Icon = (name, props) => <LucideIcon name={name} {...props} />;
+
+        // --- Logic & Constants ---
+        const AGE_GROUPS = {
+            NEONATE: { max: 0.08, hr_max: 180, rr_max: 60, sbp_min: 60 },
+            INFANT: { max: 1, hr_max: 160, rr_max: 50, sbp_min: 70 },
+            CHILD: { max: 8, hr_max: 140, rr_max: 40, sbp_min: 80 },
+            ADULT: { max: 120, hr_max: 100, rr_max: 24, sbp_min: 90 }
+        };
+
+        const TRIAGE_LEVELS = {
+            1: { id: 1, name: 'Resuscitation', label: 'วิกฤต (แดง)', color: 'text-red-600', bg: 'level-card-1', wait: 'ทันที', next: 'ห้องฉุกเฉินโซนแดง' },
+            2: { id: 2, name: 'Emergency', label: 'ฉุกเฉินมาก (ชมพู)', color: 'text-pink-600', bg: 'level-card-2', wait: '< 10 นาที', next: 'ห้องฉุกเฉินโซนชมพู' },
+            3: { id: 3, name: 'Urgent', label: 'ปานกลาง (เหลือง)', color: 'text-amber-500', bg: 'level-card-3', wait: '< 30 นาที', next: 'จุดรอตรวจ/โซนเหลือง' },
+            4: { id: 4, name: 'Semi-Urgent', label: 'เล็กน้อย (เขียว)', color: 'text-emerald-600', bg: 'level-card-4', wait: '< 60 นาที', next: 'OPD/คลินิกนอกเวลา' },
+            5: { id: 5, name: 'Non-Urgent', label: 'ทั่วไป (ขาว)', color: 'text-slate-600', bg: 'level-card-5', wait: 'ตามคิว', next: 'จุดคัดกรองทั่วไป' }
+        };
+
+        const LOCAL_TRIAGE_KEY = 'thai_triage_pro_patients_v1';
+        const LOCAL_USER = { uid: 'local-staff', displayName: 'Local Staff', isAnonymous: true };
+
+        const hasFirebaseConfig = (config) => Boolean(config?.apiKey && config?.projectId && config?.authDomain);
+        const makeLocalTimestamp = () => ({ seconds: Math.floor(Date.now() / 1000), local: true });
+        const timestampToDate = (timestamp) => {
+            if (!timestamp) return null;
+            if (timestamp.seconds) return new Date(timestamp.seconds * 1000);
+            const parsed = new Date(timestamp);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        };
+        const getNextQueueNo = (records) => {
+            const maxQueue = records.reduce((max, p) => Math.max(max, parseInt(p.queueNo, 10) || 0), 0);
+            return maxQueue + 1;
+        };
+        const readLocalPatients = () => {
+            try {
+                const raw = localStorage.getItem(LOCAL_TRIAGE_KEY);
+                const records = raw ? JSON.parse(raw) : [];
+                return Array.isArray(records) ? records : [];
+            } catch (error) {
+                console.warn('Cannot read local triage records:', error);
+                return [];
+            }
+        };
+        const writeLocalPatients = (records) => {
+            try {
+                localStorage.setItem(LOCAL_TRIAGE_KEY, JSON.stringify(records));
+            } catch (error) {
+                console.warn('Cannot save local triage records:', error);
+            }
+        };
+        const levelBadgeClass = (level) => ({
+            1: 'bg-red-600 text-white',
+            2: 'bg-pink-600 text-white',
+            3: 'bg-amber-500 text-white',
+            4: 'bg-emerald-600 text-white',
+            5: 'bg-slate-100 text-slate-700 border border-slate-300'
+        }[level] || 'bg-slate-500 text-white');
+        const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[char]));
+
+        const TriageApp = () => {
+            const [fbReady, setFbReady] = React.useState(false);
+
+            React.useEffect(() => {
+                const check = () => window.firebaseModules ? setFbReady(true) : null;
+                check();
+                window.addEventListener('firebase-ready', check);
+                const fallbackTimer = setTimeout(() => setFbReady(true), 2500);
+                return () => {
+                    clearTimeout(fallbackTimer);
+                    window.removeEventListener('firebase-ready', check);
+                };
+            }, []);
+
+            if (!fbReady) return <div className="h-screen w-full flex items-center justify-center bg-rose-50 text-rose-400 font-sans font-bold animate-pulse text-xl">Loading Red System...</div>;
+
+            let firebaseConfig;
+            try {
+                if (typeof __firebase_config !== 'undefined') {
+                    firebaseConfig = JSON.parse(__firebase_config);
+                } else {
+                    firebaseConfig = null;
+                }
+            } catch (e) { console.error("Config Parse Error", e); }
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            
+            return <MainSystem config={firebaseConfig} appId={appId} />;
+        };
+
+        const MainSystem = ({ config, appId }) => {
+            const firebase = window.firebaseModules || {};
+            const { initializeApp, getAuth, getFirestore, signInAnonymously, signInWithCustomToken, onAuthStateChanged, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, deleteDoc } = firebase;
+
+            const [user, setUser] = React.useState(null);
+            const [loading, setLoading] = React.useState(true);
+            const [tab, setTab] = React.useState('triage');
+            const [patients, setPatients] = React.useState([]);
+            const [queueNo, setQueueNo] = React.useState(1);
+            const [storageMode, setStorageMode] = React.useState('checking');
+            
+            // Refs for auth/db to avoid re-init
+            const authRef = React.useRef(null);
+            const dbRef = React.useRef(null);
+
+            // Google Apps Script URL
+            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzd6uwaWneqGyYyizfxTgceze9iwalJVL4IrgwtzxZu1hVkL6RdWE2AIiRuVVjYT7FB/exec";
+
+            const sendToGoogleSheet = (data, staffName) => {
+                try {
+                    fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...data,
+                            staffName
+                        })
+                    }).catch(err => console.error("Sheet Error (Network):", err));
+                } catch (e) {
+                    console.error("Sheet Error:", e);
+                }
+            };
+
+            const activateLocalMode = (reason = 'Local mode') => {
+                console.warn(reason);
+                const localRecords = readLocalPatients();
+                setStorageMode('local');
+                setUser(LOCAL_USER);
+                setPatients(localRecords);
+                setQueueNo(getNextQueueNo(localRecords));
+                setLoading(false);
+            };
+
+            React.useEffect(() => {
+                const init = async () => {
+                    if (!hasFirebaseConfig(config) || !initializeApp) {
+                        activateLocalMode('Firebase config not found. Using local storage mode.');
+                        return;
+                    }
+
+                    try {
+                        const app = initializeApp(config);
+                        authRef.current = getAuth(app);
+                        dbRef.current = getFirestore(app);
+
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(authRef.current, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(authRef.current);
+                        }
+                        
+                        onAuthStateChanged(authRef.current, (u) => {
+                            setUser(u);
+                            setStorageMode('cloud');
+                            setLoading(false);
+                        });
+                    } catch (e) {
+                        console.error("Init Error", e);
+                        activateLocalMode('Firebase init failed. Using local storage mode.');
+                    }
+                };
+                init();
+            }, [config]);
+
+            const COLLECTION_NAME = 'triage_patients_pro';
+            const getCollectionRef = (database) => collection(database, 'artifacts', appId, 'public', 'data', COLLECTION_NAME);
+
+            React.useEffect(() => {
+                if (storageMode !== 'cloud' || !dbRef.current || !user) return;
+                try {
+                    const colRef = getCollectionRef(dbRef.current);
+                    const q = query(colRef, orderBy('timestamp', 'desc'));
+                    const unsub = onSnapshot(q, (snap) => {
+                        const list = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                        setPatients(list);
+                        setQueueNo(getNextQueueNo(list)); 
+                    }, (err) => {
+                        console.error("Firestore Error:", err);
+                        activateLocalMode('Firestore query failed. Using local storage mode.');
+                    });
+                    return () => unsub();
+                } catch (e) { console.error("Query Error", e); }
+            }, [user, appId, storageMode]);
+
+            const savePatient = async (data) => {
+                const staffName = user?.displayName || 'Staff';
+                const timestamp = storageMode === 'cloud' && serverTimestamp ? serverTimestamp() : makeLocalTimestamp();
+
+                if (storageMode !== 'cloud' || !dbRef.current || !user) {
+                    const record = {
+                        ...data,
+                        id: `local_${Date.now()}`,
+                        timestamp,
+                        staffId: LOCAL_USER.uid,
+                        staffName
+                    };
+                    const nextRecords = [record, ...patients];
+                    writeLocalPatients(nextRecords);
+                    setPatients(nextRecords);
+                    setQueueNo(getNextQueueNo(nextRecords));
+                    sendToGoogleSheet(record, staffName);
+                    return true;
+                }
+
+                // 1. Save to Firebase (Realtime DB)
+                try {
+                    await addDoc(getCollectionRef(dbRef.current), {
+                        ...data,
+                        timestamp: timestamp,
+                        staffId: user.uid,
+                        staffName: staffName
+                    });
+                } catch (e) { alert("Firebase Error: " + e.message); return false; }
+
+                // 2. Save to Google Sheets (via Apps Script)
+                sendToGoogleSheet(data, staffName);
+
+                return true;
+            };
+
+            const deletePatient = async (id) => {
+                if(confirm("ลบข้อมูลนี้?")) {
+                    if (storageMode !== 'cloud' || !dbRef.current || !user) {
+                        const nextRecords = patients.filter(p => p.id !== id);
+                        writeLocalPatients(nextRecords);
+                        setPatients(nextRecords);
+                        setQueueNo(getNextQueueNo(nextRecords));
+                        return;
+                    }
+                    try {
+                        await deleteDoc(doc(dbRef.current, 'artifacts', appId, 'public', 'data', COLLECTION_NAME, id));
+                    } catch (e) { alert("Delete failed"); }
+                }
+            }
+
+            if (loading) return <div className="h-screen flex items-center justify-center flex-col gap-4 bg-rose-50"><Icon name="Loader2" className="animate-spin text-medical-600" size={48} /><p className="text-medical-800 font-bold font-sans text-sm animate-pulse">กำลังเชื่อมต่อระบบ Red System...</p></div>;
+
+            return (
+                <div className="min-h-screen pb-20 font-sans">
+                    <Header user={user} tab={tab} setTab={setTab} storageMode={storageMode} />
+                    {/* Adjusted padding for mobile/desktop balance */}
+                    <main className="max-w-7xl mx-auto p-4 md:p-6 pt-28 md:pt-32 animate-fade-in">
+                        {tab === 'triage' && <TriageForm onSave={savePatient} queueNo={queueNo} />}
+                        {tab === 'list' && <PatientList patients={patients} onDelete={deletePatient} />}
+                        {tab === 'dashboard' && <Dashboard patients={patients} />}
+                    </main>
+                </div>
+            );
+        };
+
+        const Header = ({ user, tab, setTab, storageMode }) => (
+            <header className="fixed top-0 left-0 right-0 z-50 glass-panel border-b-0 rounded-b-3xl shadow-3d mb-8 transition-all">
+                <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-4 group cursor-pointer">
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-red-400 rounded-2xl blur opacity-40 group-hover:opacity-60 transition duration-500"></div>
+                            <div className="relative bg-gradient-to-br from-medical-600 to-warm-500 text-white p-2.5 rounded-2xl shadow-lg border border-white/20">
+                                <Icon name="Activity" size={28} className="drop-shadow-md" />
+                            </div>
+                        </div>
+                        <div>
+                            <h1 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-medical-700 to-warm-500 leading-none text-xl tracking-tight drop-shadow-sm">Thai Triage Pro</h1>
+                            <div className="flex items-center gap-2 mt-1">
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">Red Edition 3D</p>
+                                <span className={`hidden sm:inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${storageMode === 'cloud' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                                    {storageMode === 'cloud' ? 'Cloud Sync' : 'Local Save'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <nav className="flex bg-slate-100/80 p-1.5 rounded-2xl gap-2 shadow-inner border border-white/50 overflow-x-auto">
+                        {[
+                            { id: 'triage', icon: 'Stethoscope', label: 'คัดกรอง' },
+                            { id: 'list', icon: 'List', label: 'ผู้ป่วย' },
+                            { id: 'dashboard', icon: 'BarChart3', label: 'สถิติ' }
+                        ].map(item => (
+                            <button 
+                                key={item.id}
+                                onClick={() => setTab(item.id)}
+                                className={`flex items-center gap-2 px-4 md:px-5 py-2.5 rounded-xl text-xs font-bold transition-all btn-3d whitespace-nowrap ${
+                                    tab === item.id 
+                                    ? 'bg-gradient-to-br from-medical-500 to-medical-600 text-white shadow-md border border-medical-400' 
+                                    : 'bg-white text-slate-500 hover:text-medical-600 hover:bg-rose-50 border border-transparent'
+                                }`}
+                            >
+                                <Icon name={item.icon} size={16} />
+                                <span className="hidden sm:inline uppercase tracking-wider">{item.label}</span>
+                            </button>
+                        ))}
+                    </nav>
+                </div>
+            </header>
+        );
+
+        const TriageForm = ({ onSave, queueNo }) => {
+            const [form, setForm] = React.useState({ hn: '', name: '', age: '', gender: 'male', cc: '' });
+            const [vitals, setVitals] = React.useState({ sbp: '', dbp: '', hr: '', rr: '', temp: '', o2: '', gcs: 15, pain: 0 });
+            const [risks, setRisks] = React.useState({});
+            const [resources, setResources] = React.useState({});
+            const [level, setLevel] = React.useState(null);
+            const [saving, setSaving] = React.useState(false);
+            const [isListening, setIsListening] = React.useState(false);
+
+            const ageVal = parseFloat(form.age) || 30;
+            const shockIndex = (parseFloat(vitals.hr) && parseFloat(vitals.sbp)) ? (parseFloat(vitals.hr) / parseFloat(vitals.sbp)).toFixed(2) : 0;
+
+            React.useEffect(() => { calculateLevel(); }, [vitals, risks, resources, form.age]);
+
+            const calculateLevel = () => {
+                if (risks.cardiac_arrest || risks.airway_obs || vitals.gcs < 9 || (vitals.o2 && vitals.o2 < 90)) { setLevel(1); return; }
+                
+                let isVitalUnstable = false;
+                const hr = parseFloat(vitals.hr);
+                const rr = parseFloat(vitals.rr);
+                const o2 = parseFloat(vitals.o2);
+
+                if (ageVal < 1) { if (hr > 160 || rr > 50) isVitalUnstable = true; } 
+                else if (ageVal < 8) { if (hr > 140 || rr > 40) isVitalUnstable = true; } 
+                else { if (hr > 120 || rr > 30) isVitalUnstable = true; }
+                
+                if (shockIndex > 0.9 || (o2 && o2 < 95) || risks.high_risk || risks.severe_pain || risks.confused || isVitalUnstable) { setLevel(2); return; }
+                
+                const resCount = Object.values(resources).filter(Boolean).length;
+                let dangerZone = false;
+                if (ageVal < 1 && hr > 150) dangerZone = true;
+                else if (ageVal >= 1 && ageVal < 8 && hr > 120) dangerZone = true;
+                else if (ageVal >= 8 && hr > 100) dangerZone = true;
+
+                if (dangerZone || resCount >= 2) { setLevel(3); return; }
+                if (resCount === 1) { setLevel(4); return; }
+                setLevel(5);
+            };
+
+            // --- Voice Recognition Logic ---
+            const toggleListening = () => {
+                if (!('webkitSpeechRecognition' in window)) {
+                    alert("เบราว์เซอร์นี้ไม่รองรับการพิมพ์ด้วยเสียง (แนะนำ Chrome)");
+                    return;
+                }
+                
+                if (isListening) return; // Prevent double start
+
+                const recognition = new window.webkitSpeechRecognition();
+                recognition.lang = 'th-TH'; // ภาษาไทย
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onstart = () => setIsListening(true);
+                recognition.onend = () => setIsListening(false);
+                
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    setForm(prev => ({
+                        ...prev,
+                        cc: prev.cc ? prev.cc + ' ' + transcript : transcript
+                    }));
+                };
+
+                recognition.onerror = (event) => {
+                    console.error("Speech Error", event.error);
+                    setIsListening(false);
+                };
+
+                recognition.start();
+            };
+
+            const handleSubmit = async () => {
+                if (!form.name) return alert("ระบุชื่อผู้ป่วย");
+                setSaving(true);
+                const success = await onSave({ patient: form, vitals: { ...vitals, shockIndex }, risks, resources, level, queueNo });
+                setSaving(false);
+                if (success) {
+                    setForm({ hn: '', name: '', age: '', gender: 'male', cc: '' });
+                    setVitals({ sbp: '', dbp: '', hr: '', rr: '', temp: '', o2: '', gcs: 15, pain: 0 });
+                    setRisks({}); setResources({}); window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            };
+
+            return (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                    <div className="lg:col-span-7 space-y-6">
+                        <section className="glass-panel rounded-3xl p-6 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-200 rounded-full blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 group-hover:opacity-40 transition duration-700"></div>
+                            <div className="flex items-center justify-between mb-6 relative z-10">
+                                <h2 className="text-lg font-black text-medical-800 flex items-center gap-2 uppercase tracking-wide">
+                                    <div className="p-2 bg-rose-100 rounded-lg text-medical-600 shadow-sm"><Icon name="UserSquare" size={20} /></div>
+                                    ข้อมูลผู้ป่วย (Patient)
+                                </h2>
+                                <span className="bg-gradient-to-r from-medical-600 to-medical-500 text-white px-4 py-1.5 rounded-xl text-sm font-black font-mono shadow-md border border-white/20">
+                                    Q-{queueNo.toString().padStart(3, '0')}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-5 relative z-10">
+                                <div className="col-span-2 md:col-span-1">
+                                    <label className="block text-[10px] font-black text-medical-400 mb-1.5 uppercase tracking-widest">HN Number</label>
+                                    <input type="text" className="w-full glass-input rounded-xl p-3.5 outline-none font-mono font-bold text-slate-700 text-lg placeholder-slate-300" placeholder="ระบุ HN" value={form.hn} onChange={e => setForm({...form, hn: e.target.value})} />
+                                </div>
+                                <div className="col-span-2 md:col-span-1">
+                                    <label className="block text-[10px] font-black text-medical-400 mb-1.5 uppercase tracking-widest">ชื่อ-นามสกุล</label>
+                                    <input type="text" className="w-full glass-input rounded-xl p-3.5 outline-none font-bold text-slate-700 text-lg placeholder-slate-300" placeholder="ระบุชื่อ" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-medical-400 mb-1.5 uppercase tracking-widest">อายุ (ปี)</label>
+                                    <input type="number" className="w-full glass-input rounded-xl p-3.5 outline-none font-bold text-slate-700 text-lg placeholder-slate-300" placeholder="30" value={form.age} onChange={e => setForm({...form, age: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-medical-400 mb-1.5 uppercase tracking-widest">เพศ</label>
+                                    <select className="w-full glass-input rounded-xl p-3.5 outline-none font-bold text-slate-700 text-lg bg-white/50" value={form.gender} onChange={e => setForm({...form, gender: e.target.value})}>
+                                        <option value="male">ชาย</option>
+                                        <option value="female">หญิง</option>
+                                    </select>
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-[10px] font-black text-medical-400 mb-1.5 uppercase tracking-widest">อาการสำคัญ (Chief Complaint)</label>
+                                    <div className="relative">
+                                        <input type="text" className="w-full glass-input rounded-xl p-3.5 outline-none font-bold text-slate-700 text-lg pr-12 placeholder-slate-300" placeholder="ระบุอาการ..." value={form.cc} onChange={e => setForm({...form, cc: e.target.value})} />
+                                        <div 
+                                            onClick={toggleListening}
+                                            className={`absolute right-3 top-3 p-1.5 rounded-lg cursor-pointer transition-all shadow-sm ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-rose-100 text-medical-500 hover:bg-medical-500 hover:text-white'}`}
+                                            title="กดเพื่อพูด (Voice Typing)"
+                                        >
+                                            <Icon name={isListening ? "MicOff" : "Mic"} size={18} />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 mt-3 overflow-x-auto pb-2 scrollbar-hide">
+                                        {['ไข้สูง', 'ปวดท้อง', 'อุบัติเหตุ', 'หายใจเหนื่อย', 'เจ็บแน่นหน้าอก'].map(t => (
+                                            <button key={t} onClick={() => setForm({...form, cc: t})} className="px-4 py-1.5 bg-white border border-rose-100 rounded-xl text-xs font-bold text-medical-700 whitespace-nowrap hover:bg-medical-50 hover:border-medical-200 hover:shadow-sm transition-all">{t}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="glass-panel rounded-3xl p-6">
+                             <h2 className="text-lg font-black text-medical-800 flex items-center gap-2 mb-6 uppercase tracking-wide">
+                                <div className="p-2 bg-rose-100 rounded-lg text-medical-600 shadow-sm"><Icon name="Activity" size={20} /></div>
+                                สัญญาณชีพ (Vital Signs)
+                            </h2>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="col-span-2 md:col-span-2 p-4 bg-white/60 rounded-2xl border border-rose-100 shadow-sm">
+                                    <label className="block text-[10px] font-black text-slate-400 mb-2 text-center uppercase tracking-widest">Blood Pressure</label>
+                                    <div className="flex items-center gap-2">
+                                        <input type="number" placeholder="120" className="w-full text-center text-2xl font-black bg-white rounded-xl border-2 border-slate-100 py-2 outline-none focus:border-medical-400 focus:shadow-lg transition-all text-slate-700 placeholder-slate-200" value={vitals.sbp} onChange={e => setVitals({...vitals, sbp: e.target.value})} />
+                                        <span className="text-slate-300 font-light text-xl">/</span>
+                                        <input type="number" placeholder="80" className="w-full text-center text-2xl font-black bg-white rounded-xl border-2 border-slate-100 py-2 outline-none focus:border-medical-400 focus:shadow-lg transition-all text-slate-700 placeholder-slate-200" value={vitals.dbp} onChange={e => setVitals({...vitals, dbp: e.target.value})} />
+                                    </div>
+                                    {shockIndex > 0.9 && <div className="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-lg font-black text-center mt-2 animate-pulse border border-red-200">⚠️ SHOCK RISK (SI: {shockIndex})</div>}
+                                </div>
+                                <div className="p-4 bg-white/60 rounded-2xl border border-rose-100 shadow-sm">
+                                    <label className="block text-[10px] font-black text-slate-400 mb-2 text-center uppercase tracking-widest">Pulse</label>
+                                    <input type="number" className={`w-full text-center text-2xl font-black bg-white rounded-xl border-2 py-2 outline-none transition-all ${parseFloat(vitals.hr) > 100 ? 'border-red-300 text-red-500 shadow-red-100' : 'border-slate-100 text-slate-700 focus:border-medical-400 focus:shadow-lg'}`} value={vitals.hr} onChange={e => setVitals({...vitals, hr: e.target.value})} />
+                                </div>
+                                <div className="p-4 bg-white/60 rounded-2xl border border-rose-100 shadow-sm">
+                                    <label className="block text-[10px] font-black text-slate-400 mb-2 text-center uppercase tracking-widest">RR</label>
+                                    <input type="number" className={`w-full text-center text-2xl font-black bg-white rounded-xl border-2 py-2 outline-none transition-all ${parseFloat(vitals.rr) > 24 ? 'border-red-300 text-red-500 shadow-red-100' : 'border-slate-100 text-slate-700 focus:border-medical-400 focus:shadow-lg'}`} value={vitals.rr} onChange={e => setVitals({...vitals, rr: e.target.value})} />
+                                </div>
+                                <div className="p-4 bg-white/60 rounded-2xl border border-rose-100 shadow-sm">
+                                    <label className="block text-[10px] font-black text-medical-400 mb-2 text-center uppercase tracking-widest">O2 Sat</label>
+                                    <input type="number" className={`w-full text-center text-2xl font-black bg-white rounded-xl border-2 py-2 outline-none transition-all ${parseFloat(vitals.o2) < 95 ? 'border-red-300 text-red-500 shadow-red-100' : 'border-medical-100 text-medical-600 focus:border-medical-400 focus:shadow-lg'}`} value={vitals.o2} onChange={e => setVitals({...vitals, o2: e.target.value})} />
+                                </div>
+                                <div className="p-4 bg-white/60 rounded-2xl border border-rose-100 shadow-sm">
+                                    <label className="block text-[10px] font-black text-slate-400 mb-2 text-center uppercase tracking-widest">Temp</label>
+                                    <input type="number" className={`w-full text-center text-2xl font-black bg-white rounded-xl border-2 py-2 outline-none transition-all ${parseFloat(vitals.temp) > 37.5 ? 'border-orange-300 text-orange-500' : 'border-slate-100 text-slate-700 focus:border-medical-400 focus:shadow-lg'}`} value={vitals.temp} onChange={e => setVitals({...vitals, temp: e.target.value})} />
+                                </div>
+                                <div className="col-span-2 p-4 bg-white/60 rounded-2xl border border-rose-100 shadow-sm flex flex-col justify-between">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pain Score</label>
+                                        <span className={`text-xl font-black ${vitals.pain >= 7 ? 'text-red-500' : 'text-slate-700'}`}>{vitals.pain}</span>
+                                    </div>
+                                    <input type="range" min="0" max="10" className="w-full accent-medical-500 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" value={vitals.pain} onChange={e => setVitals({...vitals, pain: parseInt(e.target.value)})} />
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <section className="glass-panel rounded-3xl p-6">
+                                <h2 className="text-xs font-black text-medical-800 uppercase tracking-[0.2em] mb-4 bg-rose-100/50 inline-block px-3 py-1 rounded-lg">ปัจจัยเสี่ยง (Risk Factors)</h2>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {[
+                                        {id: 'cardiac_arrest', label: 'หัวใจหยุดเต้น / หยุดหายใจ'},
+                                        {id: 'airway_obs', label: 'ทางเดินหายใจอุดกั้น'},
+                                        {id: 'high_risk', label: 'เสี่ยงสูง (Chest Pain/Stroke)'},
+                                        {id: 'confused', label: 'ซึม / สับสนเฉียบพลัน'},
+                                        {id: 'severe_pain', label: 'ปวดรุนแรง (Pain >= 7)'}
+                                    ].map(r => (
+                                        <button 
+                                            key={r.id}
+                                            onClick={() => setRisks(p => ({...p, [r.id]: !p[r.id]}))}
+                                            className={`p-4 rounded-2xl text-left text-sm font-bold transition-all btn-3d border ${risks[r.id] ? 'bg-gradient-to-r from-red-500 to-rose-600 text-white border-red-600' : 'bg-white border-slate-100 text-slate-500 hover:border-rose-200 hover:text-medical-600'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${risks[r.id] ? 'border-white bg-white/20' : 'border-slate-300'}`}>
+                                                    {risks[r.id] && <Icon name="Check" size={12} />}
+                                                </div>
+                                                {r.label}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+                            <section className="glass-panel rounded-3xl p-6">
+                                <h2 className="text-xs font-black text-medical-800 uppercase tracking-[0.2em] mb-4 bg-rose-100/50 inline-block px-3 py-1 rounded-lg">ทรัพยากร (Resources)</h2>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[
+                                        {id: 'lab', label: 'Lab', icon: 'TestTube'},
+                                        {id: 'xray', label: 'X-Ray/CT', icon: 'ScanLine'},
+                                        {id: 'iv', label: 'IV Fluids', icon: 'Droplet'},
+                                        {id: 'meds', label: 'IV/IM Meds', icon: 'Syringe'}
+                                    ].map(r => (
+                                        <button 
+                                            key={r.id}
+                                            onClick={() => setResources(p => ({...p, [r.id]: !p[r.id]}))}
+                                            className={`flex flex-col items-center justify-center p-4 rounded-2xl transition-all h-28 btn-3d border ${resources[r.id] ? 'bg-gradient-to-br from-medical-500 to-medical-600 text-white border-medical-600' : 'bg-white border-slate-100 text-slate-400 hover:border-rose-200 hover:text-medical-500'}`}
+                                        >
+                                            <div className={`p-2.5 rounded-full mb-2 ${resources[r.id] ? 'bg-white/20' : 'bg-slate-50'}`}>
+                                                <Icon name={r.icon} size={24} />
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase tracking-wider">{r.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+
+                    {/* Adjusted Sticky Behavior for responsive view */}
+                    <div className="lg:col-span-5 relative">
+                        <div className="lg:sticky lg:top-32 space-y-6">
+                            <div className={`rounded-[2.5rem] shadow-3d overflow-hidden transition-all duration-700 transform border-4 border-white ${level ? 'scale-100 opacity-100' : 'scale-95 opacity-80 grayscale'}`}>
+                                <div className={`p-10 text-center relative overflow-hidden ${level ? TRIAGE_LEVELS[level].bg : 'bg-slate-200'}`}>
+                                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 animate-pulse"></div>
+                                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+                                    
+                                    <h3 className="text-xs font-black uppercase tracking-[0.4em] opacity-60 mb-3 text-white mix-blend-overlay">Triage Level</h3>
+                                    <div className="text-6xl font-black mb-6 tracking-tighter drop-shadow-2xl text-white transform scale-110">
+                                        {level ? TRIAGE_LEVELS[level].name : '...'}
+                                    </div>
+                                    <div className="inline-block bg-white/20 backdrop-blur-md px-8 py-3 rounded-2xl border border-white/40 font-black text-xl shadow-lg text-white">
+                                        {level ? TRIAGE_LEVELS[level].label : 'รอข้อมูล'}
+                                    </div>
+                                    {level === 1 && <div className="mt-8 flex items-center justify-center gap-2 text-white animate-pulse-fast font-black bg-red-950/40 p-3 rounded-xl border border-red-500/50"><Icon name="Siren" /> EMERGENCY ALERT</div>}
+                                </div>
+                                <div className="bg-white/90 backdrop-blur-xl p-8 space-y-6">
+                                    <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-4">
+                                        <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">เวลารอคอย</span>
+                                        <span className={`font-black text-2xl ${level ? TRIAGE_LEVELS[level].color : 'text-slate-300'}`}>{level ? TRIAGE_LEVELS[level].wait : '-'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-4">
+                                        <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">จุดบริการ</span>
+                                        <span className="font-bold text-slate-700 text-right text-sm">{level ? TRIAGE_LEVELS[level].next : '-'}</span>
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={handleSubmit} 
+                                        disabled={saving || !level}
+                                        className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-xl transition-all transform btn-3d flex items-center justify-center gap-3 ${saving ? 'bg-slate-300 cursor-not-allowed' : 'bg-gradient-to-r from-slate-800 to-slate-900 text-white hover:bg-slate-800'}`}
+                                    >
+                                        {saving ? <Icon name="Loader2" className="animate-spin" /> : <><Icon name="Save" /> บันทึกข้อมูล (Save)</>}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-medical-500">
+                                <h4 className="font-bold text-medical-700 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide"><Icon name="Info" size={18}/> เกณฑ์เด็ก (Pediatric)</h4>
+                                <ul className="text-xs text-slate-500 space-y-2 list-none">
+                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-medical-400"></div> Age &lt; 1 ปี: HR &gt; 160 ผิดปกติ</li>
+                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-medical-400"></div> Age 1-8 ปี: HR &gt; 140 ผิดปกติ</li>
+                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-medical-400"></div> คำนวณ Shock Index อัตโนมัติ</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const PatientList = ({ patients, onDelete }) => {
+            const handlePrint = (p) => {
+                const printWindow = window.open('', '_blank');
+                if (!printWindow) return;
+                const createdAt = timestampToDate(p.timestamp);
+                const html = `
+                    <html>
+                    <head>
+                        <title>Triage Slip - ${escapeHtml(p.patient.name)}</title>
+                        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+                        <style>
+                            body { font-family: 'Sarabun', sans-serif; padding: 20px; color: #333; }
+                            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+                            .title { font-size: 20px; font-weight: bold; }
+                            .queue { font-size: 40px; font-weight: bold; margin: 10px 0; }
+                            .info { margin-bottom: 5px; font-size: 14px; }
+                            .level { font-size: 24px; font-weight: bold; border: 2px solid #000; padding: 10px; text-align: center; margin: 15px 0; }
+                            .vitals { border-top: 1px dashed #999; margin-top: 15px; padding-top: 10px; font-size: 14px; }
+                        </style>
+                    </head>
+                    <body onload="window.print(); window.close();">
+                        <div class="header">
+                            <div class="title">Thai Triage Pro</div>
+                            <div class="queue">Q-${p.queueNo}</div>
+                            <div>${createdAt ? createdAt.toLocaleString('th-TH') : '-'}</div>
+                        </div>
+                        <div class="info"><strong>HN:</strong> ${escapeHtml(p.patient.hn)}</div>
+                        <div class="info"><strong>Name:</strong> ${escapeHtml(p.patient.name)}</div>
+                        <div class="info"><strong>Age:</strong> ${escapeHtml(p.patient.age)} | <strong>Gender:</strong> ${escapeHtml(p.patient.gender)}</div>
+                        <div class="info"><strong>CC:</strong> ${escapeHtml(p.patient.cc)}</div>
+                        
+                        <div class="level">LEVEL ${p.level}: ${escapeHtml(TRIAGE_LEVELS[p.level]?.label)}</div>
+                        
+                        <div class="vitals">
+                            <strong>Vital Signs:</strong><br>
+                            BP: ${escapeHtml(p.vitals.sbp)}/${escapeHtml(p.vitals.dbp)} mmHg<br>
+                            PR: ${escapeHtml(p.vitals.hr)} /min<br>
+                            RR: ${escapeHtml(p.vitals.rr)} /min<br>
+                            Temp: ${escapeHtml(p.vitals.temp)} C<br>
+                            O2 Sat: ${escapeHtml(p.vitals.o2)} %<br>
+                            Pain: ${escapeHtml(p.vitals.pain)}
+                        </div>
+                    <\/body>
+                    <\/html>
+                `;
+                printWindow.document.write(html);
+                printWindow.document.close();
+            };
+
+            return (
+                <div className="space-y-8 animate-slide-in">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                            <span className="p-2 bg-rose-100 text-medical-600 rounded-xl"><Icon name="List" /></span> 
+                            รายชื่อผู้ป่วย
+                        </h2>
+                        <span className="bg-white text-medical-600 px-4 py-2 rounded-xl text-xs font-black shadow-sm border border-rose-100">{patients.length} เคส</span>
+                    </div>
+                    
+                    <div className="glass-panel rounded-[2rem] overflow-hidden shadow-2xl border-0">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-rose-50/50 border-b border-rose-100">
+                                    <tr>
+                                        <th className="p-5 font-black text-medical-900/40 text-[10px] uppercase tracking-[0.2em]">Queue</th>
+                                        <th className="p-5 font-black text-medical-900/40 text-[10px] uppercase tracking-[0.2em]">Time</th>
+                                        <th className="p-5 font-black text-medical-900/40 text-[10px] uppercase tracking-[0.2em]">Patient</th>
+                                        <th className="p-5 font-black text-medical-900/40 text-[10px] uppercase tracking-[0.2em] text-center">Vitals</th>
+                                        <th className="p-5 font-black text-medical-900/40 text-[10px] uppercase tracking-[0.2em] text-center">Level</th>
+                                        <th className="p-5 font-black text-medical-900/40 text-[10px] uppercase tracking-[0.2em] text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-rose-50">
+                                    {patients.map(p => (
+                                        <tr key={p.id} className="hover:bg-white transition-all group">
+                                            <td className="p-5 font-mono font-black text-medical-600 text-lg">#{p.queueNo}</td>
+                                            <td className="p-5 text-xs font-bold text-slate-400">
+                                                {timestampToDate(p.timestamp)?.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}) || '-'}
+                                            </td>
+                                            <td className="p-5">
+                                                <div className="font-bold text-slate-700 text-base">{p.patient.name}</div>
+                                                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">{p.patient.age} ปี | {p.patient.cc}</div>
+                                            </td>
+                                            <td className="p-5 text-center">
+                                                <div className="text-xs font-mono font-black text-slate-600 bg-slate-100 inline-block px-3 py-1.5 rounded-lg border border-slate-200">
+                                                    {p.vitals.sbp}/{p.vitals.dbp}
+                                                </div>
+                                            </td>
+                                            <td className="p-5 text-center">
+                                                <span className={`inline-block px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-md transform group-hover:scale-105 transition-transform ${levelBadgeClass(p.level)}`}>
+                                                    Level {p.level}
+                                                </span>
+                                            </td>
+                                            <td className="p-5 text-right">
+                                                <div className="flex justify-end gap-3">
+                                                    <button 
+                                                        onClick={() => handlePrint(p)} 
+                                                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-500 hover:text-white hover:shadow-lg active:scale-95 shadow-sm group/btn" 
+                                                        title="พิมพ์ใบปะหน้า"
+                                                    >
+                                                        <Icon name="Printer" size={16} className="group-hover/btn:animate-bounce"/>
+                                                        <span className="">พิมพ์ Slip</span>
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => onDelete(p.id)} 
+                                                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all border border-red-200 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white hover:shadow-lg active:scale-95 shadow-sm group/btn" 
+                                                        title="ลบข้อมูล"
+                                                    >
+                                                        <Icon name="Trash2" size={16} className="group-hover/btn:rotate-12 transition-transform"/>
+                                                        <span className="">ลบ</span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {patients.length === 0 && (
+                                        <tr><td colSpan="6" className="p-16 text-center text-slate-300 font-bold uppercase tracking-widest text-sm">ไม่พบข้อมูลผู้ป่วย</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Dashboard = ({ patients }) => {
+            // ฟังก์ชันคำนวณเวลารอเฉลี่ยจริง (Real-time Calculation)
+            const calculateAvgWait = () => {
+                if (patients.length === 0) return 0;
+                const now = new Date();
+                let counted = 0;
+                const totalWait = patients.reduce((acc, p) => {
+                    // ตรวจสอบว่ามี timestamp หรือไม่
+                    const triageDate = timestampToDate(p.timestamp);
+                    if (!triageDate) return acc;
+                    
+                    counted += 1;
+                    const diffMinutes = (now - triageDate) / 1000 / 60; // แปลงเป็นนาที
+                    return acc + diffMinutes;
+                }, 0);
+                
+                // หาค่าเฉลี่ย และปัดเศษทศนิยม
+                return counted ? Math.round(totalWait / counted) : 0;
+            };
+
+            const stats = {
+                total: patients.length,
+                critical: patients.filter(p => p.level === 1).length,
+                emergency: patients.filter(p => p.level === 2).length,
+                avgTime: calculateAvgWait() // เรียกใช้ฟังก์ชันคำนวณจริง
+            };
+
+            return (
+                <div className="space-y-8 animate-slide-in">
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                        <span className="p-2 bg-rose-100 text-medical-600 rounded-xl"><Icon name="BarChart3" /></span> 
+                        ภาพรวมสถิติ (Dashboard)
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="glass-panel p-6 rounded-[2rem] flex flex-col justify-between bg-white/70 h-40 group hover:-translate-y-1 transition-transform">
+                            <div className="flex justify-between items-start">
+                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Total</p>
+                                <div className="p-2 bg-slate-100 rounded-lg text-slate-400 group-hover:text-medical-500 transition-colors"><Icon name="Users" size={16} /></div>
+                            </div>
+                            <h3 className="text-5xl font-black text-slate-700">{stats.total}</h3>
+                        </div>
+                        <div className="glass-panel p-6 rounded-[2rem] flex flex-col justify-between bg-red-50/70 border-red-100 h-40 group hover:-translate-y-1 transition-transform relative overflow-hidden">
+                            <div className="absolute right-0 top-0 w-24 h-24 bg-red-500/10 rounded-full blur-2xl"></div>
+                            <div className="flex justify-between items-start relative">
+                                <p className="text-red-400 text-[10px] font-black uppercase tracking-[0.2em]">Critical</p>
+                                <div className="p-2 bg-red-100 rounded-lg text-red-500 animate-pulse"><Icon name="Activity" size={16} /></div>
+                            </div>
+                            <h3 className="text-5xl font-black text-red-600 relative">{stats.critical}</h3>
+                        </div>
+                        <div className="glass-panel p-6 rounded-[2rem] flex flex-col justify-between bg-pink-50/70 border-pink-100 h-40 group hover:-translate-y-1 transition-transform">
+                            <div className="flex justify-between items-start">
+                                <p className="text-pink-400 text-[10px] font-black uppercase tracking-[0.2em]">Emergency</p>
+                                <div className="p-2 bg-pink-100 rounded-lg text-pink-500"><Icon name="AlertTriangle" size={16} /></div>
+                            </div>
+                            <h3 className="text-5xl font-black text-pink-600">{stats.emergency}</h3>
+                        </div>
+                        <div className="glass-panel p-6 rounded-[2rem] flex flex-col justify-between bg-blue-50/70 border-blue-100 h-40 group hover:-translate-y-1 transition-transform">
+                            <div className="flex justify-between items-start">
+                                <p className="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em]">Avg Wait</p>
+                                <div className="p-2 bg-blue-100 rounded-lg text-blue-500"><Icon name="Clock" size={16} /></div>
+                            </div>
+                            <h3 className="text-5xl font-black text-blue-600">{stats.avgTime}<span className="text-lg text-blue-300 ml-1">m</span></h3>
+                        </div>
+                    </div>
+                    
+                    <div className="glass-panel p-10 rounded-[2.5rem]">
+                        <h3 className="font-black text-slate-700 mb-8 uppercase tracking-widest text-sm">Triage Distribution Analysis</h3>
+                        <div className="space-y-6">
+                             {[1, 2, 3, 4, 5].map(lvl => {
+                                const count = patients.filter(p => p.level === lvl).length;
+                                const pct = stats.total ? (count / stats.total) * 100 : 0;
+                                return (
+                                    <div key={lvl} className="flex items-center gap-6 group">
+                                        <div className="w-32 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">{TRIAGE_LEVELS[lvl].name}</div>
+                                        <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                            <div className={`h-full transition-all duration-1000 ease-out relative ${lvl === 1 ? 'bg-red-500' : lvl === 2 ? 'bg-pink-500' : lvl === 3 ? 'bg-amber-500' : lvl === 4 ? 'bg-emerald-500' : 'bg-slate-400'}`} style={{width: `${pct}%`}}>
+                                                <div className="absolute top-0 left-0 w-full h-full bg-white/20 animate-pulse"></div>
+                                            </div>
+                                        </div>
+                                        <div className="w-12 text-left text-sm font-black text-slate-700">{count}</div>
+                                    </div>
+                                )
+                             })}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Footer = () => (
+            <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-t border-rose-100 shadow-[0_-10px_40px_-15px_rgba(244,63,94,0.2)]">
+                <div className="max-w-7xl mx-auto px-4 py-2 md:py-3 flex flex-col md:flex-row justify-between items-center gap-2">
+                    <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-gradient-to-br from-medical-600 to-medical-800 rounded-lg shadow-lg shadow-medical-500/30 group cursor-pointer hover:scale-110 transition-transform">
+                             <Icon name="ShieldCheck" size={16} className="text-white" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-medical-400/80 uppercase tracking-[0.25em] leading-tight">Developed By</span>
+                            <span className="text-[11px] md:text-xs font-bold text-slate-700">
+                                นายทวี แสนสนอง <span className="text-medical-300 mx-1">|</span> <span className="text-slate-500">หัวหน้างานการพยาบาลอุบัติเหตุฉุกเฉินและนิติเวช รพ.เสลภูมิ</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                         <div className="hidden md:block h-8 w-px bg-gradient-to-b from-transparent via-slate-200 to-transparent"></div>
+                         <div className="px-3 py-1 rounded-full bg-gradient-to-r from-slate-800 to-slate-950 text-white text-[10px] font-mono font-bold shadow-lg shadow-slate-900/20 border border-slate-700/50 flex items-center gap-2 transform hover:-translate-y-0.5 transition-transform cursor-default">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            v2.5.0 Enterprise
+                         </div>
+                    </div>
+                </div>
+            </footer>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(
+            <React.StrictMode>
+                <TriageApp />
+                <Footer />
+            </React.StrictMode>
+        );
+    </script>
+    <script>
+        (function runAppSource() {
+            const source = document.getElementById('app-source');
+            const root = document.getElementById('root');
+            const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+            const showError = (error) => {
+                console.error(error);
+                root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Segoe UI,Tahoma,sans-serif;background:#f8fafc;color:#0f172a;"><div style="max-width:620px;background:#fff;border:1px solid #fecdd3;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(15,23,42,.12);"><div style="font-size:13px;font-weight:800;color:#e11d48;text-transform:uppercase;letter-spacing:.08em;">Script Error</div><h1 style="margin:10px 0 8px;font-size:22px;">เปิดระบบไม่สำเร็จ</h1><p style="margin:0;color:#64748b;line-height:1.7;">' + escapeHtml(error && error.message ? error.message : error) + '</p></div></div>';
+            };
+            try {
+                if (!window.React || !window.ReactDOM || !window.Babel) throw new Error('โหลด React / ReactDOM / Babel ไม่สำเร็จ');
+                (0, eval)(Babel.transform(source.textContent, { presets: ['env'], plugins: [['transform-react-jsx', { runtime: 'classic' }]] }).code);
+            } catch (error) {
+                showError(error);
+            }
+        })();
+    </script>
+
+    <!-- Hidden Print Section (Populated by JS when printing) -->
+    <div id="print-section"></div>
+</body>
+</html>

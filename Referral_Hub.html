@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกการส่งต่อ (Refer) รพ.เสลภูมิ</title>
+    <script src="vendor/tailwindcss.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script src="vendor/lucide.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Prompt', 'sans-serif'] },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'scale-in': 'scaleIn 0.3s ease-out',
+                        'bounce': 'bounce 1s infinite',
+                        'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        scaleIn: { '0%': { opacity: '0', transform: 'scale(0.95)' }, '100%': { opacity: '1', transform: 'scale(1)' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        select { -webkit-appearance: none; appearance: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50/50 font-sans text-slate-800 pb-12 overflow-x-hidden">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex items-center justify-center transition-all duration-300 hidden">
+        <div class="bg-white p-8 rounded-[2rem] shadow-2xl flex flex-col items-center border-t-4 border-red-600 animate-bounce">
+            <i data-lucide="loader-2" class="animate-spin text-red-600 mb-4 w-12 h-12"></i>
+            <p class="font-black text-slate-800 tracking-widest text-sm uppercase">Syncing Database...</p>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[200] flex flex-col gap-2"></div>
+
+    <!-- Modern Header -->
+    <header class="bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-200 sticky top-0 z-40 transition-all">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between p-4 gap-4">
+            <div class="flex items-center space-x-4">
+                <div class="bg-gradient-to-br from-red-600 to-red-800 p-2.5 rounded-2xl shadow-lg shadow-red-500/30">
+                    <i data-lucide="ambulance" class="text-white w-8 h-8"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-black tracking-tight text-slate-800 uppercase">Referral Hub</h1>
+                    <p class="text-xs text-red-500 font-bold uppercase tracking-widest">Selaphum Hospital</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner overflow-x-auto">
+                <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="px-5 py-2.5 rounded-xl transition-all duration-300 font-bold text-sm flex items-center gap-2 bg-white text-red-600 shadow-md">
+                    <i data-lucide="layout-dashboard" class="w-[18px] h-[18px]"></i>
+                    <span class="hidden sm:inline">แดชบอร์ด</span>
+                </button>
+                <button onclick="switchTab('table')" id="btn-tab-table" class="px-5 py-2.5 rounded-xl transition-all duration-300 font-bold text-sm flex items-center gap-2 text-slate-500 hover:bg-slate-200 hover:text-slate-700">
+                    <i data-lucide="table-2" class="w-[18px] h-[18px]"></i>
+                    <span class="hidden sm:inline">จัดการข้อมูล</span>
+                </button>
+                <div class="w-px h-6 bg-slate-300 mx-1"></div>
+                <button id="btn-logout" onclick="handleLogout()" class="px-4 py-2 hover:bg-red-50 text-red-500 rounded-xl transition-colors flex items-center gap-2 font-bold text-sm hidden" title="ออกจากระบบ">
+                    <i data-lucide="log-out" class="w-[18px] h-[18px]"></i>
+                </button>
+                <button id="btn-login-modal" onclick="document.getElementById('login-modal').classList.remove('hidden')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 rounded-xl shadow-lg shadow-slate-900/20 text-white font-bold text-sm transition-all flex items-center gap-2">
+                    <i data-lucide="lock" class="w-4 h-4"></i> <span class="hidden sm:inline">แอดมิน</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 py-8">
+        
+        <!-- ================= DASHBOARD TAB ================= -->
+        <div id="view-dashboard" class="space-y-8 animate-fade-in block">
+            <div class="relative bg-gradient-to-r from-red-800 via-red-600 to-red-500 rounded-[2.5rem] p-8 md:p-10 shadow-2xl overflow-hidden flex flex-col justify-center min-h-[180px]">
+                <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
+                <div class="absolute bottom-0 left-10 w-40 h-40 bg-orange-400 opacity-20 rounded-full blur-2xl"></div>
+                <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div class="text-white">
+                        <h2 class="text-3xl md:text-4xl font-black mb-2 tracking-tight drop-shadow-md">ภาพรวมระบบส่งต่อผู้ป่วย</h2>
+                        <p class="text-red-100 font-medium text-sm md:text-base tracking-widest uppercase flex items-center gap-2">
+                            <i data-lucide="activity" class="w-[18px] h-[18px] animate-pulse"></i> ข้อมูลสถิติแบบเรียลไทม์ (Real-time Analytics)
+                        </p>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur-md border border-white/30 p-4 rounded-2xl shadow-lg flex items-center gap-4">
+                        <div class="bg-white text-red-600 p-3 rounded-xl shadow-inner"><i data-lucide="trending-up" class="w-7 h-7"></i></div>
+                        <div>
+                            <p class="text-white/80 text-xs font-bold uppercase tracking-widest">อัปเดตล่าสุด</p>
+                            <p id="stat-last-update" class="text-white font-black text-xl">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Total -->
+                <div class="group relative bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-80"></div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">TOTAL REFERRALS</h3>
+                            <p class="text-slate-800 font-bold text-sm md:text-base">ส่งต่อทั้งหมด</p>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-blue-50 text-blue-500 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                            <i data-lucide="users" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <p id="stat-total" class="text-4xl md:text-5xl font-black text-slate-800 tracking-tighter">0</p>
+                </div>
+                <!-- Trauma -->
+                <div class="group relative bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-orange-400 to-red-500 opacity-80"></div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">TRAUMA CASES</h3>
+                            <p class="text-slate-800 font-bold text-sm md:text-base">เคส Trauma</p>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-orange-50 text-orange-500 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                            <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <p id="stat-trauma" class="text-4xl md:text-5xl font-black text-slate-800 tracking-tighter">0</p>
+                </div>
+                <!-- Resuscitation -->
+                <div class="group relative bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-rose-500 to-pink-600 opacity-80"></div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">CRITICAL LEVEL 1</h3>
+                            <p class="text-slate-800 font-bold text-sm md:text-base">Resuscitation</p>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-rose-50 text-rose-500 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                            <i data-lucide="heart-pulse" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <p id="stat-level1" class="text-4xl md:text-5xl font-black text-slate-800 tracking-tighter">0</p>
+                </div>
+                <!-- Off Hours -->
+                <div class="group relative bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-purple-500 to-violet-600 opacity-80"></div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">OFF-HOURS SHIFT</h3>
+                            <p class="text-slate-800 font-bold text-sm md:text-base">เคสนอกเวลา</p>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-purple-50 text-purple-500 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                            <i data-lucide="clock" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <p id="stat-offhours" class="text-4xl md:text-5xl font-black text-slate-800 tracking-tighter">0</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Department Bars -->
+                <div class="lg:col-span-2 bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                    <div class="flex justify-between items-end mb-8">
+                        <div>
+                            <h3 class="text-xl font-black text-slate-800 flex items-center gap-3">
+                                <span class="p-2 bg-red-100 text-red-600 rounded-lg"><i data-lucide="stethoscope" class="w-5 h-5"></i></span>
+                                สถิติ 5 แผนกที่ส่งต่อสูงสุด
+                            </h3>
+                            <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Top 5 Departments Overview</p>
+                        </div>
+                    </div>
+                    <div id="chart-departments" class="space-y-6"></div>
+                </div>
+
+                <!-- Shift & Recent -->
+                <div class="space-y-6">
+                    <div class="bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                        <h3 class="text-xl font-black text-slate-800 mb-2">เวรปฏิบัติการ</h3>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Shift Distribution</p>
+                        <div id="chart-shifts" class="flex items-end justify-around h-44 border-b-2 border-slate-100 pb-2"></div>
+                    </div>
+                    <div class="bg-gradient-to-b from-slate-800 to-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-700 text-white">
+                        <h3 class="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2 text-slate-300">
+                            <i data-lucide="clock" class="w-4 h-4 text-red-400"></i> ล่าสุด (Recent Logs)
+                        </h3>
+                        <div id="list-recent" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TABLE & FORM TAB ================= -->
+        <div id="view-table" class="space-y-8 animate-fade-in hidden">
+            <!-- Form Section -->
+            <div id="form-container" class="bg-white p-8 rounded-[2rem] shadow-xl border-t-8 border-red-600">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 id="form-title" class="text-2xl font-black text-slate-800 flex items-center italic uppercase tracking-tighter">
+                        <i data-lucide="plus-circle" class="mr-3 text-red-600 form-icon"></i>
+                        <span>บันทึกข้อมูลใหม่ (REGISTER)</span>
+                    </h2>
+                    <button id="btn-cancel-edit" onclick="cancelEdit()" class="p-2 hover:bg-red-50 rounded-full text-red-500 transition-colors hidden"><i data-lucide="x"></i></button>
+                </div>
+
+                <form id="referral-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <input type="hidden" id="field-id" name="id">
+                    
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">วันที่ดำเนินการ</label>
+                        <input required type="date" id="field-date" name="date" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold shadow-inner text-base" />
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">เวลา</label>
+                        <input required type="time" id="field-timeOut" name="timeOut" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold shadow-inner text-base" />
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">ชื่อ - นามสกุล ผู้ป่วย</label>
+                        <input required type="text" id="field-name" name="name" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold shadow-inner text-base" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col space-y-1">
+                            <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">อายุ</label>
+                            <input required type="number" id="field-age" name="age" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold shadow-inner text-base" />
+                        </div>
+                        <div class="flex flex-col space-y-1">
+                            <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">HN</label>
+                            <input required type="text" id="field-hn" name="hn" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold shadow-inner text-base" />
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">การวินิจฉัย (Diagnosis)</label>
+                        <input required type="text" id="field-diagnosis" name="diagnosis" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold shadow-inner text-base" />
+                    </div>
+
+                    <!-- NEW FIELDS -->
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">รพ.ปลายทาง</label>
+                        <input required type="text" id="field-hospital" name="hospital" placeholder="เช่น รพ.ร้อยเอ็ด" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold shadow-inner text-base" />
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">สถานะผู้ป่วยหลังส่ง</label>
+                        <select id="field-outcome" name="outcome" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
+                            <option value="อยู่ระหว่างนำส่ง">อยู่ระหว่างนำส่ง</option>
+                            <option value="ถึงปลายทางปลอดภัย">ถึงปลายทางปลอดภัย</option>
+                            <option value="เสียชีวิตระหว่างทาง">เสียชีวิตระหว่างทาง</option>
+                            <option value="ถูกปฏิเสธการรับเคส">ถูกปฏิเสธการรับเคส</option>
+                            <option value="อื่นๆ">อื่นๆ</option>
+                        </select>
+                    </div>
+
+                    <!-- NURSE -->
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">พยาบาล Refer คนที่ 1</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="field-nurse1Name" placeholder="ชื่อพยาบาล..." class="w-2/3 p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold shadow-inner text-sm md:text-base" />
+                            <select id="field-nurse1Round" class="w-1/3 p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
+                                <option value="รอบที่ 1">รอบ 1</option><option value="รอบที่ 2">รอบ 2</option><option value="รอบที่ 3">รอบ 3</option><option value="รอบที่ 4">รอบ 4</option><option value="รอบที่ 5">รอบ 5</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">พยาบาล Refer คนที่ 2</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="field-nurse2Name" placeholder="ชื่อพยาบาล..." class="w-2/3 p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold shadow-inner text-sm md:text-base" />
+                            <select id="field-nurse2Round" class="w-1/3 p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
+                                <option value="รอบที่ 1">รอบ 1</option><option value="รอบที่ 2">รอบ 2</option><option value="รอบที่ 3">รอบ 3</option><option value="รอบที่ 4">รอบ 4</option><option value="รอบที่ 5">รอบ 5</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Select Fields -->
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">ดำเนินการ</label>
+                        <select id="field-referAction" name="referAction" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
+                            <option value="ส่งต่อ">ส่งต่อ</option><option value="รับกลับ">รับกลับ</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">รับกลับ/Referกลับใน24 ชม.</label>
+                        <select id="field-returnRefer" name="returnRefer" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
+                            <option value="ไม่ใช่">ไม่ใช่</option><option value="ใช่">ใช่</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">แผนก</label>
+                        <select id="field-dept" name="dept" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
+                            <option value="อายุรกรรม">อายุรกรรม</option><option value="ศัลยกรรมทั่วไป">ศัลยกรรมทั่วไป</option><option value="ศัลยกรรมกระดูก">ศัลยกรรมกระดูก</option><option value="สูติกรรม">สูติกรรม</option><option value="กุมารเวชกรรม">กุมารเวชกรรม</option><option value="จิตเวช">จิตเวช</option><option value="Trauma">Trauma</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">ระดับความรุนแรง</label>
+                        <select id="field-level" name="level" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
+                            <option value="1 Resuscition">1 Resuscition</option><option value="2 Emergency">2 Emergency</option><option value="3 Urgent">3 Urgent</option><option value="4 Semi-Urgent">4 Semi-Urgent</option><option value="5 Non-Urgent">5 Non-Urgent</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">ทางเดินหายใจ</label>
+                        <select id="field-airway" name="airway" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
+                            <option value="Room air">Room air</option><option value="on ETT">on ETT</option><option value="on cannula">on cannula</option><option value="on mask c bag">on mask c bag</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">ประเภทเคส</label>
+                        <select id="field-type" name="type" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
+                            <option value="Non-truama">Non-truama</option><option value="Trauma">Trauma</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">ช่วงเวลา</label>
+                        <select id="field-shift" name="shift" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
+                            <option value="ในเวลา">ในเวลา</option><option value="นอกเวลา">นอกเวลา</option>
+                        </select>
+                    </div>
+
+                    <div class="lg:col-span-1 flex items-end">
+                        <button type="submit" id="btn-submit-form" class="w-full bg-gradient-to-b from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white shadow-[0_4px_0_rgb(153,27,27)] active:shadow-none active:translate-y-1 transition-all rounded-xl font-bold flex items-center justify-center py-4 uppercase tracking-[0.2em] text-sm md:text-base">
+                            บันทึกข้อมูล
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- List Table with Advanced Filters -->
+            <div class="bg-white rounded-[2rem] shadow-xl border border-slate-100">
+                <div class="p-6 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-4 rounded-t-[2rem] border-b border-slate-100">
+                    <h3 class="text-xl font-black text-slate-800 flex items-center uppercase italic tracking-tighter">
+                        <span class="w-8 h-8 bg-red-600 text-white rounded-lg flex items-center justify-center mr-3 shadow-lg"><i data-lucide="table-2" class="w-[18px] h-[18px]"></i></span>
+                        DATABASE RECORD LOGS
+                    </h3>
+                    <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                        <div class="relative flex-1">
+                            <input type="text" id="search-input" placeholder="ค้นหาชื่อ, HN, โรค..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-red-500 outline-none text-sm font-bold shadow-inner" />
+                            <i data-lucide="search" class="absolute left-3 top-3 text-slate-400 w-[18px] h-[18px]"></i>
+                        </div>
+                        <button id="btn-export-modal" onclick="document.getElementById('export-modal').classList.remove('hidden')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-sm shadow-[0_4px_0_rgb(15,23,42)] active:translate-y-1 transition-all flex items-center justify-center tracking-widest uppercase hidden">
+                            <i data-lucide="download" class="w-4 h-4 mr-2"></i> EXPORT
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ADVANCED FILTERS -->
+                <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-wrap gap-4 items-center justify-between">
+                    <div class="flex flex-wrap gap-3 items-center flex-1">
+                        <span class="text-xs font-black text-slate-400 uppercase tracking-widest"><i data-lucide="filter" class="inline w-3 h-3 mr-1"></i>Filters:</span>
+                        <input type="month" id="filter-month" class="p-2 rounded-lg border border-slate-200 text-xs font-bold outline-none text-slate-600">
+                        <select id="filter-dept" class="p-2 rounded-lg border border-slate-200 text-xs font-bold outline-none text-slate-600 cursor-pointer bg-white">
+                            <option value="">ทุกแผนก</option>
+                            <option value="อายุรกรรม">อายุรกรรม</option><option value="ศัลยกรรมทั่วไป">ศัลยกรรมทั่วไป</option><option value="ศัลยกรรมกระดูก">ศัลยกรรมกระดูก</option><option value="สูติกรรม">สูติกรรม</option><option value="กุมารเวชกรรม">กุมารเวชกรรม</option><option value="จิตเวช">จิตเวช</option><option value="Trauma">Trauma</option>
+                        </select>
+                        <select id="filter-level" class="p-2 rounded-lg border border-slate-200 text-xs font-bold outline-none text-slate-600 cursor-pointer bg-white">
+                            <option value="">ทุกระดับความรุนแรง</option>
+                            <option value="1 Resuscition">1 Resuscition</option><option value="2 Emergency">2 Emergency</option><option value="3 Urgent">3 Urgent</option><option value="4 Semi-Urgent">4 Semi-Urgent</option><option value="5 Non-Urgent">5 Non-Urgent</option>
+                        </select>
+                        <button onclick="clearFilters()" class="text-xs font-bold text-red-500 hover:underline px-2">Clear Filters</button>
+                    </div>
+                    <div class="text-xs font-bold text-slate-400">
+                        พบ <span id="filtered-count" class="text-slate-800 font-black text-sm">0</span> รายการ
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-white text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
+                            <tr>
+                                <th class="p-4 text-center">ID</th>
+                                <th class="p-4">วัน/เวลา</th>
+                                <th class="p-4">HN/ผู้ป่วย</th>
+                                <th class="p-4">สถานะการส่ง (รพ. / Status)</th>
+                                <th class="p-4">Diagnosis / Level</th>
+                                <th class="p-4 text-center">พยาบาล Refer</th>
+                                <th id="th-tools" class="p-4 text-center hidden">Tools</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-100 bg-white">
+                            <!-- Rows rendered via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PAGINATION CONTROLS -->
+                <div class="p-4 bg-white rounded-b-[2rem] border-t border-slate-100 flex justify-between items-center">
+                    <div class="flex items-center gap-2 text-xs font-bold text-slate-500">
+                        แสดงแถวละ:
+                        <select id="items-per-page" class="p-1.5 border border-slate-200 rounded-lg outline-none cursor-pointer">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                    <div id="pagination-controls" class="flex gap-1">
+                        <!-- Buttons rendered via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Admin Login Modal -->
+    <div id="login-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 transition-opacity hidden">
+        <div class="bg-white p-10 rounded-[3rem] shadow-2xl border-b-[12px] border-slate-800 w-full max-w-md animate-scale-in">
+            <h2 class="text-4xl font-black text-center mb-10 italic uppercase tracking-tighter flex items-center justify-center gap-3 text-slate-800">
+                <i data-lucide="lock" class="w-8 h-8"></i> Admin
+            </h2>
+            <form id="login-form" class="space-y-6">
+                <div class="space-y-1">
+                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Identity</label>
+                    <input type="text" id="login-username" placeholder="Username" class="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-slate-500 outline-none font-bold shadow-inner text-base" />
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Access Key</label>
+                    <input type="password" id="login-password" placeholder="Password" class="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-slate-500 outline-none font-bold shadow-inner text-base" />
+                </div>
+                
+                <p id="login-error" class="text-red-500 text-center font-bold text-sm bg-red-50 p-3 rounded-xl border border-red-100 hidden"></p>
+                
+                <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white rounded-2xl shadow-[0_4px_0_rgb(15,23,42)] active:translate-y-1 active:shadow-none transition-all py-4 text-xl uppercase tracking-widest font-black flex justify-center items-center gap-2">
+                    <span id="login-text">Authentication</span>
+                    <i id="login-spinner" data-lucide="loader-2" class="animate-spin hidden"></i>
+                </button>
+                <button type="button" onclick="document.getElementById('login-modal').classList.add('hidden')" class="w-full text-slate-400 font-bold text-base mt-2 hover:text-red-500 transition-colors uppercase tracking-widest">Abort Access</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Delete Confirmation Modal -->
+    <div id="delete-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4 transition-opacity hidden">
+        <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-sm animate-scale-in text-center">
+            <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="trash-2" class="w-10 h-10"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 mb-2">ยืนยันการลบข้อมูล</h3>
+            <p class="text-sm font-bold text-slate-500 mb-8">การกระทำนี้ไม่สามารถย้อนกลับได้ คุณแน่ใจหรือไม่?</p>
+            <div class="flex gap-4">
+                <button onclick="document.getElementById('delete-modal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors">ยกเลิก</button>
+                <button id="btn-confirm-delete" class="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 shadow-[0_4px_0_rgb(153,27,27)] active:translate-y-1 active:shadow-none transition-all">ลบข้อมูลทิ้ง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Export Modal -->
+    <div id="export-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 transition-opacity hidden">
+        <div class="bg-white p-10 rounded-[3rem] shadow-2xl border-b-[12px] border-slate-800 w-full max-w-sm animate-scale-in">
+            <h2 class="text-3xl font-black mb-8 uppercase italic tracking-tighter flex items-center gap-2 text-slate-800">
+                <i data-lucide="download"></i> EXPORT
+            </h2>
+            <div class="space-y-5">
+                <div class="space-y-1">
+                    <label class="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Data Range</label>
+                    <select id="export-type" onchange="toggleExportInputs()" class="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 font-bold outline-none cursor-pointer shadow-inner text-base">
+                        <option value="all">ทั้งหมด (Full History)</option>
+                        <option value="daily">รายวัน (Daily)</option>
+                        <option value="monthly">รายเดือน (Monthly)</option>
+                        <option value="yearly">รายปี (Yearly)</option>
+                    </select>
+                </div>
+                <input type="date" id="export-date" class="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 font-bold outline-none shadow-inner text-base hidden" />
+                <input type="month" id="export-month" class="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 font-bold outline-none shadow-inner text-base hidden" />
+                <input type="number" id="export-year" placeholder="เช่น 2569" class="w-full p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 font-bold outline-none shadow-inner text-base hidden" />
+                <button onclick="handleExportExcel()" class="w-full bg-slate-800 py-4 rounded-2xl text-white font-black shadow-[0_4px_0_rgb(15,23,42)] active:translate-y-1 active:shadow-none transition-all uppercase tracking-widest mt-4 text-lg">Generate CSV</button>
+                <button onclick="document.getElementById('export-modal').classList.add('hidden')" class="w-full text-slate-400 font-bold text-base mt-2 uppercase tracking-widest hover:text-slate-800 transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic (Vanilla JS) -->
+    <script>
+        // CONFIG - นำ URL ปัจจุบันของคุณมาใส่ที่นี่
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz9RxCbGKpLItg_eALmGU1alj6ipOADkvxGWbHSuySn_rjZbRu2oU26X48mBJPgcZUKLA/exec";
+
+        // STATE
+        let state = {
+            records: [],
+            isAuthenticated: false,
+            isEditing: false,
+            editId: null,
+            deleteTargetId: null,
+            searchTerm: '',
+            filters: { month: '', dept: '', level: '' },
+            pagination: { currentPage: 1, itemsPerPage: 10 }
+        };
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initFormDates();
+            fetchData();
+            
+            // Event Listeners (Search & Filters & Pagination)
+            document.getElementById('search-input').addEventListener('input', (e) => { state.searchTerm = e.target.value.toLowerCase(); state.pagination.currentPage = 1; renderTable(); });
+            document.getElementById('filter-month').addEventListener('input', (e) => { state.filters.month = e.target.value; state.pagination.currentPage = 1; renderTable(); });
+            document.getElementById('filter-dept').addEventListener('change', (e) => { state.filters.dept = e.target.value; state.pagination.currentPage = 1; renderTable(); });
+            document.getElementById('filter-level').addEventListener('change', (e) => { state.filters.level = e.target.value; state.pagination.currentPage = 1; renderTable(); });
+            document.getElementById('items-per-page').addEventListener('change', (e) => { state.pagination.itemsPerPage = parseInt(e.target.value); state.pagination.currentPage = 1; renderTable(); });
+
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('referral-form').addEventListener('submit', handleFormSubmit);
+            document.getElementById('btn-confirm-delete').addEventListener('click', confirmDelete);
+        });
+
+        function switchTab(tabName) {
+            document.getElementById('view-dashboard').classList.toggle('hidden', tabName !== 'dashboard');
+            document.getElementById('view-table').classList.toggle('hidden', tabName !== 'table');
+            document.getElementById('btn-tab-dashboard').className = `px-5 py-2.5 rounded-xl transition-all duration-300 font-bold text-sm flex items-center gap-2 ${tabName === 'dashboard' ? 'bg-white text-red-600 shadow-md scale-100' : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'}`;
+            document.getElementById('btn-tab-table').className = `px-5 py-2.5 rounded-xl transition-all duration-300 font-bold text-sm flex items-center gap-2 ${tabName === 'table' ? 'bg-white text-red-600 shadow-md scale-100' : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'}`;
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-500' : 'bg-red-500';
+            const icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            toast.className = `flex items-center gap-3 ${bgClass} text-white px-6 py-3 rounded-2xl shadow-xl animate-fade-in transition-all`;
+            toast.innerHTML = `<i data-lucide="${icon}"></i><span class="font-bold">${message}</span>`;
+            document.getElementById('toast-container').appendChild(toast);
+            lucide.createIcons({root: toast});
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- Date Utils ---
+        function getThailandDate() {
+            const d = new Date();
+            const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+            return new Date(utc + (3600000 * 7));
+        }
+
+        function initFormDates() {
+            const today = getThailandDate();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const timeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+            
+            const lastYear = getThailandDate();
+            lastYear.setFullYear(lastYear.getFullYear() - 1);
+            const minDateStr = `${lastYear.getFullYear()}-${String(lastYear.getMonth() + 1).padStart(2, '0')}-${String(lastYear.getDate()).padStart(2, '0')}`;
+
+            const dateInput = document.getElementById('field-date');
+            dateInput.max = todayStr;
+            dateInput.min = minDateStr;
+            dateInput.value = todayStr;
+
+            if (!state.isEditing) document.getElementById('field-timeOut').value = timeStr;
+        }
+
+        function formatThaiDate(dateStr) {
+            if (!dateStr || !dateStr.includes('-')) return dateStr;
+            const [y, m, d] = dateStr.split('-');
+            return `${d}/${m}/${parseInt(y) + 543}`;
+        }
+
+        // --- เพิ่มเงื่อนไขตรวจสอบการล็อกอินเพื่อแสดงชื่อเต็ม ---
+        function maskPatientName(fullName) {
+            if (!fullName) return '';
+            
+            // หากแอดมินล็อกอินแล้ว ให้แสดงชื่อเต็ม
+            if (state.isAuthenticated) {
+                return fullName;
+            }
+
+            const parts = fullName.trim().split(' ');
+            return parts.length > 1 ? `${parts[0]} ${parts.slice(1).join(' ').charAt(0)}****` : fullName;
+        }
+
+        function parseNurse(nurseStr) {
+            if (!nurseStr) return { name: '', round: 'รอบที่ 1' };
+            const match = nurseStr.match(/^(.*) \((รอบที่ \d)\)$/);
+            if (match) return { name: match[1].trim(), round: match[2] };
+            if (nurseStr.startsWith('รอบที่')) return { name: '', round: nurseStr };
+            return { name: nurseStr, round: 'รอบที่ 1' };
+        }
+
+        function clearFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('filter-month').value = '';
+            document.getElementById('filter-dept').value = '';
+            document.getElementById('filter-level').value = '';
+            state.searchTerm = '';
+            state.filters = { month: '', dept: '', level: '' };
+            state.pagination.currentPage = 1;
+            renderTable();
+        }
+
+        // --- Fetch & Render ---
+        async function fetchData() {
+            if (!WEB_APP_URL) return;
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            try {
+                const response = await fetch(WEB_APP_URL);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    state.records = result.data.sort((a, b) => b.id - a.id);
+                    renderDashboard();
+                    renderTable();
+                }
+            } catch (error) {
+                showToast("ไม่สามารถโหลดข้อมูลจากเซิร์ฟเวอร์ได้", "error");
+            } finally {
+                document.getElementById('loading-overlay').classList.add('hidden');
+            }
+        }
+
+        function renderDashboard() {
+            const total = state.records.length;
+            const trauma = state.records.filter(r => r.type === 'Trauma').length;
+            const level1 = state.records.filter(r => r.level && r.level.includes('1')).length;
+            
+            const deptCount = {};
+            const shiftCount = {};
+            state.records.forEach(r => {
+                if (r.dept) deptCount[r.dept] = (deptCount[r.dept] || 0) + 1;
+                if (r.shift) shiftCount[r.shift] = (shiftCount[r.shift] || 0) + 1;
+            });
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-trauma').innerText = trauma;
+            document.getElementById('stat-level1').innerText = level1;
+            document.getElementById('stat-offhours').innerText = shiftCount['นอกเวลา'] || 0;
+            document.getElementById('stat-last-update').innerText = total > 0 ? formatThaiDate(state.records[0].date) : '-';
+
+            const sortedDepts = Object.entries(deptCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const deptHtml = sortedDepts.length > 0 ? sortedDepts.map(([dept, count], idx) => {
+                const percentage = Math.round((count / total) * 100) || 0;
+                const colors = ['from-red-500 to-rose-500', 'from-orange-400 to-orange-500', 'from-amber-400 to-amber-500', 'from-blue-400 to-blue-500', 'from-emerald-400 to-emerald-500'];
+                return `
+                    <div class="group">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="font-bold text-slate-700 text-sm">${dept}</span>
+                            <div class="text-right"><span class="text-slate-800 font-black text-lg">${count}</span><span class="text-slate-400 text-xs font-bold ml-1">เคส</span></div>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-3.5 shadow-inner overflow-hidden flex items-center relative">
+                            <div class="h-full bg-gradient-to-r ${colors[idx % colors.length]} rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('') : `<p class="text-center text-slate-400 py-4 text-sm font-bold uppercase tracking-widest italic opacity-50">Empty Data</p>`;
+            document.getElementById('chart-departments').innerHTML = deptHtml;
+
+            const shiftHtml = Object.entries(shiftCount).map(([shift, count]) => {
+                const heightPct = Math.max((count / total) * 100, 10);
+                const bg = shift === 'ในเวลา' ? 'from-orange-500 to-amber-300' : 'from-indigo-600 to-blue-400';
+                return `
+                    <div class="flex flex-col items-center group relative w-1/3">
+                        <div class="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all bg-slate-800 text-white text-[10px] font-bold py-1 px-3 rounded-lg shadow-xl">${count} เคส</div>
+                        <div class="w-full max-w-[48px] rounded-t-xl transition-all shadow-md bg-gradient-to-t ${bg}" style="height: ${heightPct}%"></div>
+                        <span class="mt-4 text-xs font-black text-slate-600">${shift}</span>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('chart-shifts').innerHTML = shiftHtml;
+
+            const recentHtml = state.records.slice(0, 3).map(r => {
+                const tagColor = r.referAction === 'ส่งต่อ' ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-emerald-900/50 text-emerald-300 border-emerald-800';
+                return `
+                    <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700 flex justify-between items-center">
+                        <div>
+                            <p class="text-xs font-bold text-white truncate max-w-[120px]">${maskPatientName(r.name)}</p>
+                            <p class="text-[10px] text-slate-400 font-mono mt-1">${r.hospital || r.dept}</p>
+                        </div>
+                        <span class="px-2 py-1 rounded text-[9px] font-black uppercase border ${tagColor}">${r.referAction}</span>
+                    </div>
+                `;
+            }).join('') || `<p class="text-center text-[10px] text-slate-500 py-4">No Logs Found</p>`;
+            document.getElementById('list-recent').innerHTML = recentHtml;
+        }
+
+        // Table with Filtering and Pagination
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            
+            // Apply Filters
+            let filtered = state.records.filter(r => {
+                const term = state.searchTerm;
+                const matchSearch = (r.name && r.name.toLowerCase().includes(term)) || (r.hn && r.hn.includes(term)) || (r.diagnosis && r.diagnosis.toLowerCase().includes(term));
+                const matchMonth = state.filters.month ? r.date.startsWith(state.filters.month) : true;
+                const matchDept = state.filters.dept ? r.dept === state.filters.dept : true;
+                const matchLevel = state.filters.level ? r.level === state.filters.level : true;
+                return matchSearch && matchMonth && matchDept && matchLevel;
+            });
+
+            document.getElementById('filtered-count').innerText = filtered.length;
+
+            if (filtered.length === 0) {
+                const cols = state.isAuthenticated ? 7 : 6;
+                tbody.innerHTML = `<tr><td colspan="${cols}" class="p-16 text-center text-slate-400 font-bold italic opacity-50 uppercase tracking-widest text-xs">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
+                renderPagination(0);
+                return;
+            }
+
+            // Apply Pagination
+            const totalItems = filtered.length;
+            const totalPages = Math.ceil(totalItems / state.pagination.itemsPerPage);
+            if (state.pagination.currentPage > totalPages) state.pagination.currentPage = totalPages;
+            
+            const startIndex = (state.pagination.currentPage - 1) * state.pagination.itemsPerPage;
+            const endIndex = startIndex + state.pagination.itemsPerPage;
+            const paginatedData = filtered.slice(startIndex, endIndex);
+
+            tbody.innerHTML = paginatedData.map(r => {
+                const actionBadge = r.referAction === 'ส่งต่อ' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                const levelBadge = (r.level && r.level.includes('1')) ? 'text-red-600' : 'text-orange-600';
+                
+                // Set Outcome Color Logic
+                let outcomeColor = 'text-slate-500';
+                if (r.outcome === 'ถึงปลายทางปลอดภัย') outcomeColor = 'text-emerald-600';
+                if (r.outcome === 'เสียชีวิตระหว่างทาง' || r.outcome === 'ถูกปฏิเสธการรับเคส') outcomeColor = 'text-red-600';
+                
+                let toolsHtml = state.isAuthenticated ? `
+                    <td class="p-4 text-center whitespace-nowrap">
+                        <button onclick="editRecord(${r.id})" class="p-2 hover:bg-slate-100 rounded-lg text-blue-500 transition-all"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                        <button onclick="openDeleteModal(${r.id})" class="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                ` : '';
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="p-4 text-center font-bold text-slate-400 text-xs">${r.id}</td>
+                        <td class="p-4 font-bold text-xs leading-tight">${formatThaiDate(r.date)} <br/><span class="text-red-500">${r.timeOut} น.</span></td>
+                        <td class="p-4">
+                            <span class="font-mono text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">${r.hn}</span>
+                            <p class="font-black text-slate-800 text-sm tracking-tight mt-1">${maskPatientName(r.name)}</p>
+                        </td>
+                        <td class="p-4">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${actionBadge}">${r.referAction}</span>
+                                <span class="text-xs font-bold text-slate-700">${r.hospital || '-'}</span>
+                            </div>
+                            <p class="text-[10px] font-bold ${outcomeColor} flex items-center gap-1"><i data-lucide="info" class="w-3 h-3"></i> ${r.outcome || 'อยู่ระหว่างนำส่ง'}</p>
+                        </td>
+                        <td class="p-4">
+                            <p class="text-xs font-bold text-slate-700 truncate max-w-[150px]" title="${r.diagnosis}">${r.diagnosis}</p>
+                            <span class="text-[10px] font-black tracking-tighter ${levelBadge}">${r.level}</span>
+                        </td>
+                        <td class="p-4 text-center">
+                            <div class="flex flex-col gap-1 items-start text-[10px] font-bold text-slate-500">
+                                <span>1: ${r.nurse1 || '-'}</span>
+                                <span>2: ${r.nurse2 || '-'}</span>
+                            </div>
+                        </td>
+                        ${toolsHtml}
+                    </tr>
+                `;
+            }).join('');
+            
+            renderPagination(totalPages);
+            lucide.createIcons({ root: tbody });
+        }
+
+        function renderPagination(totalPages) {
+            const container = document.getElementById('pagination-controls');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = `<button onclick="changePage(${state.pagination.currentPage - 1})" ${state.pagination.currentPage === 1 ? 'disabled class="p-1.5 text-slate-300"' : 'class="p-1.5 text-slate-600 hover:bg-slate-100 rounded"'}><i data-lucide="chevron-left" class="w-4 h-4"></i></button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                // Show max 5 buttons (simple logic)
+                if (i === 1 || i === totalPages || (i >= state.pagination.currentPage - 1 && i <= state.pagination.currentPage + 1)) {
+                    html += `<button onclick="changePage(${i})" class="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold ${i === state.pagination.currentPage ? 'bg-red-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}">${i}</button>`;
+                } else if (i === 2 || i === totalPages - 1) {
+                    html += `<span class="px-1 text-slate-400 text-xs">...</span>`;
+                }
+            }
+            
+            html += `<button onclick="changePage(${state.pagination.currentPage + 1})" ${state.pagination.currentPage === totalPages ? 'disabled class="p-1.5 text-slate-300"' : 'class="p-1.5 text-slate-600 hover:bg-slate-100 rounded"'}><i data-lucide="chevron-right" class="w-4 h-4"></i></button>`;
+            
+            container.innerHTML = html;
+            lucide.createIcons({ root: container });
+        }
+
+        function changePage(page) {
+            state.pagination.currentPage = page;
+            renderTable();
+        }
+
+        // --- Auth Backend Verification ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('login-username').value;
+            const pass = document.getElementById('login-password').value;
+            
+            document.getElementById('login-text').classList.add('hidden');
+            document.getElementById('login-spinner').classList.remove('hidden');
+
+            try {
+                // Fetch การตั้งค่าให้เสถียรที่สุด ป้องกัน CORS และ Redirect block
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    redirect: 'follow', 
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
+                    body: JSON.stringify({ action: 'login', data: { username: user, password: pass } })
+                });
+                
+                const responseText = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error("เซิร์ฟเวอร์ไม่ได้ตอบกลับเป็น JSON:", responseText);
+                    throw new Error("NEED_NEW_DEPLOYMENT");
+                }
+
+                if (result.status === 'success') {
+                    state.isAuthenticated = true;
+                    document.getElementById('login-modal').classList.add('hidden');
+                    document.getElementById('login-error').classList.add('hidden');
+                    document.getElementById('login-form').reset();
+                    
+                    document.getElementById('btn-login-modal').classList.add('hidden');
+                    document.getElementById('btn-logout').classList.remove('hidden');
+                    document.getElementById('btn-export-modal').classList.remove('hidden');
+                    document.getElementById('th-tools').classList.remove('hidden');
+                    
+                    // สั่ง Render แดชบอร์ดและตารางใหม่เพื่อให้ชื่อแสดงเต็ม (Full Name)
+                    renderDashboard();
+                    renderTable();
+                    showToast(result.message);
+                } else {
+                    document.getElementById('login-error').innerText = result.message;
+                    document.getElementById('login-error').classList.remove('hidden');
+                }
+            } catch (error) {
+                if (error.message === "NEED_NEW_DEPLOYMENT") {
+                    document.getElementById('login-error').innerText = "ข้อผิดพลาด: โค้ดฝั่ง Google Sheets ยังเป็นเวอร์ชันเก่า กรุณากด Deploy เป็น New Version";
+                    document.getElementById('login-error').classList.remove('hidden');
+                } else {
+                    document.getElementById('login-error').innerText = "เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว กรุณาตรวจสอบอินเทอร์เน็ตหรือ URL";
+                    document.getElementById('login-error').classList.remove('hidden');
+                }
+            } finally {
+                document.getElementById('login-text').classList.remove('hidden');
+                document.getElementById('login-spinner').classList.add('hidden');
+            }
+        }
+
+        function handleLogout() {
+            state.isAuthenticated = false;
+            document.getElementById('btn-login-modal').classList.remove('hidden');
+            document.getElementById('btn-logout').classList.add('hidden');
+            document.getElementById('btn-export-modal').classList.add('hidden');
+            document.getElementById('th-tools').classList.add('hidden');
+            
+            // สั่ง Render กลับเพื่อเบลอชื่อ (Masked Name)
+            renderDashboard();
+            renderTable();
+            showToast("ออกจากระบบแล้ว");
+        }
+
+        // --- Data Manipulation ---
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            if (!WEB_APP_URL) return showToast("กรุณาใส่ Web App URL ในโค้ดก่อนใช้งาน", "error");
+
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            
+            const n1Name = document.getElementById('field-nurse1Name').value;
+            const n1Round = document.getElementById('field-nurse1Round').value;
+            const n2Name = document.getElementById('field-nurse2Name').value;
+            const n2Round = document.getElementById('field-nurse2Round').value;
+
+            const payloadData = {
+                date: document.getElementById('field-date').value,
+                timeOut: document.getElementById('field-timeOut').value,
+                name: document.getElementById('field-name').value,
+                age: document.getElementById('field-age').value,
+                hn: document.getElementById('field-hn').value,
+                diagnosis: document.getElementById('field-diagnosis').value,
+                hospital: document.getElementById('field-hospital').value,
+                outcome: document.getElementById('field-outcome').value,
+                referAction: document.getElementById('field-referAction').value,
+                returnRefer: document.getElementById('field-returnRefer').value,
+                dept: document.getElementById('field-dept').value,
+                level: document.getElementById('field-level').value,
+                airway: document.getElementById('field-airway').value,
+                type: document.getElementById('field-type').value,
+                shift: document.getElementById('field-shift').value,
+                nurse1: n1Name ? `${n1Name} (${n1Round})` : '',
+                nurse2: n2Name ? `${n2Name} (${n2Round})` : ''
+            };
+
+            if (state.isEditing) payloadData.id = state.editId;
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: state.isEditing ? 'edit' : 'add', data: payloadData })
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showToast(result.message);
+                    cancelEdit();
+                    fetchData();
+                } else {
+                    showToast("ผิดพลาด: " + result.message, "error");
+                }
+            } catch (error) {
+                showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", "error");
+            } finally {
+                document.getElementById('loading-overlay').classList.add('hidden');
+            }
+        }
+
+        function editRecord(id) {
+            const record = state.records.find(r => r.id === id);
+            if (!record) return;
+
+            state.isEditing = true;
+            state.editId = id;
+
+            document.getElementById('field-date').value = record.date;
+            document.getElementById('field-timeOut').value = record.timeOut;
+            document.getElementById('field-name').value = record.name;
+            document.getElementById('field-age').value = record.age;
+            document.getElementById('field-hn').value = record.hn;
+            document.getElementById('field-diagnosis').value = record.diagnosis;
+            document.getElementById('field-hospital').value = record.hospital || '';
+            document.getElementById('field-outcome').value = record.outcome || 'อยู่ระหว่างนำส่ง';
+            document.getElementById('field-referAction').value = record.referAction;
+            document.getElementById('field-returnRefer').value = record.returnRefer || 'ไม่ใช่';
+            document.getElementById('field-dept').value = record.dept;
+            document.getElementById('field-level').value = record.level;
+            document.getElementById('field-airway').value = record.airway;
+            document.getElementById('field-type').value = record.type;
+            document.getElementById('field-shift').value = record.shift;
+
+            const n1 = parseNurse(record.nurse1);
+            const n2 = parseNurse(record.nurse2);
+            document.getElementById('field-nurse1Name').value = n1.name;
+            document.getElementById('field-nurse1Round').value = n1.round;
+            document.getElementById('field-nurse2Name').value = n2.name;
+            document.getElementById('field-nurse2Round').value = n2.round;
+
+            document.getElementById('form-container').classList.replace('border-red-600', 'border-orange-500');
+            document.getElementById('form-title').innerHTML = `<i data-lucide="edit" class="mr-3 text-orange-500"></i><span>แก้ไขข้อมูล (UPDATE RECORD)</span>`;
+            document.getElementById('btn-submit-form').className = "w-full bg-gradient-to-b from-orange-500 to-orange-600 text-white shadow-[0_4px_0_rgb(194,65,12)] active:translate-y-1 rounded-xl font-bold py-4 uppercase tracking-[0.2em] text-lg";
+            document.getElementById('btn-submit-form').innerText = "บันทึกการแก้ไข";
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            
+            lucide.createIcons();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            state.isEditing = false;
+            state.editId = null;
+            document.getElementById('referral-form').reset();
+            initFormDates();
+            
+            document.getElementById('form-container').classList.replace('border-orange-500', 'border-red-600');
+            document.getElementById('form-title').innerHTML = `<i data-lucide="plus-circle" class="mr-3 text-red-600"></i><span>บันทึกข้อมูลใหม่ (REGISTER)</span>`;
+            document.getElementById('btn-submit-form').className = "w-full bg-gradient-to-b from-red-500 to-red-600 text-white shadow-[0_4px_0_rgb(153,27,27)] active:translate-y-1 rounded-xl font-bold py-4 uppercase tracking-[0.2em] text-lg";
+            document.getElementById('btn-submit-form').innerText = "ยืนยันการบันทึกข้อมูล";
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            lucide.createIcons();
+        }
+
+        function openDeleteModal(id) {
+            state.deleteTargetId = id;
+            document.getElementById('delete-modal').classList.remove('hidden');
+        }
+
+        async function confirmDelete() {
+            if (!state.deleteTargetId) return;
+            document.getElementById('delete-modal').classList.add('hidden');
+            document.getElementById('loading-overlay').classList.remove('hidden');
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'delete', data: { id: state.deleteTargetId } })
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showToast(result.message);
+                    state.deleteTargetId = null;
+                    fetchData();
+                } else {
+                    showToast("ผิดพลาด: " + result.message, "error");
+                }
+            } catch (error) {
+                showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", "error");
+            } finally {
+                document.getElementById('loading-overlay').classList.add('hidden');
+            }
+        }
+
+        // --- Export ---
+        function toggleExportInputs() {
+            const type = document.getElementById('export-type').value;
+            document.getElementById('export-date').classList.toggle('hidden', type !== 'daily');
+            document.getElementById('export-month').classList.toggle('hidden', type !== 'monthly');
+            document.getElementById('export-year').classList.toggle('hidden', type !== 'yearly');
+        }
+
+        function handleExportExcel() {
+            const type = document.getElementById('export-type').value;
+            const date = document.getElementById('export-date').value;
+            const month = document.getElementById('export-month').value;
+            const year = document.getElementById('export-year').value;
+
+            let dataToExport = state.records;
+            if (type === 'daily' && date) dataToExport = state.records.filter(r => r.date === date);
+            else if (type === 'monthly' && month) dataToExport = state.records.filter(r => r.date.startsWith(month));
+            else if (type === 'yearly' && year) dataToExport = state.records.filter(r => r.date.startsWith((parseInt(year) - 543).toString()));
+
+            if (dataToExport.length === 0) return showToast('ไม่พบข้อมูลในช่วงเวลาที่เลือก', 'error');
+
+            const BOM = '\uFEFF';
+            const headers = ['ลำดับ', 'วันที่', 'เวลา', 'ชื่อ-นามสกุล', 'อายุ', 'HN', 'Diagnosis', 'รพ.ปลายทาง/ต้นทาง', 'สถานะหลังส่ง', 'แผนก', 'Level', 'ประเภท', 'ดำเนินการ', 'รับ/Referกลับ', 'เวร', 'พยาบาล 1', 'พยาบาล 2'];
+            const rows = dataToExport.map((r, index) => [
+                index + 1, formatThaiDate(r.date), r.timeOut, r.name, r.age, r.hn, r.diagnosis, r.hospital, r.outcome, r.dept, r.level, r.type, r.referAction, (r.returnRefer || 'ไม่ใช่'), r.shift, r.nurse1, r.nurse2
+            ]);
+
+            const csvContent = BOM + [headers.join(','), ...rows.map(row => row.map(item => `"${item || ''}"`).join(','))].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Refer_Report_${type}_${new Date().getTime()}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            document.getElementById('export-modal').classList.add('hidden');
+            showToast('ดาวน์โหลดไฟล์สำเร็จ');
+        }
+    </script>
+</body>
+</html>

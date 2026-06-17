@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Nurse Audit - ระบบบริหารอัตรากำลังพยาบาล</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="vendor/tailwindcss.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="vendor/lucide.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="vendor/chart.umd.js"></script>
+
+    <style>
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            background-color: #f0fdf4; /* emerald-50 */
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(52, 211, 153, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(5, 150, 105, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        h1, h2, h3, h4, .font-prompt { font-family: 'Prompt', sans-serif; }
+        
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        
+        .input-field { transition: all 0.25s ease; }
+        .input-field:focus { 
+            transform: translateY(-2px); 
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.1), 0 4px 6px -2px rgba(16, 185, 129, 0.05); 
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px dashed #d1fae5;
+        }
+
+        .fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Hide scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #6ee7b7; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #34d399; }
+
+        /* --- PRINT SETTINGS (FIT TO A4) --- */
+        #print-area { display: none; }
+        @media print {
+            @page { 
+                size: A4; 
+                margin: 5mm; /* ขอบกระดาษเหลือน้อยที่สุดเพื่อให้เนื้อหาพอดี */
+            }
+            body * { visibility: hidden; }
+            #app-container, #view-login { display: none !important; }
+            body { background: white !important; margin: 0; padding: 0; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area {
+                display: block !important;
+                position: absolute; left: 0; top: 0; width: 100%;
+                background-color: white; color: black; 
+                z-index: 9999;
+                /* ถ้าเนื้อหายังล้นจริงๆ ให้ย่อลงเล็กน้อยอัตโนมัติ */
+                transform-origin: top center;
+            }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: { 50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7', 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b' },
+                        teal: { 50: '#f0fdfa', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e' },
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-slate-800 antialiased selection:bg-emerald-200 selection:text-emerald-900">
+
+    <!-- LOGIN SCREEN -->
+    <div id="view-login" class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+        <div class="glass-card p-10 rounded-[2rem] w-full max-w-md space-y-8 fade-in shadow-2xl shadow-emerald-100">
+            <div class="text-center space-y-4">
+                <div class="w-20 h-20 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-emerald-500/30 mx-auto rotate-3 hover:rotate-6 transition-transform duration-500">
+                    <i data-lucide="activity" size="40"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-emerald-900 font-prompt">Smart Nurse Audit</h1>
+                    <p class="text-emerald-600 font-medium mt-1">ระบบบริหารอัตรากำลังพยาบาลดิจิทัล</p>
+                </div>
+            </div>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-emerald-800 mb-2 pl-1">ผู้ใช้งานระบบ</label>
+                    <div class="relative">
+                        <select id="login-user" class="w-full appearance-none bg-emerald-50/50 border border-emerald-200 text-emerald-900 text-sm rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 block p-4 pr-10 font-semibold outline-none transition-all hover:bg-white">
+                            <option value="">-- กรุณาเลือกรายชื่อ --</option>
+                            <!-- Users injected via JS -->
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-emerald-500">
+                            <i data-lucide="chevron-down" size="20"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-emerald-800 mb-2 pl-1">รหัสผ่าน</label>
+                    <input type="password" id="login-pass" placeholder="• • • •" class="bg-emerald-50/50 border border-emerald-200 text-emerald-900 text-lg rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 block w-full p-4 font-bold outline-none transition-all hover:bg-white tracking-widest" value="1234">
+                </div>
+                <button onclick="handleLogin()" class="w-full text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 focus:ring-4 focus:ring-emerald-300 font-bold rounded-xl text-lg px-5 py-4 text-center shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    เข้าสู่ระบบ <i data-lucide="arrow-right" size="20"></i>
+                </button>
+            </div>
+            
+            <div class="pt-6 border-t border-emerald-100 text-center">
+                <p class="text-xs text-emerald-500 font-medium">© 2024 Smart Healthcare System</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="app-container" class="hidden">
+        <!-- Navbar -->
+        <nav class="sticky top-0 z-50 glass-card border-b-0 border-b-emerald-100/50 shadow-sm no-print mb-6">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-20">
+                    <div class="flex items-center gap-4">
+                        <div class="w-11 h-11 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                            <i data-lucide="activity" size="22"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-emerald-900 font-prompt hidden sm:block leading-tight">
+                                Smart Nurse Audit
+                            </h1>
+                            <p class="text-xs text-emerald-600 font-medium hidden sm:block">Workload & Productivity Management</p>
+                            <span class="text-lg font-bold text-emerald-900 font-prompt sm:hidden">Nurse Audit</span>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 bg-emerald-50/80 p-1.5 rounded-2xl border border-emerald-100">
+                        <button onclick="switchTab('dashboard')" id="btn-dashboard" class="px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 bg-white text-emerald-700 shadow-sm transition-all">
+                            <i data-lucide="layout-dashboard" size="18"></i> <span class="hidden sm:inline">ภาพรวม</span>
+                        </button>
+                        <button onclick="switchTab('entry')" id="btn-entry" class="px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 text-emerald-600/70 hover:text-emerald-700 hover:bg-white/50 transition-all">
+                            <i data-lucide="database" size="18"></i> <span class="hidden sm:inline">ลงข้อมูล</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <div class="hidden md:flex flex-col items-end">
+                            <input type="date" id="global-date" class="text-sm font-bold text-emerald-800 bg-transparent border-none text-right focus:ring-0 p-0 mb-0.5 font-prompt">
+                            <select id="global-shift" class="text-xs font-medium text-emerald-600 bg-transparent border-none text-right focus:ring-0 p-0 cursor-pointer">
+                                <option>ดึก/เช้า/บ่าย (รวม)</option>
+                                <option>เวรดึก (00-08น.)</option>
+                                <option>เวรเช้า (08-16น.)</option>
+                                <option>เวรบ่าย (16-24น.)</option>
+                            </select>
+                        </div>
+                        <div class="h-10 w-[1px] bg-emerald-200 hidden md:block"></div>
+                        <div class="relative group cursor-pointer" onclick="handleLogout()">
+                            <div class="w-11 h-11 rounded-full bg-white border-2 border-emerald-100 flex items-center justify-center text-emerald-700 font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors shadow-sm">
+                                <span id="user-initials" class="font-prompt">US</span>
+                            </div>
+                            <div class="absolute right-0 mt-3 w-32 bg-white rounded-xl shadow-xl border border-emerald-100 p-2 hidden group-hover:block animate-fade-in z-50">
+                                <div class="text-xs text-center text-slate-500 font-medium">คลิกเพื่อออกจากระบบ</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 no-print">
+            
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="space-y-8 fade-in">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="glass-card p-6 rounded-3xl border-l-[6px] border-l-emerald-500 hover:transform hover:-translate-y-1 transition-all duration-300">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="p-2.5 bg-emerald-100 text-emerald-700 rounded-xl"><i data-lucide="bed" size="22"></i></div>
+                            <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Capacity</span>
+                        </div>
+                        <div class="text-4xl font-extrabold text-slate-800 font-prompt" id="kpi-total-beds">0</div>
+                        <p class="text-xs text-slate-400 mt-2 font-medium">จำนวนเตียงทั้งหมด</p>
+                    </div>
+                    <div class="glass-card p-6 rounded-3xl border-l-[6px] border-l-blue-500 hover:transform hover:-translate-y-1 transition-all duration-300">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="p-2.5 bg-blue-100 text-blue-700 rounded-xl"><i data-lucide="users" size="22"></i></div>
+                            <span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Occupied</span>
+                        </div>
+                        <div class="text-4xl font-extrabold text-slate-800 font-prompt" id="kpi-occupied">0</div>
+                        <div class="text-xs text-blue-600 font-bold mt-2 bg-blue-50 inline-block px-2 py-0.5 rounded-md">ว่าง <span id="kpi-available">0</span> เตียง</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-3xl border-l-[6px] border-l-violet-500 hover:transform hover:-translate-y-1 transition-all duration-300">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="p-2.5 bg-violet-100 text-violet-700 rounded-xl"><i data-lucide="activity" size="22"></i></div>
+                            <span class="text-xs font-bold text-violet-600 uppercase tracking-wider">Occ. Rate</span>
+                        </div>
+                        <div class="text-4xl font-extrabold text-slate-800 font-prompt"><span id="kpi-rate">0</span>%</div>
+                        <p class="text-xs text-slate-400 mt-2 font-medium">อัตราการครองเตียง</p>
+                    </div>
+                    <div class="glass-card p-6 rounded-3xl border-l-[6px] border-l-rose-500 hover:transform hover:-translate-y-1 transition-all duration-300">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="p-2.5 bg-rose-100 text-rose-700 rounded-xl"><i data-lucide="alert-circle" size="22"></i></div>
+                            <span class="text-xs font-bold text-rose-600 uppercase tracking-wider">Overload</span>
+                        </div>
+                        <div class="text-4xl font-extrabold text-slate-800 font-prompt"><span id="kpi-overload">0</span> <span class="text-base text-slate-400 font-medium">วอร์ด</span></div>
+                        <p class="text-xs text-slate-400 mt-2 font-medium">ภาระงานเกินเกณฑ์</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Chart -->
+                    <div class="lg:col-span-2 glass-card p-8 rounded-3xl">
+                        <div class="flex justify-between items-center mb-8">
+                            <h3 class="text-xl font-bold text-slate-800 flex items-center gap-3 font-prompt">
+                                <div class="w-2 h-8 bg-emerald-500 rounded-full"></div>
+                                Productivity Overview
+                            </h3>
+                            <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">Real-time</span>
+                        </div>
+                        <div class="relative h-80 w-full">
+                            <canvas id="prodChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Simple Table -->
+                    <div class="lg:col-span-1 glass-card rounded-3xl overflow-hidden flex flex-col h-full border-0">
+                        <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+                            <h3 class="text-lg font-bold text-slate-800 font-prompt">สถานะเตียงรายหอผู้ป่วย</h3>
+                        </div>
+                        <div class="overflow-y-auto flex-grow max-h-[350px] p-2">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs uppercase text-slate-400 font-semibold">
+                                    <tr>
+                                        <th class="px-4 py-3 rounded-l-lg bg-white">หน่วยงาน</th>
+                                        <th class="px-2 py-3 bg-white text-center">ว่าง</th>
+                                        <th class="px-2 py-3 rounded-r-lg bg-white text-right">สถานะ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-table-body" class="divide-y divide-slate-100">
+                                    <!-- JS Generated -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Entry View -->
+            <div id="view-entry" class="hidden space-y-8 fade-in">
+                <!-- Google Sheet Config Panel -->
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="flex justify-between items-center cursor-pointer" onclick="document.getElementById('gs-config').classList.toggle('hidden')">
+                        <div class="flex items-center gap-3 text-emerald-800">
+                            <div class="p-2 bg-emerald-100 rounded-lg"><i data-lucide="sheet" class="text-emerald-600" size="18"></i></div>
+                            <span class="font-bold text-sm">ตั้งค่าการเชื่อมต่อ Google Sheets (สำหรับแอดมิน)</span>
+                        </div>
+                        <i data-lucide="chevron-down" size="18" class="text-emerald-400"></i>
+                    </div>
+                    <div id="gs-config" class="hidden mt-4 pt-4 border-t border-emerald-100">
+                        <label class="block text-xs font-bold text-slate-500 mb-2">Google Apps Script Web App URL</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="gs-url" placeholder="https://script.google.com/macros/s/..../exec" class="flex-grow text-xs border border-emerald-200 bg-white rounded-xl p-3 focus:ring-2 focus:ring-emerald-200 outline-none font-mono text-emerald-700">
+                            <button onclick="saveGoogleConfig()" class="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20">บันทึก</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-blue-50/80 p-5 rounded-2xl border border-blue-100">
+                    <div class="flex items-center gap-4 text-blue-900">
+                        <div class="p-2.5 bg-white rounded-xl shadow-sm"><i data-lucide="settings" size="20" class="text-blue-600"></i></div>
+                        <div>
+                            <span class="text-sm font-bold block font-prompt">ระบบคำนวณภาระงานอัตโนมัติ (MOPH Standard)</span>
+                            <span class="text-xs text-blue-600 opacity-80">คำนวณ Productivity ทันทีที่กรอกข้อมูล</span>
+                        </div>
+                    </div>
+                    <button onclick="resetData()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-rose-600 bg-white border border-rose-100 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all shadow-sm">
+                        <i data-lucide="trash-2" size="14"></i> ล้างข้อมูล
+                    </button>
+                </div>
+
+                <!-- SECTION 1: OPD -->
+                <div>
+                    <div class="section-header text-emerald-800">
+                        <div class="p-2 bg-emerald-100 rounded-lg"><i data-lucide="stethoscope" size="20"></i></div>
+                        <h2 class="text-xl font-bold font-prompt">ส่วนที่ 1: ผู้ป่วยนอก (OPD/ER)</h2>
+                    </div>
+                    <div id="wards-container-opd" class="grid grid-cols-1 gap-6">
+                        <!-- JS Injected -->
+                    </div>
+                </div>
+
+                <!-- SECTION 2: IPD -->
+                <div>
+                    <div class="section-header text-emerald-800 mt-8">
+                        <div class="p-2 bg-emerald-100 rounded-lg"><i data-lucide="bed-double" size="20"></i></div>
+                        <h2 class="text-xl font-bold font-prompt">ส่วนที่ 2: ผู้ป่วยใน (IPD)</h2>
+                    </div>
+                    <div id="wards-container-ipd" class="grid grid-cols-1 gap-6">
+                        <!-- JS Injected -->
+                    </div>
+                </div>
+
+                <!-- Problem & Solution Section -->
+                <div class="glass-card rounded-3xl overflow-hidden mt-8">
+                    <div class="bg-gradient-to-r from-orange-50 to-white px-8 py-5 border-b border-orange-100 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600 shadow-inner">
+                            <i data-lucide="alert-triangle" size="24"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800 font-prompt">ปัญหาภายในเวรและการแก้ไข</h3>
+                            <p class="text-xs text-orange-600 font-medium">บันทึกเหตุการณ์สำคัญเพื่อรายงานผู้ตรวจการ</p>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <textarea id="shift-notes" rows="4" class="w-full border border-slate-200 rounded-2xl p-5 text-sm focus:ring-4 focus:ring-orange-100 focus:border-orange-300 outline-none resize-none bg-slate-50/50 focus:bg-white transition-all placeholder:text-slate-400 leading-relaxed shadow-inner" placeholder="ระบุเหตุการณ์สำคัญ ปัญหาที่พบ และแนวทางการแก้ไขในเวรนี้..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Floating Action Bar -->
+        <div class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 w-[95%] max-w-2xl no-print">
+            <div class="bg-slate-900/85 backdrop-blur-xl text-white p-3 rounded-[1.5rem] shadow-2xl border border-slate-700/50 flex items-center justify-between pl-6 pr-3 hover:scale-[1.01] transition-transform duration-300">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">System Status</span>
+                    <span id="save-status" class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                        <i data-lucide="check-circle" size="14"></i> All systems go
+                    </span>
+                </div>
+                
+                <div class="flex gap-3">
+                     <button onclick="printReport()" class="flex items-center gap-2 px-4 py-3 bg-slate-700/80 hover:bg-slate-600 rounded-2xl transition-all text-sm font-bold active:scale-95 text-white border border-slate-600" title="พิมพ์รายงาน">
+                        <i data-lucide="printer" size="18"></i>
+                    </button>
+                    <button onclick="sendToGoogleSheets()" class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-2xl transition-all text-sm font-bold active:scale-95 shadow-lg shadow-emerald-900/50 group">
+                        <i data-lucide="upload-cloud" size="18" class="group-hover:animate-bounce"></i>
+                        <span class="hidden sm:inline">ส่งข้อมูล Cloud</span>
+                        <span class="sm:hidden">ส่ง Cloud</span>
+                    </button>
+                    <button onclick="manualSave()" class="flex items-center gap-2 px-5 py-3 bg-slate-700/80 hover:bg-slate-600 rounded-2xl transition-all text-sm font-bold active:scale-95 border border-slate-600">
+                        <i data-lucide="save" size="18"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Print Layout -->
+    <div id="print-area">
+        <!-- JS will populate this -->
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- USERS CONFIGURATION ---
+        const USERS_LIST = [
+            { name: "นางวารี โมสิต", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นางขนานันท์ มณีกัญย์", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นายทวี แสนสนอง", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นางสาวชญาดา เที่ยงผดุง", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นางสาวกันตาภารัตน์ อ้วนศรีเมือง", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นางสาวนัฏยา เหมสัตย์", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นางสุพรรณี แน่นอุดร", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นางกรรณิการ์ ชายพรม", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นางหทัยรัตน์ ลือชัยนาม", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นางขวัญฤดี ไชยลาภ", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นางสาวชญาดา นวลฉวี", role: "พยาบาลวิชาชีพชำนาญการ" },
+            { name: "นางสาวกมลชนก บูรพาปัญญาโชติ", role: "พยาบาลวิชาชีพชำนาญการ" }
+        ];
+
+        // --- CONSTANTS ---
+        const ACUITY_HOURS = { type1: 0.5, type2: 1.5, type3: 3.5, type4: 5.5, type5: 7.5 };
+        const SHIFT_HOURS = 8;
+        const STORAGE_KEY = 'smart_nurse_audit_v5_green'; // New key for new structure
+        const NOTES_KEY = 'smart_nurse_notes_v5';
+        const CONFIG_KEY = 'smart_nurse_gs_config';
+        const DEFAULT_GS_URL = 'https://script.google.com/macros/s/AKfycbywbD7kMmOF_cvT88b_Y2UX3Rqhdc4UkfQrOTbHK-6ELqIwJNSMLVlofu28OD-58BpC/exec';
+
+        // --- UPDATED INITIAL DATA (OPD & IPD SPLIT) ---
+        const INITIAL_WARDS = [
+            // --- OPD SECTION ---
+            { id: 'opd', name: 'งานผู้ป่วยนอก (OPD)', category: 'opd', capacity: 0, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'er', name: 'อุบัติเหตุ (ER)', category: 'opd', capacity: 10, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'hemo', name: 'ไตเทียม', category: 'opd', capacity: 10, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'or', name: 'ห้องผ่าตัด (OR)', category: 'opd', capacity: 5, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+
+            // --- IPD SECTION ---
+            { id: 'male_ipd', name: 'หอผู้ป่วยในชาย', category: 'ipd', capacity: 30, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'female_ipd', name: 'หอผู้ป่วยในหญิง', category: 'ipd', capacity: 30, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'surgery_ortho', name: 'ศัลยกรรม/กระดูก', category: 'ipd', capacity: 30, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'pediatrics', name: 'หอผู้ป่วยเด็ก', category: 'ipd', capacity: 20, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'gyn', name: 'หอผู้ป่วยนารีเวช', category: 'ipd', capacity: 20, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'monk_2', name: 'พิเศษสงฆ์ ชั้น 2', category: 'ipd', capacity: 15, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'monk_3', name: 'พิเศษสงฆ์ ชั้น 3', category: 'ipd', capacity: 15, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'icu', name: 'วิกฤติ (ICU)', category: 'ipd', capacity: 8, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'lr', name: 'ห้องคลอด (LR)', category: 'ipd', capacity: 10, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } },
+            { id: 'stroke_unit', name: 'โรคหลอดเลือดสมอง', category: 'ipd', capacity: 10, census: { initial: 0, new: 0, discharge: 0, current: 0 }, acuity: { type1: 0, type2: 0, type3: 0, type4: 0, type5: 0 }, staff: { rn: 0, rnNames: '', pn: 0, pnNames: '', aid: 0, aidNames: '' } }
+        ];
+
+        // --- STATE ---
+        let wards = JSON.parse(localStorage.getItem(STORAGE_KEY)) || JSON.parse(JSON.stringify(INITIAL_WARDS));
+        let shiftNotes = localStorage.getItem(NOTES_KEY) || '';
+        let currentUser = null;
+        let chartInstance = null;
+        let gsUrl = localStorage.getItem(CONFIG_KEY) || DEFAULT_GS_URL;
+
+        // --- INIT ---
+        window.onload = function() {
+            // Setup Login Dropdown
+            const userSelect = document.getElementById('login-user');
+            USERS_LIST.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.name;
+                opt.innerText = u.name;
+                userSelect.appendChild(opt);
+            });
+
+            // Set Date
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            document.getElementById('global-date').value = dateStr;
+            document.getElementById('gs-url').value = gsUrl;
+            
+            // Set Notes
+            const noteArea = document.getElementById('shift-notes');
+            if(noteArea) {
+                noteArea.value = shiftNotes;
+                noteArea.addEventListener('input', function(e) {
+                    shiftNotes = e.target.value;
+                    saveData();
+                });
+            }
+
+            lucide.createIcons();
+            
+            // Check if wards structure needs update
+            if (wards.length !== INITIAL_WARDS.length || !wards[0].category) {
+                 // You might want to auto-migrate here, but for now we render what we have
+            }
+            
+            renderWards();
+        };
+
+        // --- FUNCTIONS ---
+        function handleLogin() {
+            const user = document.getElementById('login-user').value;
+            const pass = document.getElementById('login-pass').value;
+
+            if(!user) { alert('กรุณาเลือกผู้ใช้งาน'); return; }
+            if(pass !== '1234') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
+
+            currentUser = USERS_LIST.find(u => u.name === user);
+            const initials = user.split(' ').map(n => n[0]).join('').substring(0,2);
+            document.getElementById('user-initials').innerText = initials;
+
+            document.getElementById('view-login').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            
+            // FIX: Call updateDashboard here
+            updateDashboard();
+        }
+
+        function handleLogout() {
+            if(confirm('ต้องการออกจากระบบหรือไม่?')) location.reload();
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(wards));
+            localStorage.setItem(NOTES_KEY, shiftNotes);
+            
+            const statusEl = document.getElementById('save-status');
+            if(statusEl) {
+                statusEl.innerHTML = '<i data-lucide="check-circle" size="14"></i> Auto-Saved';
+                lucide.createIcons();
+            }
+            if (!document.getElementById('view-dashboard').classList.contains('hidden')) updateDashboard();
+        }
+
+        function manualSave() {
+            saveData();
+            alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+        }
+
+        function resetData() {
+            if(confirm('ต้องการล้างข้อมูลทั้งหมดใช่หรือไม่? (ข้อมูลจะกลับเป็นค่าเริ่มต้น)')) {
+                wards = JSON.parse(JSON.stringify(INITIAL_WARDS));
+                shiftNotes = '';
+                document.getElementById('shift-notes').value = '';
+                saveData();
+                renderWards();
+                updateDashboard();
+            }
+        }
+
+        function calculateValues(ward) {
+            ward.census.current = (parseInt(ward.census.initial) || 0) + (parseInt(ward.census.new) || 0) - (parseInt(ward.census.discharge) || 0);
+            if(ward.census.current < 0) ward.census.current = 0;
+
+            const workload = (
+                ((parseInt(ward.acuity.type1)||0) * ACUITY_HOURS.type1) +
+                ((parseInt(ward.acuity.type2)||0) * ACUITY_HOURS.type2) +
+                ((parseInt(ward.acuity.type3)||0) * ACUITY_HOURS.type3) +
+                ((parseInt(ward.acuity.type4)||0) * ACUITY_HOURS.type4) +
+                ((parseInt(ward.acuity.type5)||0) * ACUITY_HOURS.type5)
+            );
+
+            const manpower = ((parseInt(ward.staff.rn)||0) + (parseInt(ward.staff.pn)||0) + (parseInt(ward.staff.aid)||0)) * SHIFT_HOURS * 3;
+            const productivity = manpower > 0 ? ((workload / manpower) * 100).toFixed(2) : 0;
+
+            return { workload, manpower, productivity };
+        }
+
+        // MISSING FUNCTIONS RESTORED
+        function updateDashboard() {
+            let totalBeds = 0;
+            let totalOccupied = 0;
+            let overloadedWards = 0;
+            const chartLabels = [];
+            const chartData = [];
+            const chartColors = [];
+            const tbody = document.getElementById('dashboard-table-body');
+            tbody.innerHTML = '';
+
+            wards.forEach(w => {
+                const { workload, manpower, productivity } = calculateValues(w);
+                
+                // Only count capacity/beds for IPD usually, but here we sum all if capacity > 0
+                totalBeds += parseInt(w.capacity) || 0;
+                totalOccupied += w.census.current;
+                
+                if(productivity > 120) overloadedWards++;
+
+                if(w.census.current > 0 || manpower > 0) {
+                    chartLabels.push(w.name);
+                    chartData.push(productivity);
+                    if(productivity > 120) chartColors.push('#f43f5e'); // rose
+                    else if(productivity < 80) chartColors.push('#f59e0b'); // amber
+                    else chartColors.push('#10b981'); // emerald
+                }
+
+                const avail = w.capacity - w.census.current;
+                const occRate = w.capacity > 0 ? w.census.current / w.capacity : 0;
+                let statusBadge = '';
+                
+                if(avail <= 0) statusBadge = '<span class="text-[10px] px-2 py-1 rounded-full font-bold uppercase bg-rose-100 text-rose-600">FULL</span>';
+                else if(occRate > 0.85) statusBadge = '<span class="text-[10px] px-2 py-1 rounded-full font-bold uppercase bg-amber-100 text-amber-600">BUSY</span>';
+                else statusBadge = '<span class="text-[10px] px-2 py-1 rounded-full font-bold uppercase bg-emerald-100 text-emerald-600">OPEN</span>';
+
+                // Add to simple table
+                if(w.capacity > 0 || w.census.current > 0) {
+                     tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0">
+                            <td class="px-4 py-3 font-medium text-slate-700">${w.name}</td>
+                            <td class="px-2 py-3 text-center font-bold text-slate-600">${Math.max(0, avail)}</td>
+                            <td class="px-2 py-3 text-right">${statusBadge}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            document.getElementById('kpi-total-beds').innerText = totalBeds;
+            document.getElementById('kpi-occupied').innerText = totalOccupied;
+            document.getElementById('kpi-available').innerText = Math.max(0, totalBeds - totalOccupied);
+            
+            const rate = totalBeds > 0 ? ((totalOccupied/totalBeds)*100).toFixed(1) : 0;
+            document.getElementById('kpi-rate').innerText = rate;
+            document.getElementById('kpi-overload').innerText = overloadedWards;
+
+            renderChart(chartLabels, chartData, chartColors);
+        }
+
+        function renderChart(labels, data, colors) {
+            const ctx = document.getElementById('prodChart').getContext('2d');
+            if(chartInstance) {
+                chartInstance.destroy();
+            }
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Productivity (%)',
+                        data: data,
+                        backgroundColor: colors,
+                        borderRadius: 8,
+                        barThickness: 25,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#064e3b',
+                            bodyColor: '#065f46',
+                            borderColor: '#d1fae5',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Productivity: ' + context.raw + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: '#f1f5f9', borderDash: [4, 4] }, 
+                            ticks: { font: { family: "'Sarabun', sans-serif", size: 11 }, color: '#64748b' } 
+                        },
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { font: { family: "'Sarabun', sans-serif", size: 10 }, color: '#64748b' } 
+                        }
+                    }
+                }
+            });
+        }
+
+        async function sendToGoogleSheets() {
+             if (!gsUrl) {
+                alert('ไม่พบ URL ปลายทาง กรุณาตรวจสอบการตั้งค่า');
+                return;
+            }
+
+            const date = document.getElementById('global-date').value;
+            const shift = document.getElementById('global-shift').value;
+            const submitter = currentUser ? currentUser.name : 'Unknown';
+
+            // Prepare Data Payload
+            const payload = {
+                timestamp: new Date().toISOString(),
+                submitter: submitter,
+                date: date,
+                shift: shift,
+                notes: shiftNotes,
+                wards: []
+            };
+
+            wards.forEach(w => {
+                const calcs = calculateValues(w);
+                payload.wards.push({
+                    name: w.name,
+                    category: w.category,
+                    capacity: w.capacity,
+                    census_in: w.census.initial,
+                    census_new: w.census.new,
+                    census_out: w.census.discharge,
+                    census_current: w.census.current,
+                    acuity_1: w.acuity.type1,
+                    acuity_2: w.acuity.type2,
+                    acuity_3: w.acuity.type3,
+                    acuity_4: w.acuity.type4,
+                    acuity_5: w.acuity.type5,
+                    staff_rn: w.staff.rn,
+                    staff_pn: w.staff.pn,
+                    staff_aid: w.staff.aid,
+                    productivity: calcs.productivity
+                });
+            });
+
+            const btn = document.querySelector('button[onclick="sendToGoogleSheets()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> กำลังส่ง...';
+            btn.disabled = true;
+
+            try {
+                await fetch(gsUrl, {
+                    method: 'POST',
+                    mode: 'no-cors', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                alert('✅ ส่งข้อมูลเรียบร้อยแล้ว!');
+            } catch (error) {
+                console.error(error);
+                alert('❌ เกิดข้อผิดพลาดในการส่งข้อมูล: ' + error.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+
+        // End of Missing Functions
+
+        function renderWards() {
+            const opdContainer = document.getElementById('wards-container-opd');
+            const ipdContainer = document.getElementById('wards-container-ipd');
+            opdContainer.innerHTML = '';
+            ipdContainer.innerHTML = '';
+
+            wards.forEach((ward, index) => {
+                const card = document.createElement('div');
+                card.className = 'glass-card rounded-3xl overflow-hidden hover:shadow-lg transition-all duration-300 border-0 shadow-sm';
+                
+                const generateStaffSlots = (type, label, iconClass, bgClass) => {
+                    let slotsHtml = '';
+                    const names = ward.staff[type + 'Names'] ? ward.staff[type + 'Names'].split('\n') : [];
+                    for(let i=0; i<6; i++) {
+                        slotsHtml += `
+                            <div class="relative group mb-2">
+                                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-400 pointer-events-none">${i+1}</div>
+                                <input type="text" 
+                                    class="input-field w-full text-sm pl-7 pr-3 py-1.5 border border-slate-200 rounded-lg outline-none bg-white focus:border-transparent focus:ring-2 focus:ring-${bgClass}-200 placeholder:text-slate-300 text-slate-700 font-medium"
+                                    placeholder="ชื่อ..."
+                                    value="${names[i] || ''}"
+                                    onchange="updateStaffName(${index}, '${type}', ${i}, this.value)"
+                                >
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="p-4 rounded-2xl border border-${bgClass}-100 bg-${bgClass}-50/30 flex flex-col h-full">
+                            <div class="flex justify-between items-center mb-3">
+                                <label class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                    ${iconClass} ${label}
+                                </label>
+                                <span id="count-${ward.id}-${type}" class="text-xs px-2 py-0.5 rounded-md font-bold bg-white shadow-sm border border-${bgClass}-100 text-slate-700">
+                                    ${ward.staff[type]}
+                                </span>
+                            </div>
+                            <div class="space-y-1 flex-grow">${slotsHtml}</div>
+                        </div>
+                    `;
+                };
+
+                const numInput = (category, field, color='slate', w='full') => `
+                    <input type="number" min="0" 
+                        class="input-field w-${w} border border-${color}-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-${color}-200 outline-none bg-${color === 'slate' ? 'white' : color + '-50/50'} font-bold text-${color === 'slate' ? 'slate-700' : color + '-700'} text-center"
+                        value="${category === 'root' ? ward[field] : ward[category][field]}"
+                        oninput="updateValue(${index}, '${category}', '${field}', this.value)"
+                    >
+                `;
+
+                // Badge color based on category
+                const headerColor = ward.category === 'opd' ? 'from-emerald-500 to-teal-500' : 'from-emerald-600 to-emerald-700';
+
+                card.innerHTML = `
+                    <div class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br ${headerColor} flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+                                <i data-lucide="${ward.category === 'opd' ? 'stethoscope' : 'bed-double'}" size="20"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-800 font-prompt">${ward.name}</h3>
+                                <p class="text-xs text-slate-500 font-medium">Code: ${ward.id.toUpperCase()}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Target/Bed</label>
+                            ${numInput('root', 'capacity', 'teal', '16')}
+                        </div>
+                    </div>
+
+                    <div class="p-6 grid grid-cols-1 xl:grid-cols-12 gap-8">
+                        <div class="xl:col-span-5 space-y-6">
+                            <div>
+                                <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <i data-lucide="users" size="14"></i> ข้อมูลผู้ป่วย (Census/Visits)
+                                </h4>
+                                <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 grid grid-cols-4 gap-2 text-center">
+                                    <div><label class="text-[10px] font-bold text-slate-500 block mb-1">ยกมา</label>${numInput('census', 'initial')}</div>
+                                    <div><label class="text-[10px] font-bold text-emerald-600 block mb-1">รับใหม่</label>${numInput('census', 'new', 'emerald')}</div>
+                                    <div><label class="text-[10px] font-bold text-rose-600 block mb-1">จำหน่าย</label>${numInput('census', 'discharge', 'rose')}</div>
+                                    <div>
+                                        <label class="text-[10px] font-bold text-slate-500 block mb-1">คงเหลือ</label>
+                                        <div id="display-${ward.id}-current" class="w-full bg-slate-800 text-white rounded-lg px-2 py-1.5 text-sm font-bold shadow-md h-[34px] flex items-center justify-center">
+                                            ${ward.census.current}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <i data-lucide="activity" size="14"></i> ประเภทผู้ป่วย (Acuity 1-5)
+                                </h4>
+                                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-5 gap-2">
+                                    ${[1,2,3,4,5].map(t => `
+                                        <div class="text-center">
+                                            <label class="block text-[10px] font-bold text-slate-400 mb-1">T${t}</label>
+                                            ${numInput('acuity', 'type'+t)}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="xl:col-span-7">
+                            <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                <i data-lucide="user-plus" size="14"></i> อัตรากำลัง (Staffing)
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                ${generateStaffSlots('rn', 'พยาบาล (RN)', '<i data-lucide="stethoscope" size="14"></i>', 'emerald')}
+                                ${generateStaffSlots('pn', 'ผช. (PN)', '', 'teal')}
+                                ${generateStaffSlots('aid', 'คนงาน (Aide)', '', 'slate')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                if (ward.category === 'opd') {
+                    opdContainer.appendChild(card);
+                } else {
+                    ipdContainer.appendChild(card);
+                }
+            });
+            lucide.createIcons();
+        }
+
+        function updateValue(index, category, field, value) {
+            const val = parseInt(value) || 0;
+            if (category === 'root') wards[index][field] = val;
+            else wards[index][category][field] = val;
+
+            if (category === 'census') {
+                const w = wards[index];
+                w.census.current = (parseInt(w.census.initial)||0) + (parseInt(w.census.new)||0) - (parseInt(w.census.discharge)||0);
+                if(w.census.current < 0) w.census.current = 0;
+                const displayEl = document.getElementById(`display-${w.id}-current`);
+                if(displayEl) displayEl.innerText = w.census.current;
+            }
+            saveData();
+        }
+
+        function updateStaffName(index, type, slotIndex, value) {
+            const w = wards[index];
+            let currentNames = w.staff[type + 'Names'] ? w.staff[type + 'Names'].split('\n') : [];
+            while(currentNames.length < 6) currentNames.push('');
+            currentNames[slotIndex] = value;
+            w.staff[type + 'Names'] = currentNames.join('\n');
+            w.staff[type] = currentNames.filter(n => n.trim() !== '').length;
+            document.getElementById(`count-${w.id}-${type}`).innerText = w.staff[type];
+            saveData();
+        }
+
+        function switchTab(tab) {
+            const dashView = document.getElementById('view-dashboard');
+            const entryView = document.getElementById('view-entry');
+            const btnDash = document.getElementById('btn-dashboard');
+            const btnEntry = document.getElementById('btn-entry');
+
+            if (tab === 'dashboard') {
+                dashView.classList.remove('hidden');
+                entryView.classList.add('hidden');
+                btnDash.classList.remove('text-emerald-600/70', 'hover:bg-white/50');
+                btnDash.classList.add('bg-white', 'text-emerald-700', 'shadow-sm');
+                btnEntry.classList.add('text-emerald-600/70', 'hover:bg-white/50');
+                btnEntry.classList.remove('bg-white', 'text-emerald-700', 'shadow-sm');
+                updateDashboard();
+            } else {
+                dashView.classList.add('hidden');
+                entryView.classList.remove('hidden');
+                btnEntry.classList.remove('text-emerald-600/70', 'hover:bg-white/50');
+                btnEntry.classList.add('bg-white', 'text-emerald-700', 'shadow-sm');
+                btnDash.classList.add('text-emerald-600/70', 'hover:bg-white/50');
+                btnDash.classList.remove('bg-white', 'text-emerald-700', 'shadow-sm');
+            }
+        }
+
+        function saveGoogleConfig() {
+            const url = document.getElementById('gs-url').value;
+            localStorage.setItem(CONFIG_KEY, url);
+            gsUrl = url;
+            alert('บันทึกการตั้งค่าแล้ว');
+        }
+
+        // --- PRINT ---
+        function printReport() {
+            const dateVal = document.getElementById('global-date').value;
+            const dateObj = new Date(dateVal);
+            const dateStr = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+            const shift = document.getElementById('global-shift').value;
+            const reporter = currentUser ? currentUser.name : '......................................................';
+
+            let opdRows = '', ipdRows = '';
+            let totalBeds = 0, totalPatients = 0;
+
+            wards.forEach(w => {
+                const { workload, manpower, productivity } = calculateValues(w);
+                if(w.census.current > 0 || manpower > 0) {
+                    totalBeds += parseInt(w.capacity) || 0;
+                    totalPatients += w.census.current;
+                    
+                    const row = `
+                        <tr class="border-b border-gray-200 text-[10px] leading-tight">
+                            <td class="p-1 border-r border-gray-300 text-left font-bold text-xs">${w.name}</td>
+                            <td class="p-1 border-r border-gray-300 text-center">${w.capacity}</td>
+                            <td class="p-1 border-r border-gray-300 text-center">${w.census.initial}</td>
+                            <td class="p-1 border-r border-gray-300 text-center">${w.census.new}</td>
+                            <td class="p-1 border-r border-gray-300 text-center">${w.census.discharge}</td>
+                            <td class="p-1 border-r border-gray-300 text-center font-bold bg-gray-50">${w.census.current}</td>
+                            <td class="p-1 border-r border-gray-300 text-center text-[9px]">${w.acuity.type1}/${w.acuity.type2}/${w.acuity.type3}/${w.acuity.type4}/${w.acuity.type5}</td>
+                            <td class="p-1 border-r border-gray-300 text-center text-[9px]">${w.staff.rn}/${w.staff.pn}/${w.staff.aid}</td>
+                            <td class="p-1 text-center font-bold text-[10px]">${productivity}%</td>
+                        </tr>`;
+                    
+                    if (w.category === 'opd') opdRows += row;
+                    else ipdRows += row;
+                }
+            });
+
+            const html = `
+                <div class="font-sarabun text-black p-2 max-w-[21cm] mx-auto">
+                    <div class="text-center mb-2">
+                        <h2 class="text-xl font-bold font-prompt leading-tight">รายงานเวรตรวจการพยาบาล (Smart Nurse Audit)</h2>
+                        <p class="text-sm mt-0.5">วันที่ ${dateStr} &nbsp;|&nbsp; เวร: ${shift}</p>
+                    </div>
+
+                    <div class="space-y-2">
+                        ${opdRows ? `
+                        <div>
+                            <h3 class="font-bold text-sm mb-1 font-prompt bg-emerald-50 px-2 py-0.5 rounded">ส่วนที่ 1: OPD/ER</h3>
+                            <table class="w-full border border-gray-400 border-collapse text-[10px]">
+                                <thead class="bg-gray-100 text-[9px] font-bold">
+                                    <tr class="border-b border-gray-400">
+                                        <th class="p-1 border-r border-gray-400 w-1/4">หน่วยงาน</th>
+                                        <th class="p-1 border-r border-gray-400">Target</th>
+                                        <th class="p-1 border-r border-gray-400">ยกมา</th>
+                                        <th class="p-1 border-r border-gray-400">รับ</th>
+                                        <th class="p-1 border-r border-gray-400">ออก</th>
+                                        <th class="p-1 border-r border-gray-400">คงเหลือ</th>
+                                        <th class="p-1 border-r border-gray-400">ประเภท (1-5)</th>
+                                        <th class="p-1 border-r border-gray-400">จนท.(R/P/A)</th>
+                                        <th class="p-1">Prod.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${opdRows}</tbody>
+                            </table>
+                        </div>` : ''}
+
+                        ${ipdRows ? `
+                        <div>
+                            <h3 class="font-bold text-sm mb-1 font-prompt bg-emerald-50 px-2 py-0.5 rounded">ส่วนที่ 2: IPD</h3>
+                            <table class="w-full border border-gray-400 border-collapse text-[10px]">
+                                <thead class="bg-gray-100 text-[9px] font-bold">
+                                    <tr class="border-b border-gray-400">
+                                        <th class="p-1 border-r border-gray-400 w-1/4">หอผู้ป่วย</th>
+                                        <th class="p-1 border-r border-gray-400">เตียง</th>
+                                        <th class="p-1 border-r border-gray-400">ยกมา</th>
+                                        <th class="p-1 border-r border-gray-400">รับ</th>
+                                        <th class="p-1 border-r border-gray-400">ออก</th>
+                                        <th class="p-1 border-r border-gray-400">คงเหลือ</th>
+                                        <th class="p-1 border-r border-gray-400">ประเภท (1-5)</th>
+                                        <th class="p-1 border-r border-gray-400">จนท.(R/P/A)</th>
+                                        <th class="p-1">Prod.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${ipdRows}</tbody>
+                            </table>
+                        </div>` : ''}
+                    </div>
+
+                    <div class="mt-2 border-t border-gray-300 pt-1 mb-2">
+                        <div class="flex justify-between font-bold text-sm">
+                            <span>รวมทั้งหมด</span>
+                            <span>ผู้ป่วยคงเหลือ: ${totalPatients} ราย</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="font-bold text-sm mb-1 border-b border-gray-300 pb-0.5 font-prompt">ปัญหา/เหตุการณ์</h3>
+                        <div class="p-2 border border-gray-300 rounded min-h-[60px] whitespace-pre-wrap leading-tight text-xs bg-gray-50">${shiftNotes || '- ไม่มีรายงาน -'}</div>
+                    </div>
+
+                    <div class="flex justify-between mt-4 px-4 text-xs">
+                        <div class="text-center">
+                            <p class="mb-6">ลงชื่อ ..................................................</p>
+                            <p class="font-bold">(${reporter})</p>
+                            <p class="text-[10px] text-gray-500 mt-0.5">ผู้ตรวจการพยาบาล</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="mb-6">ลงชื่อ ..................................................</p>
+                            <p class="font-bold">(..................................................)</p>
+                            <p class="text-[10px] text-gray-500 mt-0.5">หัวหน้ากลุ่มการพยาบาล</p>
+                        </div>
+                    </div>
+                    
+                    <div class="text-[8px] text-right text-gray-400 mt-2">พิมพ์จากระบบ Smart Nurse Audit</div>
+                </div>
+            `;
+            document.getElementById('print-area').innerHTML = html;
+            setTimeout(() => window.print(), 200);
+        }
+    </script>
+</body>
+</html>

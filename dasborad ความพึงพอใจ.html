@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard ความพึงพอใจห้องฉุกเฉิน</title>
+    <!-- Tailwind CSS -->
+    <script src="vendor/tailwindcss.js"></script>
+    <!-- Chart.js -->
+    <script src="vendor/chart.umd.js"></script>
+    <!-- FontAwesome -->
+    <script src="vendor/fontawesome-all.min.js"></script>
+    <!-- Google Fonts: Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .loader {
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Custom Scrollbar for Feedback */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased p-4 md:p-6 lg:p-8">
+
+    <!-- Loading Screen -->
+    <div id="loading" class="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center transition-opacity duration-300">
+        <div class="loader mb-4"></div>
+        <h2 class="text-xl font-semibold text-blue-600">กำลังประมวลผลข้อมูล...</h2>
+        <p class="text-slate-500 text-sm mt-2">กรุณารอสักครู่</p>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="max-w-7xl mx-auto hidden opacity-0 transition-opacity duration-500">
+        
+        <!-- Header -->
+        <header class="mb-6 flex flex-col lg:flex-row lg:items-center justify-between bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 p-6 rounded-2xl shadow-lg text-white">
+            <div class="mb-4 lg:mb-0">
+                <h1 class="text-2xl md:text-3xl font-bold mb-2 flex items-center">
+                    <div class="bg-white/20 p-2 rounded-lg mr-3 backdrop-blur-sm">
+                        <i class="fa-solid fa-truck-medical text-white"></i>
+                    </div>
+                    รายงานความพึงพอใจห้องฉุกเฉิน
+                </h1>
+                <p class="text-blue-100 opacity-90 text-sm md:text-base"><i class="fa-solid fa-chart-line mr-2"></i>วิเคราะห์ข้อมูลการให้บริการและข้อเสนอแนะ</p>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <!-- Time Filter -->
+                <div class="bg-white/10 p-1 rounded-lg backdrop-blur-sm flex items-center border border-white/20 w-full sm:w-auto">
+                    <i class="fa-regular fa-calendar ml-3 mr-2 text-white/80"></i>
+                    <select id="timeFilter" class="bg-transparent text-white border-none outline-none py-2 pr-4 pl-1 text-sm font-medium cursor-pointer appearance-none w-full sm:w-auto">
+                        <option value="all" class="text-slate-800">ช่วงเวลา: ทั้งหมด</option>
+                        <option value="30days" class="text-slate-800">ช่วงเวลา: 30 วันที่ผ่านมา</option>
+                        <option value="7days" class="text-slate-800">ช่วงเวลา: 7 วันที่ผ่านมา</option>
+                    </select>
+                </div>
+
+                <!-- Total Count -->
+                <div class="bg-white text-blue-600 px-5 py-2 rounded-lg shadow-sm flex items-center justify-between w-full sm:w-auto">
+                    <div class="mr-4">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 block">ผู้ตอบแบบสอบถาม</span>
+                        <div class="text-2xl font-bold leading-none" id="totalRespondents">0</div>
+                    </div>
+                    <div class="text-blue-100 bg-blue-500 rounded-full w-10 h-10 flex items-center justify-center">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Data Empty State -->
+        <div id="emptyState" class="hidden glass-card p-12 text-center mb-8">
+            <i class="fa-regular fa-folder-open text-6xl text-slate-300 mb-4"></i>
+            <h3 class="text-xl font-bold text-slate-700">ไม่มีข้อมูลในช่วงเวลาที่เลือก</h3>
+            <p class="text-slate-500 mt-2">โปรดเลือกช่วงเวลาอื่น หรือรอให้มีผู้ตอบแบบสอบถามเพิ่มเติม</p>
+        </div>
+
+        <div id="dashboardContent">
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <!-- Overall Score -->
+                <div class="glass-card p-5 flex items-center border-l-4 border-l-emerald-500 relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 opacity-5 text-emerald-500"><i class="fa-solid fa-star text-9xl"></i></div>
+                    <div class="rounded-xl bg-emerald-50 p-4 mr-4 text-emerald-500 shadow-sm border border-emerald-100">
+                        <i class="fa-solid fa-star text-2xl"></i>
+                    </div>
+                    <div class="z-10">
+                        <p class="text-slate-500 text-sm font-semibold mb-1">คะแนนภาพรวมเฉลี่ย</p>
+                        <h3 class="text-3xl font-bold text-slate-800 flex items-baseline gap-1" id="avgOverall">
+                            0.00 <span class="text-sm font-medium text-slate-400">%</span>
+                        </h3>
+                    </div>
+                </div>
+                
+                <!-- Doctor Score -->
+                <div class="glass-card p-5 flex items-center border-l-4 border-l-blue-500 relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 opacity-5 text-blue-500"><i class="fa-solid fa-user-doctor text-9xl"></i></div>
+                    <div class="rounded-xl bg-blue-50 p-4 mr-4 text-blue-500 shadow-sm border border-blue-100">
+                        <i class="fa-solid fa-user-doctor text-2xl"></i>
+                    </div>
+                    <div class="z-10">
+                        <p class="text-slate-500 text-sm font-semibold mb-1">ความพึงพอใจต่อแพทย์</p>
+                        <h3 class="text-3xl font-bold text-slate-800 flex items-baseline gap-1" id="avgDoctor">
+                            0.00 <span class="text-sm font-medium text-slate-400">/ 5</span>
+                        </h3>
+                    </div>
+                </div>
+
+                <!-- Nurse Score -->
+                <div class="glass-card p-5 flex items-center border-l-4 border-l-pink-500 relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 opacity-5 text-pink-500"><i class="fa-solid fa-user-nurse text-9xl"></i></div>
+                    <div class="rounded-xl bg-pink-50 p-4 mr-4 text-pink-500 shadow-sm border border-pink-100">
+                        <i class="fa-solid fa-user-nurse text-2xl"></i>
+                    </div>
+                    <div class="z-10">
+                        <p class="text-slate-500 text-sm font-semibold mb-1">ความพึงพอใจต่อพยาบาล</p>
+                        <h3 class="text-3xl font-bold text-slate-800 flex items-baseline gap-1" id="avgNurse">
+                            0.00 <span class="text-sm font-medium text-slate-400">/ 5</span>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section 1 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Gender & User Type (Takes 2 columns on lg) -->
+                <div class="glass-card p-6 lg:col-span-2">
+                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                        <h3 class="text-lg font-bold text-slate-700 flex items-center">
+                            <i class="fa-solid fa-users text-indigo-500 mr-2 bg-indigo-50 p-2 rounded-lg"></i>ข้อมูลผู้ใช้บริการ
+                        </h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 h-[250px]">
+                        <div class="relative w-full h-full flex flex-col items-center">
+                            <canvas id="genderChart"></canvas>
+                        </div>
+                        <div class="relative w-full h-full flex flex-col items-center">
+                            <canvas id="userTypeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recommend -->
+                <div class="glass-card p-6 flex flex-col">
+                    <div class="flex items-center mb-4 border-b border-slate-100 pb-3">
+                        <h3 class="text-lg font-bold text-slate-700 flex items-center">
+                            <i class="fa-solid fa-heart text-rose-500 mr-2 bg-rose-50 p-2 rounded-lg"></i>การแนะนำบอกต่อ
+                        </h3>
+                    </div>
+                    <div class="relative flex-grow flex items-center justify-center min-h-[200px]">
+                        <div class="w-full h-full relative" style="max-height: 220px; max-width: 220px;">
+                            <canvas id="recommendChart"></canvas>
+                            <div class="absolute inset-0 flex items-center justify-center flex-col mt-4">
+                                <span class="text-4xl font-black text-emerald-500 drop-shadow-sm" id="recommendPercent">0%</span>
+                                <span class="text-sm font-medium text-slate-500 bg-white/80 px-2 rounded-full mt-1">แนะนำให้ผู้อื่น</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section 2 : Detailed Scores -->
+            <div class="glass-card p-6 mb-6">
+                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                    <h3 class="text-lg font-bold text-slate-700 flex items-center">
+                        <i class="fa-solid fa-chart-column text-blue-500 mr-2 bg-blue-50 p-2 rounded-lg"></i>รายละเอียดคะแนนรายข้อ (เต็ม 5)
+                    </h3>
+                    <div class="flex gap-3 text-xs font-medium text-slate-500">
+                        <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-blue-400 mr-1"></span>แพทย์</span>
+                        <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-pink-400 mr-1"></span>พยาบาล</span>
+                        <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-amber-400 mr-1"></span>อื่นๆ</span>
+                    </div>
+                </div>
+                <div class="h-[350px] w-full relative">
+                    <canvas id="detailChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Feedback Section -->
+            <div class="glass-card p-6 mb-6">
+                <div class="flex items-center mb-4 border-b border-slate-100 pb-3">
+                    <h3 class="text-lg font-bold text-slate-700 flex items-center">
+                        <i class="fa-solid fa-comments text-amber-500 mr-2 bg-amber-50 p-2 rounded-lg"></i>ข้อเสนอแนะเพื่อการปรับปรุง
+                    </h3>
+                    <span class="ml-3 bg-slate-100 text-slate-600 py-1 px-3 rounded-full text-xs font-bold" id="feedbackCount">0 รายการ</span>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2 pb-2" id="feedbackContainer">
+                    <!-- Feedbacks will go here -->
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center text-slate-400 text-sm mt-8 mb-4 border-t border-slate-200 pt-4 flex flex-col items-center justify-center gap-1">
+            <p>ระบบรายงานผลแบบเรียลไทม์</p>
+            <p class="text-xs">พัฒนาโดยใช้ Google Apps Script & Chart.js</p>
+        </footer>
+
+    </div>
+
+    <script>
+        // --- Global Variables ---
+        let allRawData = [];
+        let charts = {}; // เก็บ Object ของกราฟเพื่อใช้ทำลายก่อนวาดใหม่
+
+        // กำหนด Default Font & Color สำหรับ Chart.js
+        Chart.defaults.font.family = "'Prompt', sans-serif";
+        Chart.defaults.color = '#64748b';
+        Chart.defaults.plugins.tooltip.titleFont = { family: "'Prompt', sans-serif", size: 14 };
+        Chart.defaults.plugins.tooltip.bodyFont = { family: "'Prompt', sans-serif", size: 13 };
+
+        // --- 1. Initialization Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup Filter Listener
+            document.getElementById('timeFilter').addEventListener('change', (e) => {
+                filterAndRenderData(e.target.value);
+            });
+
+            // ตั้งค่า API URL (ใส่ลิงก์ของคุณ และระบบจะเติม ?api=true ให้โดยอัตโนมัติเพื่อให้ดึงเป็นข้อมูล JSON)
+            const BASE_URL = "https://script.google.com/macros/s/AKfycbwoIlqY79p6zhpQHi4ha50bkfxz1um6rrc6Wh2qLmO5wraQSNR_Z8KkTtVEME7hVehlFg/exec"; 
+            const API_URL = BASE_URL ? BASE_URL + "?api=true" : "";
+
+            // Check Environment
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                // 1. กรณีรันบน Google Apps Script โดยตรง (ดึงข้อมูลจริง)
+                google.script.run
+                    .withSuccessHandler(handleData)
+                    .withFailureHandler(handleError)
+                    .getSheetData();
+            } else if (API_URL !== "") {
+                // 2. กรณีใช้เป็นเว็บ HTML ภายนอก แล้วดึง API (ดึงข้อมูลจริง)
+                fetch(API_URL, { redirect: 'follow' }) // เพิ่ม redirect: 'follow' เพื่อแก้ปัญหาการดึงข้อมูลจาก Google
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => handleData(data))
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        handleError("ไม่สามารถดึงข้อมูลจาก Google Sheet ได้: " + error.message);
+                    });
+            } else {
+                // 3. กรณีรัน Preview (หน้าจอนี้ - แสดงข้อมูลจำลอง)
+                console.log("Running in preview mode with mock data.");
+                setTimeout(() => handleData(generateMockData()), 1000);
+            }
+        });
+
+        function handleError(error) {
+            document.getElementById('loading').innerHTML = `
+                <div class="bg-red-50 p-6 rounded-2xl flex flex-col items-center text-center max-w-sm border border-red-100">
+                    <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-red-700 mb-2">เกิดข้อผิดพลาด</h2>
+                    <p class="text-red-500/80 text-sm">${error.message || error}</p>
+                    <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">ลองใหม่อีกครั้ง</button>
+                </div>
+            `;
+        }
+
+        function handleData(response) {
+            if (response.error) {
+                handleError(response.message);
+                return;
+            }
+
+            allRawData = response.data;
+            
+            if(!allRawData || allRawData.length === 0) {
+                handleError("ไม่พบข้อมูลในระบบ");
+                return;
+            }
+
+            // ซ่อน Loading, แสดง Dashboard ด้วย Animation
+            const loadingEl = document.getElementById('loading');
+            const dashboardEl = document.getElementById('dashboard');
+            
+            loadingEl.style.opacity = '0';
+            setTimeout(() => {
+                loadingEl.style.display = 'none';
+                dashboardEl.classList.remove('hidden');
+                // Trigger reflow
+                void dashboardEl.offsetWidth; 
+                dashboardEl.style.opacity = '1';
+                
+                // Initial Render (All data)
+                filterAndRenderData('all');
+            }, 300);
+        }
+
+        // --- 2. Filter & Process Logic ---
+
+        // ฟังก์ชันช่วยแปลงวันที่ให้รองรับทั้งแบบสากลและแบบไทย (DD/MM/YYYY, ปี พ.ศ.)
+        function parseDateString(dateStr) {
+            if (!dateStr) return null;
+            
+            // 1. ลองใช้ Date ปกติของ JS ก่อน (รองรับ ISO format)
+            let d = new Date(dateStr);
+            if (!isNaN(d.getTime()) && d.getFullYear() < 2500) {
+                return d;
+            }
+
+            // 2. กรณี Date ปกติแปลงไม่ได้ (มักเกิดจากวันที่ของ Google Sheet ภาษาไทย DD/MM/YYYY)
+            // เช่น "27/02/2567 15:30:00"
+            let parts = String(dateStr).trim().split(/[\s,T]+/); 
+            let datePart = parts[0];
+            let timePart = parts.length > 1 ? parts[1] : "00:00:00";
+
+            let dateChunks = datePart.split('/');
+            if (dateChunks.length === 3) {
+                let day = parseInt(dateChunks[0]);
+                let month = parseInt(dateChunks[1]) - 1; // JS เดือนเริ่มที่ 0
+                let year = parseInt(dateChunks[2]);
+
+                // ถ้าวัน/เดือนสลับตำแหน่งกัน (เดือนเกิน 12)
+                if (month > 11 && day <= 12) {
+                    let temp = day;
+                    day = month + 1;
+                    month = temp - 1;
+                }
+
+                // แปลง พ.ศ. เป็น ค.ศ.
+                if (year >= 2500) year -= 543;
+                else if (year < 100) year += 2000;
+
+                let timeChunks = timePart.split(':');
+                let h = timeChunks.length > 0 ? parseInt(timeChunks[0]) : 0;
+                let m = timeChunks.length > 1 ? parseInt(timeChunks[1]) : 0;
+                let s = timeChunks.length > 2 ? parseInt(timeChunks[2]) : 0;
+
+                d = new Date(year, month, day, h, m, s);
+                if (!isNaN(d.getTime())) return d;
+            }
+            return null;
+        }
+
+        function filterAndRenderData(filterValue) {
+            let filteredData = allRawData;
+            
+            if (filterValue !== 'all') {
+                const now = new Date();
+                const daysToSubtract = filterValue === '30days' ? 30 : 7;
+                const cutoffDate = new Date(now.getTime() - (daysToSubtract * 24 * 60 * 60 * 1000));
+                
+                filteredData = allRawData.filter(row => {
+                    // รองรับชื่อคอลัมน์ทั้งไทยและอังกฤษ
+                    const timestampStr = findVal(row, "ประทับเวลา") || findVal(row, "timestamp");
+                    if (!timestampStr) return true; // ถ้าไม่มีเวลาให้รวมไว้ก่อน
+                    
+                    const rowDate = parseDateString(timestampStr);
+                    if (!rowDate) return true; // ถ้าแปลงค่าไม่ได้ให้รวมไว้ก่อน
+                    
+                    return rowDate >= cutoffDate;
+                });
+            }
+
+            const emptyState = document.getElementById('emptyState');
+            const dashboardContent = document.getElementById('dashboardContent');
+
+            if (filteredData.length === 0) {
+                emptyState.classList.remove('hidden');
+                dashboardContent.classList.add('hidden');
+                document.getElementById('totalRespondents').innerText = "0";
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+                dashboardContent.classList.remove('hidden');
+            }
+
+            processAndRender(filteredData);
+        }
+
+        // Helper functions
+        function findVal(row, keyword) {
+            const key = Object.keys(row).find(k => k.toLowerCase().includes(keyword.toLowerCase()));
+            return key ? row[key] : null;
+        }
+
+        function getScore(val) {
+            let num = parseFloat(val);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function processAndRender(data) {
+            const total = data.length;
+            
+            // Animate Number count
+            animateValue("totalRespondents", 0, total, 1000);
+
+            // --- ชุดข้อมูลคำถามที่ถูกปรับปรุงเพื่อให้กราฟแสดงครบถ้วนและแม่นยำ ---
+            // ข้อ 14 (คุณภาพรวม) และข้อ 15 จะไม่ตกหล่นอีกต่อไป
+            const questions = [
+                { key: "1.กิริยา", label: "1. กิริยาของแพทย์", group: "doc" },
+                { key: "2.แพทย์สนใจ", label: "2. แพทย์สนใจฟังคำบอกเล่า", group: "doc" },
+                { key: "3.การตรวจร่างกาย", label: "3. การตรวจร่างกาย", group: "doc" },
+                { key: "4.การมีส่วนร่วม", label: "4. การมีส่วนร่วมในการรักษา", group: "doc" },
+                { key: "5.การซักประวัติ", label: "5. การซักประวัติ", group: "nur" },
+                { key: "6.การดูแล", label: "6. การดูแลให้ความช่วยเหลือ", group: "nur" },
+                { key: "7การตอบสนอง", label: "7. การตอบสนองอย่างรวดเร็ว", group: "nur" },
+                { key: "8.ท่านมีโอกาส", label: "8. โอกาสพูดคุยซักถาม", group: "nur" },
+                { key: "9.การให้ข้อมูล", label: "9. การให้ข้อมูล/คำแนะนำ", group: "nur" },
+                { key: "10.กิริยา", label: "10. กิริยามารยาทของพยาบาล", group: "nur" },
+                { key: "11.การแนะนำ", label: "11. การแนะนำประชาสัมพันธ์", group: "oth" },
+                { key: "12.กิริยา", label: "12. กิริยามารยาทเจ้าหน้าที่", group: "oth" },
+                { key: "13ความสะดวก", label: "13. ความสะดวกในการติดต่อ", group: "oth" },
+                { key: "14.คุณภาพ", label: "14. คุณภาพบริการโดยรวม", group: "oth" },
+                { key: "15.ความสะอาด", label: "15. ความสะอาดของสถานที่", group: "oth" }
+            ];
+
+            let stats = {
+                gender: { "ชาย": 0, "หญิง": 0, "อื่นๆ": 0 },
+                userType: { "ผู้ป่วย": 0, "ญาติ": 0, "อื่นๆ": 0 },
+                recommend: { "แนะนำ": 0, "ไม่แนะนำ": 0 },
+                scores: {
+                    doctor: 0, nurse: 0, overall: 0,
+                    details: {}
+                },
+                feedbacks: []
+            };
+
+            // สร้าง Object รองรับคะแนนรายข้อตาม Configuration
+            questions.forEach(q => {
+                stats.scores.details[q.label] = { sum: 0, count: 0 };
+            });
+
+            let globalSumActual = 0;
+            let globalValidCount = 0;
+
+            data.forEach(row => {
+                // Demographics
+                let gender = findVal(row, "เพศ");
+                if(gender) {
+                    if(gender.includes("ชาย")) stats.gender["ชาย"]++;
+                    else if(gender.includes("หญิง")) stats.gender["หญิง"]++;
+                    else stats.gender["อื่นๆ"]++;
+                }
+
+                let type = findVal(row, "ผู้ใช้บริการ");
+                if(type) {
+                    if(type.includes("ผู้ป่วย")) stats.userType["ผู้ป่วย"]++;
+                    else if(type.includes("ญาติ")) stats.userType["ญาติ"]++;
+                    else stats.userType["อื่นๆ"]++;
+                }
+
+                // แก้ปัญหาดึงข้อมูลผิดคอลัมน์ (ข้ามข้อ 11.การแนะนำประชาสัมพันธ์)
+                let recKey = Object.keys(row).find(k => k.includes("แนะนำ") && !k.includes("11") && !k.includes("ประชาสัมพันธ์"));
+                let rec = recKey ? row[recKey] : null;
+                
+                if(rec) {
+                    let recStr = rec.toString();
+                    if(recStr.includes("ไม่")) stats.recommend["ไม่แนะนำ"]++;
+                    else if(recStr.includes("แนะนำ") || recStr.includes("ใช่")) stats.recommend["แนะนำ"]++;
+                }
+
+                // Feedbacks
+                let comment = findVal(row, "ปรับปรุง");
+                if(comment && comment.trim() !== "" && comment !== "-" && comment !== "ไม่มี") {
+                    stats.feedbacks.push({ text: comment, date: findVal(row, "ประทับเวลา") });
+                }
+
+                // Scores Calculation
+                let docSum = 0, docCount = 0;
+                let nurseSum = 0, nurseCount = 0;
+
+                questions.forEach(q => {
+                    let s = getScore(findVal(row, q.key));
+                    if(s > 0) {
+                        // ภาพรวมทั้งหมด
+                        globalSumActual += s;
+                        globalValidCount++;
+
+                        // คะแนนรายข้อ (อัปเดตตรงนี้ให้ครบ 15 ข้อ)
+                        stats.scores.details[q.label].sum += s;
+                        stats.scores.details[q.label].count++;
+
+                        // แยกหมวดหมู่สำหรับการคำนวณคะแนนเฉลี่ยหมอ/พยาบาลด้านบน
+                        if(q.group === 'doc') { docSum += s; docCount++; }
+                        if(q.group === 'nur') { nurseSum += s; nurseCount++; }
+                    }
+                });
+
+                if(docCount > 0) stats.scores.doctor += (docSum/docCount);
+                if(nurseCount > 0) stats.scores.nurse += (nurseSum/nurseCount);
+            });
+
+            // Calculate Averages
+            let maxPossibleScore = globalValidCount * 5; 
+            const avgOverall = maxPossibleScore > 0 ? ((globalSumActual * 100) / maxPossibleScore).toFixed(2) : "0.00";
+            const avgDoc = total > 0 ? (stats.scores.doctor / total).toFixed(2) : "0.00";
+            const avgNur = total > 0 ? (stats.scores.nurse / total).toFixed(2) : "0.00";
+
+            document.getElementById('avgOverall').innerHTML = `${avgOverall} <span class="text-sm text-slate-400 font-medium">%</span>`;
+            document.getElementById('avgDoctor').innerHTML = `${avgDoc} <span class="text-sm text-slate-400 font-medium">/ 5</span>`;
+            document.getElementById('avgNurse').innerHTML = `${avgNur} <span class="text-sm text-slate-400 font-medium">/ 5</span>`;
+
+            let recTotal = stats.recommend["แนะนำ"] + stats.recommend["ไม่แนะนำ"];
+            let recPercent = recTotal > 0 ? Math.round((stats.recommend["แนะนำ"] / recTotal) * 100) : 0;
+            animateValue("recommendPercent", 0, recPercent, 1000, "%");
+
+            // Render Feedbacks
+            const fbContainer = document.getElementById('feedbackContainer');
+            const fbCount = document.getElementById('feedbackCount');
+            
+            fbCount.innerText = `${stats.feedbacks.length} รายการ`;
+            
+            if(stats.feedbacks.length > 0) {
+                // Sort by newest first if date exists (ใช้ parseDateString แทน new Date ธรรมดา)
+                stats.feedbacks.sort((a, b) => {
+                    let da = parseDateString(a.date) || new Date(0);
+                    let db = parseDateString(b.date) || new Date(0);
+                    return db - da;
+                });
+                
+                fbContainer.innerHTML = stats.feedbacks.map((f, i) => {
+                    const colors = ['bg-blue-50/50', 'bg-emerald-50/50', 'bg-amber-50/50', 'bg-rose-50/50', 'bg-purple-50/50'];
+                    const bgColor = colors[i % colors.length];
+                    
+                    let dateStr = "";
+                    if(f.date) {
+                        const d = parseDateString(f.date);
+                        if(d) {
+                            dateStr = d.toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' });
+                        } else {
+                            dateStr = f.date; // แสดงข้อความเดิมหากแปลงเป็น Date ไม่สำเร็จ
+                        }
+                    }
+
+                    return `
+                    <div class="${bgColor} p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                        <p class="text-sm text-slate-700 leading-relaxed relative z-10">
+                            <i class="fa-solid fa-quote-left text-slate-300 text-lg absolute -top-1 -left-1 opacity-50 z-[-1]"></i>
+                            ${f.text}
+                        </p>
+                        ${dateStr ? `<span class="text-xs text-slate-400 mt-3 text-right block"><i class="fa-regular fa-clock mr-1"></i>${dateStr}</span>` : ''}
+                    </div>
+                `}).join('');
+            } else {
+                fbContainer.innerHTML = `
+                    <div class="col-span-full py-10 flex flex-col items-center justify-center text-slate-400">
+                        <i class="fa-regular fa-comment-dots text-4xl mb-3 opacity-50"></i>
+                        <p>ยังไม่มีข้อเสนอแนะในช่วงเวลานี้</p>
+                    </div>`;
+            }
+
+            // ส่งข้อมูลไปวาดกราฟ
+            drawCharts(stats, questions);
+        }
+
+        // --- 3. Chart.js Drawing Logic ---
+        function clearChart(chartName) {
+            if (charts[chartName]) {
+                charts[chartName].destroy();
+            }
+        }
+
+        // รับตัวแปร questions มาใช้เพื่อ Map ข้อมูลให้ตรงเป๊ะ
+        function drawCharts(stats, questions) {
+            // 1. Gender Chart (Doughnut)
+            clearChart('gender');
+            const ctxGender = document.getElementById('genderChart').getContext('2d');
+            charts.gender = new Chart(ctxGender, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(stats.gender),
+                    datasets: [{
+                        data: Object.values(stats.gender),
+                        backgroundColor: ['#3b82f6', '#ec4899', '#cbd5e1'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 4
+                    }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, cutout: '65%',
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15 } }, 
+                        title: { display: true, text: 'สัดส่วนเพศ', font: { size: 14, weight: 'normal' }, padding: {bottom: 10} } 
+                    } 
+                }
+            });
+
+            // 2. User Type Chart (Pie)
+            clearChart('type');
+            const ctxType = document.getElementById('userTypeChart').getContext('2d');
+            charts.type = new Chart(ctxType, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(stats.userType),
+                    datasets: [{
+                        data: Object.values(stats.userType),
+                        backgroundColor: ['#10b981', '#f59e0b', '#8b5cf6'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 4
+                    }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15 } }, 
+                        title: { display: true, text: 'สถานะผู้ใช้บริการ', font: { size: 14, weight: 'normal' }, padding: {bottom: 10} } 
+                    } 
+                }
+            });
+
+            // 3. Recommend Chart (Doughnut - Half)
+            clearChart('rec');
+            const ctxRec = document.getElementById('recommendChart').getContext('2d');
+            const recData = [stats.recommend["แนะนำ"], stats.recommend["ไม่แนะนำ"]];
+            const isZero = recData[0] === 0 && recData[1] === 0;
+            
+            charts.rec = new Chart(ctxRec, {
+                type: 'doughnut',
+                data: {
+                    labels: ['แนะนำ', 'ไม่แนะนำ'],
+                    datasets: [{
+                        data: isZero ? [1] : recData,
+                        backgroundColor: isZero ? ['#f1f5f9'] : ['#10b981', '#ef4444'],
+                        borderWidth: 0, cutout: '75%', borderRadius: 5
+                    }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, circumference: 180, rotation: 270,
+                    plugins: { 
+                        legend: { display: false }, 
+                        tooltip: { enabled: !isZero, callbacks: { label: function(c) { return ' ' + c.label + ': ' + c.raw + ' คน'; } } } 
+                    } 
+                }
+            });
+
+            // 4. Detail Bar Chart (กราฟแท่ง 15 ข้อแบบครบถ้วน)
+            clearChart('detail');
+            const ctxDetail = document.getElementById('detailChart').getContext('2d');
+            
+            // ดึง Label สั้นๆ ไปแสดงที่แกน X (ตัดตัวเลขข้างหน้าออก)
+            const shortLabels = questions.map(q => {
+                let cleaned = q.label.replace(/^[0-9]+\.\s*/, '').trim();
+                return cleaned.length > 15 ? cleaned.substring(0, 15) + "..." : cleaned;
+            });
+
+            // ดึงข้อมูลคะแนนตามที่ผูกไว้ใน Object
+            const dataScores = questions.map(q => {
+                let d = stats.scores.details[q.label];
+                return (d && d.count > 0) ? (d.sum / d.count).toFixed(2) : 0;
+            });
+
+            // ใส่สีตาม Group ให้สอดคล้องกัน
+            const bgColors = questions.map(q => {
+                if(q.group === 'doc') return 'rgba(59, 130, 246, 0.85)'; // สีฟ้า (หมอ)
+                if(q.group === 'nur') return 'rgba(236, 72, 153, 0.85)';  // สีชมพู (พยาบาล)
+                return 'rgba(245, 158, 11, 0.85)';                         // สีส้ม (อื่นๆ รวมข้อ 14,15)
+            });
+
+            charts.detail = new Chart(ctxDetail, {
+                type: 'bar',
+                data: {
+                    labels: shortLabels,
+                    datasets: [{
+                        label: 'คะแนนเฉลี่ย',
+                        data: dataScores,
+                        backgroundColor: bgColors,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            max: 5, 
+                            ticks: { stepSize: 1, padding: 10 },
+                            grid: { borderDash: [4, 4], color: '#f1f5f9', drawBorder: false }
+                        },
+                        x: { 
+                            ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: {size: 11} },
+                            grid: { display: false, drawBorder: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            padding: 12,
+                            callbacks: {
+                                // เมื่อเอาเมาส์ชี้จะแสดงชื่อคำถามเต็มๆ อย่างถูกต้อง
+                                title: function(context) { 
+                                    return questions[context[0].dataIndex].label; 
+                                },
+                                label: function(context) {
+                                    return ` คะแนนเฉลี่ย: ${context.raw} / 5.00`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Utils ---
+        function animateValue(id, start, end, duration, suffix = "") {
+            if (start === end) {
+                document.getElementById(id).innerHTML = end + suffix;
+                return;
+            }
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const easeOut = progress * (2 - progress);
+                const current = Math.floor(easeOut * (end - start) + start);
+                document.getElementById(id).innerHTML = current + suffix;
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    document.getElementById(id).innerHTML = end + suffix;
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // --- Mock Data Generator ---
+        function generateMockData() {
+            const data = [];
+            const types = ["ผู้ป่วย", "ญาติ", "ผู้ป่วย", "ผู้ป่วย", "ญาติ", "อื่นๆ"];
+            const genders = ["ชาย", "หญิง", "หญิง", "ชาย", "หญิง", "อื่นๆ"];
+            const comments = [
+                "บริการดีมากครับ รวดเร็วทันใจ", 
+                "ห้องน้ำสกปรกนิดหน่อย อยากให้มีแม่บ้านดูแลบ่อยขึ้น", 
+                "คุณพยาบาลพูดจาไพเราะ ให้กำลังใจดีมาก", 
+                "อยากให้มีที่นั่งรอสำหรับญาติเพิ่มขึ้น", 
+                "คุณหมออธิบายอาการได้ชัดเจน เข้าใจง่าย",
+                "รอนานไปนิดนึงครับช่วงดึก",
+                "-", "ไม่มี", "", ""
+            ];
+            
+            const now = new Date();
+            
+            for(let i=0; i<180; i++) {
+                const daysAgo = Math.floor(Math.random() * 90);
+                const randomDate = new Date(now.getTime() - (daysAgo * 24 * 60 * 60 * 1000));
+                
+                const getRandScore = (min) => Math.floor(Math.random() * (6 - min)) + min;
+
+                // ชุดข้อมูลจำลองที่ตรงกับชื่อคอลัมน์ของจริงทั้งหมด
+                let row = {
+                    "ประทับเวลา": randomDate.toISOString(),
+                    "ท่านเป็นผู้ใช้บริการ": types[Math.floor(Math.random()*types.length)],
+                    "เพศ": genders[Math.floor(Math.random()*genders.length)],
+                    "1.กิริยาของแพทย์": getRandScore(3), // 3-5
+                    "2.แพทย์สนใจฟังคำบอกเล่า": getRandScore(3),
+                    "3.การตรวจร่างกาย": getRandScore(3),
+                    "4.การมีส่วนร่วมในการรักษา": getRandScore(2), // 2-5
+                    "5.การซักประวัติ": getRandScore(3),
+                    "6.การดูแลให้ควาช่วยเหลือ": getRandScore(4), // 4-5
+                    "7การตอบสนองอย่างรวดเร็ว": getRandScore(2),
+                    "8.ท่านมีโอกาสพูดคุย": getRandScore(3),
+                    "9.การให้ข้อมูล": getRandScore(3),
+                    "10.กิริยารยาทของพยาบาล": getRandScore(4),
+                    "11.การแนะนำประชาสัมพันธ์": getRandScore(2),
+                    "12.กิริยามารยาทเจ้าหน้าที่ อื่นๆ": getRandScore(3),
+                    "13ความสะดวก": getRandScore(3),
+                    "15.ความสะอาด": getRandScore(2),
+                    "14.คุณภาพบริการโดยรวมทุกด้าน": getRandScore(3),
+                    "แนะนำ": Math.random() > 0.15 ? "แนะนำ" : "ไม่แนะนำ",
+                    "ปรับปรุง": Math.random() > 0.6 ? comments[Math.floor(Math.random()*comments.length)] : ""
+                };
+                data.push(row);
+            }
+            return { error: false, data: data };
+        }
+    </script>
+</body>
+</html>

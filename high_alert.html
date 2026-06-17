@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แบบติดตามการใช้ยาความเสี่ยงสูง (High Alert Drugs)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="vendor/tailwindcss.js"></script>
+    
+    <!-- React & ReactDOM -->
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="vendor/babel.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Sarabun', Tahoma, sans-serif; }
+        
+        @media print {
+            @page { 
+                size: A4 portrait; /* บังคับขนาด A4 แนวตั้ง */
+                margin: 1cm; /* ขอบกระดาษ 1 เซนติเมตร */
+            }
+            body { 
+                background-color: white !important; 
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            /* ป้องกันการแบ่งหน้ากลางบรรทัดตาราง */
+            tr { page-break-inside: avoid; }
+            /* ให้หัวตารางแสดงซ้ำเมื่อขึ้นหน้าใหม่ (ถ้ามี) */
+            thead { display: table-header-group; }
+            /* บังคับการแสดงสีพื้นหลังเมื่อพิมพ์ */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Prompt','Segoe UI',Tahoma,sans-serif;background:#fdf2f8;color:#0f172a;">
+            <div style="max-width:520px;width:100%;background:#fff;border:1px solid #fbcfe8;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(219,39,119,.14);">
+                <div style="font-size:13px;font-weight:800;color:#db2777;letter-spacing:.08em;text-transform:uppercase;">Loading High Alert Drugs</div>
+                <h1 style="margin:10px 0 8px;font-size:24px;line-height:1.25;">กำลังเปิดระบบ High Alert Drugs</h1>
+                <p style="margin:0;color:#64748b;line-height:1.7;">หากหน้านี้ไม่เปลี่ยนเป็นระบบหลัก แสดงว่า React/Babel หรือไฟล์จาก CDN ยังโหลดไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรช หรือเปิดไฟล์นี้ในแท็บใหม่</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/plain" id="app-source">
+        /** @jsxRuntime classic */
+        const { useState } = React;
+
+        // --- SVG Icons Components ---
+        const PrinterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>;
+        const AlertTriangleIcon = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
+        const ActivityIcon = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>;
+        const ChevronLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>;
+        const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+        const Trash2Icon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
+        const FileTextIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
+        const ClockIcon = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
+
+        // ข้อมูลยาทั้ง 20 รายการ พร้อม Parameter สำหรับเฝ้าระวัง
+        const drugsData = [
+          {
+            id: 1, name: "1. Adenosine injection (6 mg/2 ml/Vial)", category: "Antiarrhythmic",
+            warnings: "Rapid IV push ภายใน 1-3 วินาที (ไม่เกิน 10 วินาที) ตามด้วย NSS 20 ml ทันที และยกแขนสูง ห้ามผสมยาอื่น",
+            monitorFreq: "ติดตามหลังให้ยาเสร็จทันที และทุก 2 นาที (3 รอบ)",
+            symptomsToWatch: ["หน้าแดง (Flushing)", "หายใจลำบาก/แน่นหน้าอก", "ปวดศีรษะ/วิงเวียน", "ใจสั่น", "คลื่นไส้อาเจียน"], color: "bg-red-50 border-red-200 text-red-900"
+          },
+          {
+            id: 2, name: "2. Adrenaline injection (1 mg/1 ml/Amp)", category: "Adrenergic agonist",
+            warnings: "IV infusion ต้องเจือจางด้วย NSS หรือ D5W อย่างน้อย 10 ml (1:10,000) ห้ามผสมในสารละลายด่าง เช่น Sodium Bicarbonate",
+            monitorFreq: "วัด BP, HR ทุก 5 นาที จนคงที่ หลังจากนั้นทุก 1 ชั่วโมง",
+            symptomsToWatch: ["Anxiety/Restless", "ปวดศีรษะรุนแรง", "ปลายมือปลายเท้าเขียว (Ischemia)", "Extravasation", "Arrhythmia"], color: "bg-orange-50 border-orange-200 text-orange-900"
+          },
+          {
+            id: 3, name: "3. Alteplase (rt-PA) injection (50 mg/Vial)", category: "Thrombolytic",
+            warnings: "ห้ามผสม rt-PA ร่วมกับยาอื่นๆ เด็ดขาด ไม่ควรเจือจางด้วย Dextrose",
+            monitorFreq: "ประเมิน Neuro signs และ เฝ้าระวัง Bleeding อย่างใกล้ชิดทุก 15 นาที",
+            symptomsToWatch: ["เลือดออกผิดปกติ (Bleeding)", "ระดับความรู้สึกตัวลดลง", "ปวดศีรษะรุนแรง (ICH)", "ความดันโลหิตต่ำ", "อาการแพ้/ผื่น"], color: "bg-rose-50 border-rose-200 text-rose-900"
+          },
+          {
+            id: 4, name: "4. Amiodarone injection (150 mg/3 ml/Amp)", category: "Antiarrhythmic",
+            warnings: "ห้ามผสมใน NSS (อาจตกตะกอน) ให้ผสมใน 5%DW เท่านั้น และให้ผ่าน Central line กรณีความเข้มข้น >2 mg/ml",
+            monitorFreq: "วัด V/S ทุก 15-30 นาที เฝ้าระวัง EKG อย่างต่อเนื่อง",
+            symptomsToWatch: ["Neurotoxicity (เดินลำบาก/มือสั่น)", "Ocular toxicity (ตามัว/แพ้แสง)", "Thrombophlebitis", "Hypotension", "Bradycardia"], color: "bg-yellow-50 border-yellow-200 text-yellow-900"
+          },
+          {
+            id: 5, name: "5. Amphotericin B injection (50 mg/Vial)", category: "Antifungal",
+            warnings: "ห้ามผสมใน NSS ให้ใช้ D5W เท่านั้น ต้องให้ Pre-medication (เช่น Paracetamol, CPM) และ Test dose ก่อนเสมอ",
+            monitorFreq: "วัด Fever, Pulse, BP ทุก 30 นาที นาน 4 ชั่วโมง",
+            symptomsToWatch: ["ไข้/หนาวสั่น", "Hypokalemia (กล้ามเนื้ออ่อนแรง)", "คลื่นไส้อาเจียน", "ปัสสาวะออกน้อย (Nephrotoxicity)", "Phlebitis"], color: "bg-lime-50 border-lime-200 text-lime-900"
+          },
+          {
+            id: 6, name: "6. 10% Calcium gluconate injection (10 ml/Amp)", category: "Electrolyte",
+            warnings: "ห้าม IV Push อย่างรวดเร็ว (ฉีด 1 นาที ไม่เกิน 1.5 ml) ระวัง Extravasation (เนื้อเยื่อตาย)",
+            monitorFreq: "ตรวจสอบอัตราการหยดยา และ HR (ระวัง < 60 ครั้ง/นาที)",
+            symptomsToWatch: ["Extravasation (ยาออกนอกเส้น)", "หัวใจเต้นช้า (Bradycardia)", "รู้สึกร้อนวูบวาบ", "คลื่นไส้อาเจียน", "กล้ามเนื้ออ่อนแรง"], color: "bg-green-50 border-green-200 text-green-900"
+          },
+          {
+            id: 7, name: "7. Dobutamine injection (250 mg/5 ml/Vial)", category: "Inotropic agent",
+            warnings: "ต้องเจือจางก่อนให้เสมอ ห้ามผสมกับยาที่มีฤทธิ์เป็นด่าง ควรให้ผ่าน Infusion pump",
+            monitorFreq: "ติดตาม BP, HR, EKG, Urine output บ่อยๆ",
+            symptomsToWatch: ["Tachyarrhythmia", "Hypertension", "ปวดศีรษะ", "หายใจลำบาก", "เจ็บหน้าอก"], color: "bg-emerald-50 border-emerald-200 text-emerald-900"
+          },
+          {
+            id: 8, name: "8. Dopamine injection (250 mg/10 ml/Amp)", category: "Inotropic agent",
+            warnings: "ห้ามผสมร่วมกับ Sodium Bicarbonate ระวัง Extravasation ให้ทางหลอดเลือดดำขนาดใหญ่",
+            monitorFreq: "ตรวจดูบริเวณ IV site ทุก 30-60 นาที และติดตาม BP, HR, Urine output",
+            symptomsToWatch: ["ใจสั่น/Tachycardia", "ปวดศีรษะ", "คลื่นไส้อาเจียน", "หอบเหนื่อย", "Extravasation"], color: "bg-teal-50 border-teal-200 text-teal-900"
+          },
+          {
+            id: 9, name: "9. Ketamine injection (50 mg/1 ml)", category: "Anesthetics",
+            warnings: "ระวังกดการหายใจ ให้ยาช้าๆ มากกว่า 60 วินาที เจือจางให้ความเข้มข้นไม่เกิน 2 mg/ml",
+            monitorFreq: "ติดตาม BP, HR, RR ทุก 5 นาที จนตื่น และทุก 15 นาทีในชั่วโมงแรก",
+            symptomsToWatch: ["กดการหายใจ (RR < 12)", "ความดันโลหิตสูง (BP > 150/90)", "หัวใจเต้นเร็ว (HR > 120)", "ภาพหลอน/สับสน", "น้ำลายไหลมาก"], color: "bg-cyan-50 border-cyan-200 text-cyan-900"
+          },
+          {
+            id: 10, name: "10. 50% Magnesium sulfate (MgSO4) (1 g/2 ml/Amp)", category: "Electrolyte / Anticonvulsant",
+            warnings: "ก่อนฉีด IV ต้อง Dilute เสมอ (ไม่เกิน 20%) กรณี Eclampsia เตรียม Calcium gluconate เป็น Antidote",
+            monitorFreq: "วัด V/S ทุก 15 นาที และตรวจ Deep tendon reflex ทุก 1 ชั่วโมง",
+            symptomsToWatch: ["หายใจช้า (RR < 14)", "Deep tendon reflex ลดลง/หายไป", "Urine < 100 ml/4hr", "ความดันโลหิตต่ำ", "หน้าแดง/เหงื่อออก"], color: "bg-sky-50 border-sky-200 text-sky-900"
+          },
+          {
+            id: 11, name: "11. Morphine injection (10 mg/1 ml/Amp)", category: "Narcotic Analgesic",
+            warnings: "ห้ามใช้ยาเมื่อตกตะกอน กรณี IV push ฉีดช้าๆ 3-5 นาที เตรียม Naloxone ไว้แก้ไข",
+            monitorFreq: "วัด V/S และ Pain score ทุก 15-30 นาที ระวังกดการหายใจ",
+            symptomsToWatch: ["กดการหายใจ (RR < 14)", "หมดสติ/หลับลึก", "ความดันโลหิตต่ำ (BP < 90/60)", "หัวใจเต้นช้า", "คลื่นไส้อาเจียน/ท้องผูก"], color: "bg-blue-50 border-blue-200 text-blue-900"
+          },
+          {
+            id: 12, name: "12. Nicardipine injection (2 mg/2 ml/Amp)", category: "Antihypertensive",
+            warnings: "ต้องเจือจางก่อนใช้เสมอ (Must be diluted) เปลี่ยนตำแหน่ง Peripheral vein ทุก 12 ชม. ลดการระคายเคือง",
+            monitorFreq: "ติดตาม BP อย่างต่อเนื่อง (ระวัง BP < 90/60)",
+            symptomsToWatch: ["ความดันต่ำเกิน (Hypotension)", "ปวดศีรษะ", "ใจสั่น (Tachycardia)", "หน้าแดง (Flushing)", "Phlebitis ที่จุดฉีด"], color: "bg-indigo-50 border-indigo-200 text-indigo-900"
+          },
+          {
+            id: 13, name: "13. Nitroglycerin injection (25 mg/5 ml/Amp)", category: "Vasodilator",
+            warnings: "ห้าม IV push ยาควรผสมในภาชนะแก้วหรือ Non-PVC หลีกเลี่ยงยาในกลุ่ม PDE-5 inhibitors",
+            monitorFreq: "ติดตาม BP, HR ทุก 5 นาที (3 ครั้ง) และจากนั้นทุก 1 ชั่วโมง",
+            symptomsToWatch: ["ปวดศีรษะมาก", "ความดันโลหิตต่ำ", "หน้าแดง", "เวียนศีรษะ/หน้ามืด", "หัวใจเต้นช้า/เร็วผิดปกติ"], color: "bg-violet-50 border-violet-200 text-violet-900"
+          },
+          {
+            id: 14, name: "14. Norepinephrine injection (4 mg/4 ml/Amp)", category: "Vasopressor",
+            warnings: "ห้ามผสมใน NSS (เกิดปฏิกิริยา Oxidation) ให้ใช้ D5W ต้องให้ผ่านหลอดเลือดดำขนาดใหญ่",
+            monitorFreq: "ตรวจวัด BP และ HR ทุก 2 นาทีเมื่อเริ่มให้ และทุก 5 นาทีเมื่อคงที่",
+            symptomsToWatch: ["Extravasation (เนื้อตาย)", "Anxiety/Headache", "หัวใจเต้นผิดจังหวะ", "ปลายมือปลายเท้าซีด/เย็น", "ความดันสูงเกิน"], color: "bg-purple-50 border-purple-200 text-purple-900"
+          },
+          {
+            id: 15, name: "15. Pethidine injection (50 mg/1 ml/Amp)", category: "Narcotic Analgesic",
+            warnings: "ห้ามผสมกับ Barbiturate ระวัง active metabolite ในผู้ป่วยโรคไต ห้ามใช้ร่วมกับ MAOIs",
+            monitorFreq: "ติดตาม Pain relief, Respiratory status, Blood pressure",
+            symptomsToWatch: ["กดการหายใจ", "อาการสั่น/ชัก (Tremors/Seizure)", "ความดันโลหิตต่ำ", "ม่านตาขยาย", "คลื่นไส้อาเจียน"], color: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-900"
+          },
+          {
+            id: 16, name: "16. Phenytoin injection (250 mg/5 ml/Vial)", category: "Anticonvulsant",
+            warnings: "ใช้ NSS เท่านั้นในการผสม หลีกเลี่ยงให้ร่วมสายยาอื่น ฉีด IV ช้าๆ อัตราไม่เกิน 50 mg/min",
+            monitorFreq: "ประเมิน BP ทุก 5 นาที ระวังยา Overdose (Nystagmus, Ataxia)",
+            symptomsToWatch: ["ความดันโลหิตต่ำ", "หัวใจเต้นช้า (Bradycardia)", "ตาตุก (Nystagmus)/เดินเซ", "การระคายเคืองที่จุดฉีด", "สับสน/พูดไม่ชัด"], color: "bg-pink-50 border-pink-200 text-pink-900"
+          },
+          {
+            id: 17, name: "17. Potassium chloride (KCL) (20 mEq/10 ml/Amp)", category: "Electrolyte",
+            warnings: "ห้าม IV Push เด็ดขาด! Peripheral line ห้ามเกิน 40 mEq/L (Max rate 10 mEq/hr)",
+            monitorFreq: "ติดตาม EKG, Urine output และ Serum K+",
+            symptomsToWatch: ["คลื่นไส้อาเจียน/ท้องอืด", "หัวใจเต้นช้า/ผิดจังหวะ", "กล้ามเนื้ออ่อนแรง", "ชาปลายมือปลายเท้า", "Urine < 600 ml/day"], color: "bg-orange-100 border-orange-300 text-orange-900"
+          },
+          {
+            id: 18, name: "18. 7.5% Sodium bicarbonate (44.6 mEq/50 ml/Amp)", category: "Alkalinizing agent",
+            warnings: "ห้ามผสมร่วมกับ Calcium, Dopamine, Amiodarone ระวังการรั่วของยาออกนอกหลอดเลือด",
+            monitorFreq: "ติดตาม ABG, Electrolyte (ระวัง Hypernatremia, Hypokalemia)",
+            symptomsToWatch: ["Extravasation", "บวม (Edema)", "ท้องอืด/เรอ", "เกร็งกระตุก (Hypocalcemia)", "กล้ามเนื้ออ่อนแรง (Hypokalemia)"], color: "bg-blue-100 border-blue-300 text-blue-900"
+          },
+          {
+            id: 19, name: "19. Streptokinase injection (1,500,000 IU/Vial)", category: "Thrombolytic",
+            warnings: "ห้ามเขย่าขวดยา (เกิดฟอง ให้ใช้วิธีกลิ้งเบาๆ) หลีกเลี่ยง IM ให้ IV infusion เท่านั้น",
+            monitorFreq: "Observe Neuro signs ทุก 15 นาที ใน 1 ชั่วโมงแรก และระวังปฏิกิริยาแพ้",
+            symptomsToWatch: ["Bleeding (เลือดออกตามไรฟัน/ทางเดินอาหาร)", "ไข้/หนาวสั่น (แพ้ยา)", "ความดันโลหิตต่ำ", "ปวดศีรษะรุนแรง (ICH)", "ผื่นคัน"], color: "bg-red-100 border-red-300 text-red-900"
+          },
+          {
+            id: 20, name: "20. Warfarin tablet (2 mg, 3 mg, 5 mg)", category: "Anticoagulant",
+            warnings: "ระวังปฏิกิริยากับยาอื่น (เช่น NSAIDs, Antibiotics) ตรวจสอบค่า INR ให้ได้ตามเป้าหมาย (2-3)",
+            monitorFreq: "ติดตามอาการเลือดออกผิดปกติ และตรวจสอบค่า PT/INR ตามแพทย์สั่ง",
+            symptomsToWatch: ["เลือดออกตามไรฟัน/เลือดกำเดา", "จ้ำเลือด/รอยช้ำตามตัว", "ปัสสาวะ/อุจจาระเป็นเลือด", "ปวดศีรษะ/หน้ามืด", "Purple toe syndrome"], color: "bg-gray-100 border-gray-300 text-gray-900"
+          }
+        ];
+
+        function App() {
+          const [selectedDrug, setSelectedDrug] = useState(null);
+          
+          const [patientInfo, setPatientInfo] = useState({
+            name: '', age: '', weight: '', hn: '', an: '', ward: '', doctor: ''
+          });
+
+          const [records, setRecords] = useState([]);
+          
+          const [formInput, setFormInput] = useState({
+            time: '', bp: '', hr: '', rr: '', spo2: '', symptoms: {}, recorder: ''
+          });
+
+          const handlePrint = () => {
+            // โฟกัสที่หน้าต่างนี้ก่อนพิมพ์ และหน่วงเวลาเล็กน้อยเพื่อให้ระบบพร้อม
+            window.focus();
+            setTimeout(() => {
+              window.print();
+            }, 150);
+          };
+
+          const handleSelectDrug = (drug) => {
+            setSelectedDrug(drug);
+            setRecords([]); 
+            setFormInput({ time: '', bp: '', hr: '', rr: '', spo2: '', symptoms: {}, recorder: formInput.recorder });
+          };
+
+          const handleBack = () => {
+            setSelectedDrug(null);
+          };
+
+          const handlePatientChange = (e) => {
+            setPatientInfo({...patientInfo, [e.target.name]: e.target.value});
+          };
+
+          const handleRecordChange = (e) => {
+            setFormInput({...formInput, [e.target.name]: e.target.value});
+          };
+
+          const handleSymptomChange = (symptom) => {
+            if (symptom === 'ไม่พบอาการผิดปกติ') {
+              setFormInput({
+                ...formInput,
+                symptoms: formInput.symptoms['ไม่พบอาการผิดปกติ'] ? {} : { 'ไม่พบอาการผิดปกติ': true }
+              });
+            } else {
+              setFormInput({
+                ...formInput,
+                symptoms: {
+                  ...formInput.symptoms,
+                  [symptom]: !formInput.symptoms[symptom],
+                  'ไม่พบอาการผิดปกติ': false
+                }
+              });
+            }
+          };
+
+          const addRecord = () => {
+            if(!formInput.time) return alert('กรุณาระบุเวลาที่บันทึก (เช่น 10:15 หรือ 5 นาที)');
+            
+            const activeSymptoms = Object.keys(formInput.symptoms).filter(k => formInput.symptoms[k]);
+            
+            const newRecord = {
+              ...formInput,
+              symptomsList: activeSymptoms.length > 0 ? activeSymptoms.join(', ') : '-'
+            };
+            
+            setRecords([...records, newRecord]);
+            
+            setFormInput({ time: '', bp: '', hr: '', rr: '', spo2: '', symptoms: {}, recorder: formInput.recorder });
+          };
+
+          const removeRecord = (index) => {
+            const newRecords = [...records];
+            newRecords.splice(index, 1);
+            setRecords(newRecords);
+          };
+
+          if (!selectedDrug) {
+            return (
+              <div className="min-h-screen bg-gray-100 font-sans text-gray-800 p-4 md:p-8 flex flex-col">
+                <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden flex-grow w-full">
+                  <div className="bg-red-700 text-white p-6 flex flex-col md:flex-row justify-between items-start md:items-center">
+                    <div>
+                      <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+                        <AlertTriangleIcon className="w-8 h-8" />
+                        บัญชียาที่มีความเสี่ยงสูง (High Alert Drugs)
+                      </h1>
+                      <p className="mt-2 text-red-100 text-lg">โรงพยาบาลเสลภูมิ | เลือกรายการยาเพื่อเข้าสู่แบบฟอร์มการติดตาม</p>
+                    </div>
+                    <div className="mt-4 md:mt-0 bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
+                      <span className="font-bold text-lg">จำนวน: 20 รายการ</span>
+                    </div>
+                  </div>
+
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {drugsData.map((drug) => (
+                        <div 
+                          key={drug.id} 
+                          onClick={() => handleSelectDrug(drug)}
+                          className={`cursor-pointer transition-all hover:shadow-md p-4 rounded-xl border-2 hover:-translate-y-1 ${drug.color}`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-bold text-lg leading-tight">{drug.name}</h3>
+                          </div>
+                          <span className="inline-block px-2 py-1 bg-white/60 rounded text-xs font-semibold mb-3">
+                            {drug.category}
+                          </span>
+                          <p className="text-sm line-clamp-3 opacity-90">
+                            <span className="font-bold">⚠️ ข้อควรระวัง: </span>
+                            {drug.warnings}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center mt-8 text-gray-500 font-medium">
+                  นายทวี แสนสนอง develop
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-100 print:bg-white font-sans text-gray-800 p-4 md:p-8 print:p-0 flex flex-col">
+              <div className="max-w-6xl mx-auto bg-white print:shadow-none shadow-xl rounded-xl overflow-hidden print:w-full print:max-w-none print:rounded-none flex-grow">
+                
+                <div className="print:hidden bg-gray-50 border-b p-4 flex justify-between items-center">
+                  <button 
+                    onClick={handleBack}
+                    className="flex items-center gap-1 text-gray-600 hover:text-red-700 font-medium px-3 py-2 rounded-lg hover:bg-gray-200 transition"
+                  >
+                    <ChevronLeftIcon /> กลับหน้ารายการยา
+                  </button>
+                  <button 
+                    onClick={handlePrint}
+                    className="bg-red-700 text-white hover:bg-red-800 px-5 py-2 rounded-lg shadow font-medium flex items-center gap-2 transition"
+                  >
+                    <PrinterIcon /> พิมพ์แบบบันทึก (PDF)
+                  </button>
+                </div>
+
+                <div className="p-6 md:p-8 print:p-2">
+                  <div className="text-center mb-6 print:mb-3 border-b-2 border-black pb-4 print:pb-2 relative">
+                    <h1 className="text-2xl print:text-xl font-bold uppercase mb-1">แบบติดตามการใช้ยาความเสี่ยงสูง (High Alert Drugs)</h1>
+                    <h2 className="text-xl print:text-lg text-red-700 print:text-black font-bold flex items-center justify-center gap-2">
+                      <ActivityIcon className="w-6 h-6 print:w-5 print:h-5" /> {selectedDrug.name}
+                    </h2>
+                    <p className="text-sm print:text-xs text-gray-500 print:text-black mt-2 print:mt-1">โรงพยาบาลเสลภูมิ จังหวัดร้อยเอ็ด</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:gap-2 mb-6 print:mb-3 print:grid-cols-4 border border-gray-300 print:border-black p-4 print:p-2 rounded-lg print:rounded-none">
+                    <div className="col-span-2 md:col-span-2">
+                      <label className="block text-xs print:text-[10px] text-gray-500 font-bold uppercase">ชื่อ-สกุล ผู้ป่วย</label>
+                      <input type="text" name="name" value={patientInfo.name} onChange={handlePatientChange} className="w-full border-b border-gray-300 print:border-black focus:outline-none focus:border-red-500 py-1 print:py-0 print:text-xs" placeholder="ระบุชื่อ-สกุล" />
+                    </div>
+                    <div>
+                      <label className="block text-xs print:text-[10px] text-gray-500 font-bold uppercase">อายุ (ปี)</label>
+                      <input type="text" name="age" value={patientInfo.age} onChange={handlePatientChange} className="w-full border-b border-gray-300 print:border-black focus:outline-none focus:border-red-500 py-1 print:py-0 print:text-xs" placeholder="ระบุอายุ" />
+                    </div>
+                    <div>
+                      <label className="block text-xs print:text-[10px] text-gray-500 font-bold uppercase">น้ำหนัก (กก.)</label>
+                      <input type="text" name="weight" value={patientInfo.weight} onChange={handlePatientChange} className="w-full border-b border-gray-300 print:border-black focus:outline-none focus:border-red-500 py-1 print:py-0 print:text-xs" placeholder="ระบุน้ำหนัก" />
+                    </div>
+                    <div>
+                      <label className="block text-xs print:text-[10px] text-gray-500 font-bold uppercase">HN</label>
+                      <input type="text" name="hn" value={patientInfo.hn} onChange={handlePatientChange} className="w-full border-b border-gray-300 print:border-black focus:outline-none focus:border-red-500 py-1 print:py-0 print:text-xs" placeholder="รหัส HN" />
+                    </div>
+                    <div>
+                      <label className="block text-xs print:text-[10px] text-gray-500 font-bold uppercase">AN</label>
+                      <input type="text" name="an" value={patientInfo.an} onChange={handlePatientChange} className="w-full border-b border-gray-300 print:border-black focus:outline-none focus:border-red-500 py-1 print:py-0 print:text-xs" placeholder="รหัส AN" />
+                    </div>
+                    <div>
+                      <label className="block text-xs print:text-[10px] text-gray-500 font-bold uppercase">หอผู้ป่วย/เตียง</label>
+                      <input type="text" name="ward" value={patientInfo.ward} onChange={handlePatientChange} className="w-full border-b border-gray-300 print:border-black focus:outline-none focus:border-red-500 py-1 print:py-0 print:text-xs" placeholder="ระบุเตียง" />
+                    </div>
+                    <div>
+                      <label className="block text-xs print:text-[10px] text-gray-500 font-bold uppercase">แพทย์ผู้สั่งใช้ยา</label>
+                      <input type="text" name="doctor" value={patientInfo.doctor} onChange={handlePatientChange} className="w-full border-b border-gray-300 print:border-black focus:outline-none focus:border-red-500 py-1 print:py-0 print:text-xs" placeholder="ชื่อแพทย์" />
+                    </div>
+                  </div>
+
+                  <div className="mb-6 print:mb-3 grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-2">
+                    <div className="bg-red-50 border border-red-200 print:border-black p-4 print:p-2 rounded-lg print:rounded-none">
+                      <h3 className="font-bold text-red-800 print:text-black mb-2 print:mb-1 flex items-center gap-1 print:text-sm">
+                        <AlertTriangleIcon className="w-4 h-4 print:w-3 print:h-3" /> ข้อควรระวังในการบริหารยา
+                      </h3>
+                      <p className="text-sm print:text-xs font-semibold leading-relaxed text-red-900 print:text-black">
+                        {selectedDrug.warnings}
+                      </p>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 print:border-black p-4 print:p-2 rounded-lg print:rounded-none">
+                      <h3 className="font-bold text-blue-800 print:text-black mb-2 print:mb-1 flex items-center gap-1 print:text-sm">
+                        <ClockIcon className="w-4 h-4 print:w-3 print:h-3" /> การเฝ้าระวังและการติดตาม
+                      </h3>
+                      <p className="text-sm print:text-xs font-semibold leading-relaxed text-blue-900 print:text-black">
+                        {selectedDrug.monitorFreq}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-8 print:mb-2 overflow-x-auto">
+                    <table className="min-w-full border-collapse border border-gray-400 print:border-black text-sm print:text-[11px]">
+                      <thead className="bg-gray-100 print:bg-gray-200">
+                        <tr>
+                          <th className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1 w-24 print:w-16">เวลา (Time)</th>
+                          <th className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1 w-24 print:w-16">BP<br/><span className="text-xs print:text-[9px] font-normal">(mmHg)</span></th>
+                          <th className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1 w-16">HR<br/><span className="text-xs print:text-[9px] font-normal">(/min)</span></th>
+                          <th className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1 w-16">RR<br/><span className="text-xs print:text-[9px] font-normal">(/min)</span></th>
+                          <th className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1 w-16">O2 Sat<br/><span className="text-xs print:text-[9px] font-normal">(%)</span></th>
+                          <th className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1">อาการอันไม่พึงประสงค์ (Adverse Events)</th>
+                          <th className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1 w-24 print:w-20">ผู้บันทึก</th>
+                          <th className="print:hidden border border-gray-400 py-2 px-3 w-12">ลบ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {records.length === 0 ? (
+                          <tr>
+                            <td colSpan="8" className="border border-gray-400 print:border-black py-8 print:py-4 text-center text-gray-400 print:text-black italic">
+                              -- ยังไม่มีข้อมูลการบันทึก (กรอกข้อมูลในฟอร์มด้านล่าง) --<br/>
+                              <span className="print:inline hidden">หรือเว้นว่างไว้สำหรับจดบันทึกด้วยมือ</span>
+                            </td>
+                          </tr>
+                        ) : (
+                          records.map((rec, idx) => (
+                            <tr key={idx} className="text-center">
+                              <td className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1 font-semibold">{rec.time}</td>
+                              <td className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1">{rec.bp || '-'}</td>
+                              <td className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1">{rec.hr || '-'}</td>
+                              <td className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1">{rec.rr || '-'}</td>
+                              <td className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1">{rec.spo2 || '-'}</td>
+                              <td className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1 text-left text-xs print:text-[10px] text-red-700 print:text-black">
+                                {rec.symptomsList}
+                              </td>
+                              <td className="border border-gray-400 print:border-black py-2 px-3 print:py-1 print:px-1 text-sm print:text-[10px]">{rec.recorder || '-'}</td>
+                              <td className="print:hidden border border-gray-400 py-2 px-3">
+                                <button onClick={() => removeRecord(idx)} className="text-red-500 hover:text-red-700">
+                                  <Trash2Icon />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                        
+                        {/* ปรับจำนวนบรรทัดว่างอัตโนมัติตามจำนวนที่มี เพื่อให้พอดีกับกระดาษ 1 หน้า (สูงสุดประมาณ 15 บรรทัด) */}
+                        {[...Array(Math.max(0, 15 - records.length))].map((_, i) => (
+                          <tr key={`empty-${i}`} className="hidden print:table-row h-10 print:h-6">
+                            <td className="border border-black"></td><td className="border border-black"></td><td className="border border-black"></td><td className="border border-black"></td><td className="border border-black"></td><td className="border border-black"></td><td className="border border-black"></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="print:hidden bg-gray-50 border border-gray-200 p-5 rounded-lg">
+                    <h3 className="font-bold mb-4 flex items-center gap-2">
+                      <FileTextIcon /> บันทึกสัญญาณชีพและอาการ (V/S & Symptoms)
+                    </h3>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+                      <div className="col-span-2 md:col-span-1">
+                        <label className="block text-xs font-semibold mb-1 text-red-700">เวลา (นาที/ชม.) *</label>
+                        <input type="text" name="time" value={formInput.time} onChange={handleRecordChange} className="w-full border border-red-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500" placeholder="เช่น 5 นาที, 10:30" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">BP (mmHg)</label>
+                        <input type="text" name="bp" value={formInput.bp} onChange={handleRecordChange} className="w-full border rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500" placeholder="120/80" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">HR (/min)</label>
+                        <input type="number" name="hr" value={formInput.hr} onChange={handleRecordChange} className="w-full border rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500" placeholder="80" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">RR (/min)</label>
+                        <input type="number" name="rr" value={formInput.rr} onChange={handleRecordChange} className="w-full border rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500" placeholder="20" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">SpO2 (%)</label>
+                        <input type="number" name="spo2" value={formInput.spo2} onChange={handleRecordChange} className="w-full border rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500" placeholder="98" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold mb-1 text-blue-700">ผู้บันทึก</label>
+                        <input type="text" name="recorder" value={formInput.recorder} onChange={handleRecordChange} className="w-full border border-blue-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="ชื่อพยาบาล" />
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-xs font-bold text-red-700 mb-2">อาการที่ต้องเฝ้าระวัง (ติ๊กอาการที่พบ):</label>
+                      <div className="flex flex-wrap gap-3">
+                        <label className="flex items-center gap-2 bg-green-50 border border-green-300 px-3 py-2 rounded shadow-sm cursor-pointer hover:bg-green-100 text-sm">
+                          <input 
+                            type="checkbox" 
+                            checked={!!formInput.symptoms['ไม่พบอาการผิดปกติ']}
+                            onChange={() => handleSymptomChange('ไม่พบอาการผิดปกติ')}
+                            className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                          />
+                          <span className="text-green-800 font-bold">ไม่พบอาการผิดปกติ</span>
+                        </label>
+                        {selectedDrug.symptomsToWatch.map((symp, i) => (
+                          <label key={i} className="flex items-center gap-2 bg-white border px-3 py-2 rounded shadow-sm cursor-pointer hover:bg-red-50 text-sm">
+                            <input 
+                              type="checkbox" 
+                              checked={!!formInput.symptoms[symp]}
+                              onChange={() => handleSymptomChange(symp)}
+                              className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+                            />
+                            {symp}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button onClick={addRecord} className="w-full md:w-auto bg-gray-800 text-white px-6 py-2 rounded shadow flex items-center justify-center gap-2 hover:bg-black transition">
+                      <PlusIcon /> เพิ่มข้อมูลลงตาราง
+                    </button>
+                  </div>
+
+                  <div className="hidden print:flex justify-end mt-4 print:mt-2 relative">
+                    <div className="text-center w-48 print:w-40">
+                      <p className="border-b border-black mb-1 pb-4 print:pb-3"></p>
+                      <p className="text-sm print:text-[10px]">( พยาบาลผู้ดูแล / ผู้ประเมิน )</p>
+                      <p className="text-sm print:text-[10px] mt-1">วันที่ _______/_______/_______</p>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <div className="print:hidden text-center mt-6 mb-2 text-gray-500 font-medium">
+                นายทวี แสนสนอง develop
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <script>
+        (function runAppSource() {
+            const source = document.getElementById('app-source');
+            const root = document.getElementById('root');
+            const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+            const showError = (error) => {
+                console.error(error);
+                root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Segoe UI,Tahoma,sans-serif;background:#f8fafc;color:#0f172a;"><div style="max-width:620px;background:#fff;border:1px solid #fecdd3;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(15,23,42,.12);"><div style="font-size:13px;font-weight:800;color:#e11d48;text-transform:uppercase;letter-spacing:.08em;">Script Error</div><h1 style="margin:10px 0 8px;font-size:22px;">เปิดระบบไม่สำเร็จ</h1><p style="margin:0;color:#64748b;line-height:1.7;">' + escapeHtml(error && error.message ? error.message : error) + '</p></div></div>';
+            };
+            try {
+                if (!window.React || !window.ReactDOM || !window.Babel) throw new Error('โหลด React / ReactDOM / Babel ไม่สำเร็จ');
+                (0, eval)(Babel.transform(source.textContent, { presets: ['env'], plugins: [['transform-react-jsx', { runtime: 'classic' }]] }).code);
+            } catch (error) {
+                showError(error);
+            }
+        })();
+    </script>
+</body>
+</html>

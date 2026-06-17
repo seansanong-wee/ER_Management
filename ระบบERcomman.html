@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ศูนย์สั่งการ ER - โรงพยาบาลเสลภูมิ (Enterprise)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="vendor/tailwindcss.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zinc: { 850: '#27272a', 900: '#18181b', 950: '#09090b' },
+                        er: { red: '#dc2626', orange: '#f97316', emerald: '#10b981', pink: '#ec4899', blue: '#3b82f6' }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans Thai', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- React & Libraries -->
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <!-- Added PropTypes to fix Recharts 'oneOfType' error -->
+    <script src="vendor/prop-types.min.js"></script>
+    <script src="vendor/Recharts.js"></script>
+    <script src="vendor/babel.min.js"></script>
+    <script src="vendor/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        /* Global Styles */
+        body { 
+            font-family: 'Noto Sans Thai', sans-serif; 
+            -webkit-font-smoothing: antialiased; 
+            overscroll-behavior-y: contain;
+        }
+        .recharts-wrapper { font-family: 'Noto Sans Thai', sans-serif !important; }
+        .glass-panel { background: rgba(24, 24, 27, 0.95); backdrop-filter: blur(20px); border-right: 1px solid rgba(63, 63, 70, 0.5); }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #52525b; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #71717a; }
+
+        /* Animations */
+        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        .animate-slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        
+        /* Print Styles - For Executive Report */
+        @media print {
+            body { background: white; color: black; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .glass-panel { display: none; }
+            main { padding: 0 !important; overflow: visible !important; }
+            .card-print { border: 1px solid #ddd; box-shadow: none; break-inside: avoid; }
+            h1, h2, h3, h4 { color: black !important; }
+            /* Force charts to print (limited support depending on browser) */
+            .recharts-responsive-container { width: 100% !important; height: 300px !important; }
+        }
+    </style>
+</head>
+<body class="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 overflow-hidden transition-colors duration-300">
+    <div id="root">
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Noto Sans Thai','Segoe UI',Tahoma,sans-serif;background:#ecfeff;color:#0f172a;">
+            <div style="max-width:520px;width:100%;background:#fff;border:1px solid #a5f3fc;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(8,145,178,.14);">
+                <div style="font-size:13px;font-weight:800;color:#0891b2;letter-spacing:.08em;text-transform:uppercase;">Loading ER Command Center</div>
+                <h1 style="margin:10px 0 8px;font-size:24px;line-height:1.25;">กำลังเปิด ER Command Center</h1>
+                <p style="margin:0;color:#64748b;line-height:1.7;">หากหน้านี้ไม่เปลี่ยนเป็นระบบหลัก แสดงว่า React/Babel หรือไฟล์จาก CDN ยังโหลดไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรช หรือเปิดไฟล์นี้ในแท็บใหม่</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/plain" id="app-source">
+        /** @jsxRuntime classic */
+        // --- Configuration & Constants ---
+        // Updated with user provided URL
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwozRAAsjopYJ8IHnrits5WGXwW6_AHGNdOLu3VLquUpNzrroOVelPMi4pMrqZhEalzKQ/exec"; 
+        
+        const EKG_LOGO = "https://cdn-icons-png.flaticon.com/512/1055/1055609.png";
+        const FISCAL_MONTHS = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
+        const FISCAL_YEARS = Array.from({length: 5}, (_, i) => (2567 + i).toString());
+
+        const COLORS = {
+            Resuscitate: '#dc2626', Emergency: '#ec4899', Urgent: '#f59e0b',
+            SemiUrgent: '#10b981', NonUrgent: '#71717a', Morning: '#3b82f6',
+            Afternoon: '#f97316', Night: '#6366f1', ReferIn: '#10b981',
+            ReferOut: '#f97316', ReferBack: '#3b82f6', EMS: '#dc2626'
+        };
+
+        const INCIDENT_CATEGORIES = [
+            { id: 'med_error', name: 'ความคลาดเคลื่อนทางยา' },
+            { id: 'fall', name: 'พลัดตกหกล้ม' },
+            { id: 'complaint', name: 'ข้อร้องเรียน' },
+            { id: 'delay', name: 'ความล่าช้า/รอคอย' },
+            { id: 'equipment', name: 'ความไม่พร้อมเครื่องมือ' }
+        ];
+
+        // --- Data Models ---
+        const createYearTemplate = () => ({
+            triageLevels: [
+                { id: 'red', name: 'วิกฤต (แดง)', color: COLORS.Resuscitate, monthly: FISCAL_MONTHS.map(m => ({ month: m, value: 0 })) },
+                { id: 'pink', name: 'ด่วนมาก (ชมพู)', color: COLORS.Emergency, monthly: FISCAL_MONTHS.map(m => ({ month: m, value: 0 })) },
+                { id: 'yellow', name: 'ด่วน (เหลือง)', color: COLORS.Urgent, monthly: FISCAL_MONTHS.map(m => ({ month: m, value: 0 })) },
+                { id: 'green', name: 'ไม่ด่วน (เขียว)', color: COLORS.SemiUrgent, monthly: FISCAL_MONTHS.map(m => ({ month: m, value: 0 })) },
+                { id: 'white', name: 'ทั่วไป (ขาว)', color: COLORS.NonUrgent, monthly: FISCAL_MONTHS.map(m => ({ month: m, value: 0 })) }
+            ],
+            shiftLevels: [
+                { id: 'morning', name: 'เวรเช้า', color: COLORS.Morning, monthly: FISCAL_MONTHS.map(m => ({ month: m, value: 0 })) },
+                { id: 'afternoon', name: 'เวรบ่าย', color: COLORS.Afternoon, monthly: FISCAL_MONTHS.map(m => ({ month: m, value: 0 })) },
+                { id: 'night', name: 'เวรดึก', color: COLORS.Night, monthly: FISCAL_MONTHS.map(m => ({ month: m, value: 0 })) }
+            ],
+            clinicalStats: {
+                stroke: { name: 'Stroke Fast Track', count: 0, rate: 0, target: 80, unit: '< 60 นาที', monthly: FISCAL_MONTHS.map(m => ({ month: m, count: 0 })) },
+                stemi: { name: 'STEMI Fast Track', count: 0, rate: 0, target: 80, unit: '< 90 นาที', monthly: FISCAL_MONTHS.map(m => ({ month: m, count: 0 })) },
+                sepsis: { name: 'Sepsis Survival', count: 0, rate: 0, target: 90, unit: 'รอดชีวิต', monthly: FISCAL_MONTHS.map(m => ({ month: m, count: 0 })) },
+                headInjury: { name: 'Trauma Audit', count: 0, rate: 0, target: 100, unit: 'Audit', monthly: FISCAL_MONTHS.map(m => ({ month: m, count: 0 })) }
+            },
+            emsRefer: {
+                monthlyTotal: FISCAL_MONTHS.map(m => ({ month: m, ems: 0, in: 0, out: 0, back: 0 }))
+            },
+            quality: {
+                monthlyData: FISCAL_MONTHS.map(m => ({ month: m, satisfaction: 0, complaints: 0, los: 0 })),
+                incidents: INCIDENT_CATEGORIES.map(cat => ({
+                    id: cat.id, category: cat.name, monthly: FISCAL_MONTHS.map(m => ({ month: m, value: 0 }))
+                }))
+            },
+            staff: []
+        });
+
+        const INITIAL_MULTI_YEAR = FISCAL_YEARS.reduce((acc, yr) => ({ ...acc, [yr]: createYearTemplate() }), {});
+
+        // --- Components ---
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        const Icon = ({ name, size = 20, className = "", ...props }) => {
+            if (!window.lucide || !window.lucide.icons) return <div style={{width: size, height: size}} className={className}></div>;
+            const IconComp = window.lucide.icons[name];
+            if (!IconComp) return null;
+            
+            // Convert lucide node structure to React elements
+            return (
+                <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width={size} 
+                    height={size} 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className={className} 
+                    {...props}
+                >
+                    {IconComp.map((child, index) => {
+                        const [Tag, attrs] = child;
+                        return <Tag key={index} {...attrs} />;
+                    })}
+                </svg>
+            );
+        };
+
+        const MetricCard = ({ title, value, unit, icon: IconName, color, subtext, onEdit }) => (
+            <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] p-6 md:p-8 border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between hover:shadow-xl transition-all relative overflow-hidden group card-print">
+                {onEdit && <button onClick={onEdit} className="no-print absolute top-4 right-4 p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-zinc-400 opacity-0 group-hover:opacity-100 transition-all hover:text-red-600"><Icon name="Edit3" size={16} /></button>}
+                <div className="flex justify-between items-start mb-4 md:mb-6 relative z-10">
+                    <div className={`p-3 md:p-4 rounded-xl ${color} bg-opacity-10 dark:bg-opacity-20`}>
+                        <Icon name={IconName} className={`${color.replace('bg-', 'text-')}`} size={24} />
+                    </div>
+                </div>
+                <div className="relative z-10">
+                    <p className="text-zinc-500 dark:text-zinc-400 text-[10px] md:text-xs font-black uppercase tracking-wider mb-1">{title}</p>
+                    <div className="flex items-baseline space-x-2">
+                        <h3 className="text-2xl md:text-4xl font-black text-zinc-900 dark:text-white leading-none">{value}</h3>
+                        <span className="text-zinc-400 dark:text-zinc-500 text-[10px] md:text-xs font-bold uppercase">{unit}</span>
+                    </div>
+                    {subtext && <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-2 font-medium tracking-tight">{subtext}</p>}
+                </div>
+            </div>
+        );
+
+        // --- Login Screen ---
+        const LoginScreen = ({ onLogin }) => {
+            const [pin, setPin] = useState("");
+            const [error, setError] = useState(false);
+
+            const handlePin = (num) => {
+                if (pin.length < 4) {
+                    const newPin = pin + num;
+                    setPin(newPin);
+                    if (newPin.length === 4) {
+                        if (newPin === "9999") onLogin(); // Default PIN
+                        else {
+                            setError(true);
+                            setTimeout(() => { setPin(""); setError(false); }, 500);
+                        }
+                    }
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-zinc-950 flex flex-col items-center justify-center z-[1000] text-white">
+                    <div className="mb-8 flex flex-col items-center animate-fade-up">
+                        <img src={EKG_LOGO} className="w-20 h-20 mb-4 animate-pulse" alt="Logo" />
+                        <h1 className="text-2xl font-black uppercase tracking-widest">ER Command Center</h1>
+                        <p className="text-zinc-500 text-sm tracking-widest mt-2">โรงพยาบาลเสลภูมิ</p>
+                    </div>
+                    <div className="flex space-x-4 mb-8">
+                        {[0,1,2,3].map(i => (
+                            <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all ${pin.length > i ? 'bg-red-600 border-red-600' : 'border-zinc-700'} ${error ? 'animate-bounce border-red-500' : ''}`}></div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-3 gap-6 w-64">
+                        {[1,2,3,4,5,6,7,8,9].map(n => (
+                            <button key={n} onClick={() => handlePin(n.toString())} className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 text-xl font-bold hover:bg-zinc-800 active:scale-95 transition-all">{n}</button>
+                        ))}
+                        <div className="col-start-2"><button onClick={() => handlePin("0")} className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 text-xl font-bold hover:bg-zinc-800 active:scale-95 transition-all">0</button></div>
+                        <button onClick={() => setPin(pin.slice(0, -1))} className="w-16 h-16 rounded-full flex items-center justify-center text-zinc-500 hover:text-white"><Icon name="Delete" size={24} /></button>
+                    </div>
+                </div>
+            );
+        };
+
+        const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg" }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/90 backdrop-blur-md no-print">
+                    <div className={`bg-white dark:bg-zinc-900 rounded-[2rem] shadow-2xl w-full ${maxWidth} overflow-hidden border border-zinc-100 dark:border-zinc-800 animate-fade-up`}>
+                        <div className="bg-zinc-50 dark:bg-zinc-950 px-6 md:px-10 py-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+                            <h3 className="font-black text-zinc-900 dark:text-white text-xl flex items-center tracking-tight truncate uppercase"><Icon name="Edit" className="mr-3 text-red-600" size={20} /> {title}</h3>
+                            <button onClick={onClose} className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full text-zinc-400"><Icon name="X" size={24} /></button>
+                        </div>
+                        <div className="p-6 md:p-10 max-h-[70vh] overflow-y-auto custom-scrollbar text-zinc-700 dark:text-zinc-300">
+                            {children}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main App Component ---
+        const App = () => {
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [multiYearData, setMultiYearData] = useState(INITIAL_MULTI_YEAR);
+            const [selectedYear, setSelectedYear] = useState("2567");
+            const [activeTab, setActiveTab] = useState('overview');
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+            const [loading, setLoading] = useState(false);
+            const [isSaving, setIsSaving] = useState(false); // New saving state
+            const [lastSync, setLastSync] = useState(null);
+            const [modalType, setModalType] = useState(null);
+            const [notifications, setNotifications] = useState([]);
+            
+            // Recharts Deconstruct
+            const { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList, LineChart, Line } = window.Recharts || {};
+
+            const currentYearData = useMemo(() => multiYearData[selectedYear] || createYearTemplate(), [multiYearData, selectedYear]);
+
+            // Utils
+            const sumVal = (arr, key) => (arr || []).reduce((acc, curr) => acc + (Number(curr[key] || curr.value || 0) || 0), 0);
+            const avgVal = (arr, key) => {
+                const filtered = (arr || []).filter(x => (Number(x[key]) || 0) > 0);
+                return filtered.length === 0 ? 0 : filtered.reduce((acc, curr) => acc + Number(curr[key]), 0) / filtered.length;
+            };
+
+            // Summaries
+            const triageSummary = useMemo(() => (currentYearData.triageLevels || []).map(l => ({ name: l.name, value: sumVal(l.monthly, 'value'), color: l.color })), [currentYearData]);
+            const shiftSummary = useMemo(() => (currentYearData.shiftLevels || []).map(l => ({ name: l.name, patients: sumVal(l.monthly, 'value'), color: l.color })), [currentYearData]);
+            const yearlyTotal = useMemo(() => triageSummary.reduce((acc, curr) => acc + curr.value, 0), [triageSummary]);
+            const emsReferSummary = useMemo(() => {
+                const m = currentYearData.emsRefer?.monthlyTotal || [];
+                return { ems: sumVal(m, 'ems'), in: sumVal(m, 'in'), out: sumVal(m, 'out'), back: sumVal(m, 'back') };
+            }, [currentYearData]);
+
+            // Trend Comparison Data (Starting from 2567 onwards)
+            const trendComparisonData = useMemo(() => {
+                return FISCAL_YEARS.map(year => {
+                    const yearData = multiYearData[year] || createYearTemplate();
+                    
+                    let total = 0, red = 0, pink = 0, yellow = 0;
+                    (yearData.triageLevels || []).forEach(l => {
+                        const sum = sumVal(l.monthly, 'value');
+                        total += sum;
+                        if (l.id === 'red') red = sum;
+                        if (l.id === 'pink') pink = sum;
+                        if (l.id === 'yellow') yellow = sum;
+                    });
+
+                    const ems = sumVal(yearData.emsRefer?.monthlyTotal, 'ems');
+                    const referOut = sumVal(yearData.emsRefer?.monthlyTotal, 'out');
+
+                    return {
+                        name: `FY ${year}`,
+                        total,
+                        red,
+                        pink,
+                        yellow,
+                        ems,
+                        referOut
+                    };
+                });
+            }, [multiYearData]);
+
+            const aiAnalysis = useMemo(() => {
+                const q = currentYearData.quality;
+                const avgSat = avgVal(q.monthlyData, 'satisfaction');
+                const totalIncidents = (q.incidents || []).reduce((acc, inc) => acc + sumVal(inc.monthly, 'value'), 0);
+                let insights = [];
+                if (avgSat > 0) insights.push(avgSat >= 85 ? `✅ ความพึงพอใจ ${avgSat.toFixed(1)}% ผ่านเกณฑ์มาตรฐาน` : `⚠️ ความพึงพอใจ ${avgSat.toFixed(1)}% ต่ำกว่าเกณฑ์`);
+                if (totalIncidents > 0) insights.push(`📊 พบอุบัติการณ์ ${totalIncidents} ครั้ง ควรทำ RCA`);
+                else insights.push(`🌟 ไม่พบอุบัติการณ์รุนแรง`);
+                return insights;
+            }, [currentYearData]);
+
+            // Data Handling
+            const loadData = async () => {
+                setLoading(true);
+                try {
+                    // Try fetch
+                    if(GOOGLE_SCRIPT_URL.includes("INSERT")) throw new Error("Mock Mode");
+                    
+                    const res = await fetch(GOOGLE_SCRIPT_URL);
+                    const cloud = await res.json();
+                    if (cloud.status === 'success' && Object.keys(cloud.data).length > 0) {
+                        setMultiYearData(prev => ({ ...prev, ...cloud.data }));
+                        setLastSync(new Date());
+                        addNotification('Sync Complete', 'ข้อมูลล่าสุดจาก Cloud', 'success');
+                    } else {
+                        // Keep initial data if empty
+                    }
+                } catch (e) {
+                    console.warn("Offline/Mock Mode Active");
+                } finally { 
+                    setLoading(false); 
+                }
+            };
+
+            const saveData = async (newData) => {
+                setIsSaving(true);
+                try {
+                    if(!GOOGLE_SCRIPT_URL.includes("INSERT")) {
+                        await fetch(GOOGLE_SCRIPT_URL, { 
+                            method: 'POST', 
+                            mode: 'no-cors', // Important for GAS
+                            body: JSON.stringify(newData),
+                            // Removing Content-Type header to allow browser to send body correctly in no-cors mode
+                        });
+                    }
+                    // Simulate success even in mock mode for UX
+                    setLastSync(new Date());
+                    addNotification('Saved', 'บันทึกข้อมูลสำเร็จ', 'success');
+                } catch (e) { 
+                    addNotification('Error', 'การบันทึกขัดข้อง', 'error'); 
+                } finally {
+                    setIsSaving(false);
+                }
+            };
+
+            const updateCurrentYear = (key, val) => {
+                const updatedYearData = { ...currentYearData, [key]: val };
+                const updatedAllData = { ...multiYearData, [selectedYear]: updatedYearData };
+                setMultiYearData(updatedAllData);
+                setModalType(null);
+                saveData(updatedAllData);
+            };
+
+            useEffect(() => { if (isLoggedIn) loadData(); }, [isLoggedIn]);
+
+            const addNotification = (title, message, type='info') => {
+                const id = Date.now();
+                setNotifications(p => [...p, { id, title, message, type }]);
+                setTimeout(() => setNotifications(p => p.filter(n => n.id !== id)), 4000);
+            };
+
+            const handlePrint = () => {
+                window.print();
+            };
+
+            if (!isLoggedIn) return <LoginScreen onLogin={() => setIsLoggedIn(true)} />;
+
+            // === เพิ่มเมนู "ระบบบันทึก Refer" ที่บรรทัดนี้ครับ ===
+            const menuItems = [
+                { id: 'overview', name: 'Dashboard ภาพรวม', icon: 'LayoutDashboard' },
+                { id: 'clinical', name: 'ตัวชี้วัดกลุ่มโรค (KPI)', icon: 'Activity' },
+                { id: 'operations', name: 'EMS และการส่งต่อ', icon: 'Ambulance' },
+                { id: 'referral', name: 'ระบบบันทึก Refer', icon: 'Send' }, // เมนูใหม่
+                { id: 'quality', name: 'คุณภาพและ AI วิเคราะห์', icon: 'ShieldCheck' },
+                { id: 'staff', name: 'ทะเบียนบุคลากร', icon: 'Users' }
+            ];
+
+            return (
+                <div className="flex h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 overflow-hidden font-sans">
+                    {/* Sidebar */}
+                    <aside className={`no-print fixed inset-y-0 left-0 z-50 w-72 glass-panel transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 flex flex-col`}>
+                        <div className="p-8 border-b border-zinc-800/50 flex items-center space-x-4">
+                            <img src={EKG_LOGO} alt="EKG" className="w-10 h-10 shrink-0 filter drop-shadow-[0_0_8px_rgba(220,38,38,0.5)]" />
+                            <div><h1 className="text-xl font-black text-white uppercase tracking-tighter">ER COMMAND</h1><p className="text-[10px] text-zinc-500 font-black tracking-widest uppercase">โรงพยาบาลเสลภูมิ</p></div>
+                        </div>
+                        <nav className="mt-6 px-4 space-y-2 flex-1 overflow-y-auto">
+                            {menuItems.map(tab => (
+                                <button key={tab.id} onClick={() => {setActiveTab(tab.id); setSidebarOpen(false)}} className={`w-full flex items-center px-6 py-4 rounded-[1.25rem] transition-all duration-200 group ${activeTab === tab.id ? 'bg-red-600 shadow-lg shadow-red-900/20 text-white' : 'hover:bg-zinc-800/50 text-zinc-500 hover:text-zinc-200'}`}>
+                                    <Icon name={tab.icon} className={`mr-4 transition-transform group-hover:scale-110 ${activeTab === tab.id ? 'animate-pulse' : ''}`} size={20} />
+                                    <span className="font-black text-sm tracking-tight">{tab.name}</span>
+                                </button>
+                            ))}
+                        </nav>
+                        <div className="p-6 border-t border-zinc-800/50">
+                            <div className="bg-zinc-900/80 rounded-2xl p-4 border border-zinc-800 flex justify-between items-center">
+                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">Status: {isSaving ? 'Saving...' : 'Online'}</span>
+                                <div className={`w-2 h-2 rounded-full ${isSaving ? 'bg-yellow-500' : 'bg-emerald-500'} shadow-lg animate-pulse`}></div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* Main Content */}
+                    <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+                        {/* Header */}
+                        <header className="bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-900 h-20 md:h-24 flex items-center justify-between px-6 md:px-10 shrink-0 z-40 no-print">
+                            <div className="flex items-center space-x-4">
+                                <button onClick={() => setSidebarOpen(true)} className="md:hidden text-zinc-500"><Icon name="Menu" size={28} /></button>
+                                <div>
+                                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white flex items-center">
+                                        <span className="text-red-600 mr-3">/</span> {menuItems.find(i=>i.id===activeTab)?.name}
+                                    </h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-3 md:space-x-4">
+                                <div className="hidden md:flex flex-col items-end mr-4">
+                                    <span className="text-[10px] font-black text-zinc-500 uppercase">Last Sync</span>
+                                    <span className="text-xs font-bold text-zinc-300 font-mono">{lastSync ? lastSync.toLocaleTimeString('th-TH') : 'Checking...'}</span>
+                                </div>
+                                <button onClick={handlePrint} className="bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl hover:bg-zinc-800 text-zinc-500 transition-colors" title="Print Report"><Icon name="Printer" size={20} /></button>
+                                <div className="h-8 w-[1px] bg-zinc-800 mx-2"></div>
+                                <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-zinc-100 dark:bg-zinc-900 border-none px-4 py-2 rounded-xl font-black text-xs outline-none cursor-pointer text-zinc-700 dark:text-white uppercase tracking-widest hover:ring-1 hover:ring-red-600 transition-all">
+                                    {FISCAL_YEARS.map(y => <option key={y} value={y}>FY {y}</option>)}
+                                </select>
+                            </div>
+                        </header>
+
+                        {/* Printable Header (Only shows on print) */}
+                        <div className="hidden print-only p-10 border-b border-black mb-5 text-center">
+                            <h1 className="text-3xl font-black uppercase">รายงานสรุปผลการดำเนินงาน ศูนย์สั่งการ ER</h1>
+                            <p className="text-lg">โรงพยาบาลเสลภูมิ | ปีงบประมาณ {selectedYear}</p>
+                            <p className="text-sm text-gray-500 mt-2">พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH')}</p>
+                        </div>
+
+                        {/* Content Scrollable Area */}
+                        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-zinc-50 dark:bg-black scroll-smooth">
+                            <div className="max-w-7xl mx-auto space-y-8 animate-fade-up pb-20">
+                                
+                                {/* --- OVERVIEW TAB --- */}
+                                {activeTab === 'overview' && (
+                                    <>
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                                            <MetricCard title="ผู้ป่วยรวมทั้งหมด" value={yearlyTotal.toLocaleString()} unit="ราย" icon="Users" color="bg-blue-600" subtext={`สะสมปี ${selectedYear}`} />
+                                            <MetricCard title="วิกฤต (แดง)" value={triageSummary[0]?.value?.toLocaleString() || '0'} unit="ราย" icon="HeartPulse" color="bg-red-600" />
+                                            <MetricCard title="EMS สะสม" value={emsReferSummary.ems.toLocaleString()} unit="ครั้ง" icon="Siren" color="bg-orange-500" />
+                                            <MetricCard title="ส่งต่อสะสม" value={emsReferSummary.out.toLocaleString()} unit="ราย" icon="ArrowUpRight" color="bg-zinc-600" />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[400px]">
+                                            <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col card-print">
+                                                <h4 className="font-black text-xs dark:text-white uppercase tracking-widest mb-6 flex justify-between">
+                                                    <span>สัดส่วน Triage (Pyramid)</span>
+                                                    <button onClick={() => setModalType('edit_triage')} className="no-print p-1 bg-zinc-800 rounded text-red-600 hover:text-white transition-colors"><Icon name="Edit3" size={14} /></button>
+                                                </h4>
+                                                <div className="flex-1 min-h-0">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <PieChart>
+                                                            <Pie data={triageSummary} innerRadius={60} outerRadius={90} paddingAngle={4} dataKey="value" stroke="none">
+                                                                {triageSummary.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                                                            </Pie>
+                                                            <Tooltip contentStyle={{backgroundColor: '#18181b', border: 'none', borderRadius: '12px', color: '#fff'}} itemStyle={{color:'#fff'}} />
+                                                            <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col card-print">
+                                                <h4 className="font-black text-xs dark:text-white uppercase tracking-widest mb-6 flex justify-between">
+                                                    <span>ภาระงานเฉลี่ยต่อวัน (แยกเวร)</span>
+                                                    <button onClick={() => setModalType('edit_workload')} className="no-print p-1 bg-zinc-800 rounded text-orange-600 hover:text-white transition-colors"><Icon name="Edit3" size={14} /></button>
+                                                </h4>
+                                                <div className="flex-1 min-h-0">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <BarChart data={shiftSummary.map(s => ({...s, patients: (s.patients/365).toFixed(1)}))} margin={{ top: 20 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} stroke="#52525b"/>
+                                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#71717a'}}/>
+                                                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#71717a'}}/>
+                                                            <Tooltip cursor={{fill: 'transparent'}} contentStyle={{backgroundColor: '#18181b', border: 'none', borderRadius: '12px', color: '#fff'}}/>
+                                                            <Bar dataKey="patients" name="เฉลี่ย/วัน" radius={[6, 6, 0, 0]} barSize={40}>
+                                                                {shiftSummary.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                                                                <LabelList dataKey="patients" position="top" fill="#a1a1aa" fontSize={12} fontWeight="bold" />
+                                                            </Bar>
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Trend Comparison Line Chart */}
+                                        <div className="bg-white dark:bg-zinc-900 p-6 md:p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col card-print mt-6">
+                                            <h4 className="font-black text-xs dark:text-white uppercase tracking-widest mb-6 flex justify-between items-center">
+                                                <span className="flex items-center"><Icon name="TrendingUp" className="mr-2 text-blue-500" size={18}/> แนวโน้มเปรียบเทียบ 5 ปีงบประมาณ (ตั้งแต่ปี 2567)</span>
+                                            </h4>
+                                            <div className="h-[350px] w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <LineChart data={trendComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} stroke="#52525b"/>
+                                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#71717a', fontWeight: 'bold'}} padding={{ left: 30, right: 30 }}/>
+                                                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#71717a'}}/>
+                                                        <Tooltip contentStyle={{backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '12px', color: '#fff'}}/>
+                                                        <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }}/>
+                                                        
+                                                        <Line type="monotone" dataKey="total" name="ยอดรวมทั้งหมด" stroke="#3b82f6" strokeWidth={4} dot={{r: 5}} activeDot={{r: 8}} />
+                                                        <Line type="monotone" dataKey="red" name="วิกฤต (แดง)" stroke="#dc2626" strokeWidth={3} dot={{r: 4}} />
+                                                        <Line type="monotone" dataKey="pink" name="ด่วนมาก (ชมพู)" stroke="#ec4899" strokeWidth={3} dot={{r: 4}} />
+                                                        <Line type="monotone" dataKey="yellow" name="ด่วน (เหลือง)" stroke="#f59e0b" strokeWidth={3} dot={{r: 4}} />
+                                                        <Line type="monotone" dataKey="ems" name="EMS สะสม" stroke="#f97316" strokeWidth={3} strokeDasharray="5 5" dot={{r: 4}} />
+                                                        <Line type="monotone" dataKey="referOut" name="ส่งต่อสะสม" stroke="#10b981" strokeWidth={3} strokeDasharray="5 5" dot={{r: 4}} />
+                                                    </LineChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* --- CLINICAL KPI TAB (NEW DESIGN) --- */}
+                                {activeTab === 'clinical' && (
+                                    <>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-xl font-black uppercase dark:text-white">KPI Monitor</h3>
+                                            <button onClick={() => setModalType('edit_clinical')} className="no-print bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-black uppercase shadow-lg hover:scale-105 transition-all">Update KPI</button>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {Object.entries(currentYearData.clinicalStats).map(([key, stat]) => {
+                                                const percentage = Math.min(stat.rate, 100);
+                                                const isPass = stat.rate >= stat.target;
+                                                return (
+                                                    <div key={key} className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden group card-print">
+                                                        <div className={`absolute top-0 right-0 p-4 opacity-10 ${isPass ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                            <Icon name={isPass ? "CheckCircle" : "AlertTriangle"} size={100} />
+                                                        </div>
+                                                        <div className="relative z-10">
+                                                            <div className="flex justify-between items-end mb-6">
+                                                                <div>
+                                                                    <h4 className="text-xl font-black dark:text-white uppercase tracking-tight">{stat.name}</h4>
+                                                                    <p className="text-zinc-500 text-[10px] font-bold mt-1">เกณฑ์: {stat.unit} (Target ≥ {stat.target}%)</p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <span className={`text-5xl font-black ${isPass ? 'text-emerald-500' : 'text-red-500'}`}>{stat.rate}%</span>
+                                                                </div>
+                                                            </div>
+                                                            {/* Gauge Bar */}
+                                                            <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-4 rounded-full overflow-hidden">
+                                                                <div 
+                                                                    className={`h-full transition-all duration-1000 ${isPass ? 'bg-emerald-500' : 'bg-red-500'}`} 
+                                                                    style={{ width: `${percentage}%` }}
+                                                                ></div>
+                                                            </div>
+                                                            <div className="mt-4 flex justify-between text-[10px] font-black uppercase text-zinc-400">
+                                                                <span>N = {stat.count} ราย</span>
+                                                                <span>{isPass ? 'PASS' : 'FAIL'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* --- OPERATIONS TAB --- */}
+                                {activeTab === 'operations' && (
+                                    <>
+                                        <div className="flex justify-between items-center no-print">
+                                            <h3 className="text-xl font-black flex items-center dark:text-white uppercase"><Icon name="Ambulance" className="mr-3 text-orange-500" size={24} /> EMS Operations</h3>
+                                            <button onClick={() => setModalType('edit_ems')} className="bg-zinc-800 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-zinc-700">Update Monthly Data</button>
+                                        </div>
+                                        
+                                        <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm h-96 card-print">
+                                            <h4 className="font-black text-xs dark:text-white uppercase tracking-widest mb-6">แนวโน้ม Refer & EMS รายเดือน</h4>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={currentYearData.emsRefer?.monthlyTotal || []} margin={{top:0, right:0, left:-20, bottom: 20}}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} stroke="#52525b"/>
+                                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#71717a'}}/>
+                                                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#52525b'}}/>
+                                                    <Tooltip contentStyle={{backgroundColor: '#18181b', border: '1px solid #27272a', color: '#fff', borderRadius: '12px'}}/>
+                                                    <Legend verticalAlign="top" height={36} iconType="circle"/>
+                                                    <Bar dataKey="ems" name="EMS" fill={COLORS.EMS} radius={[4, 4, 0, 0]}/>
+                                                    <Bar dataKey="out" name="Refer OUT" fill={COLORS.ReferOut} radius={[4, 4, 0, 0]}/>
+                                                    <Bar dataKey="in" name="Refer IN" fill={COLORS.ReferIn} radius={[4, 4, 0, 0]}/>
+                                                    <Bar dataKey="back" name="Refer Back" fill={COLORS.ReferBack} radius={[4, 4, 0, 0]}/>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* === REFERRAL HUB TAB (เพิ่มใหม่ตรงนี้) === */}
+                                {activeTab === 'referral' && (
+                                    <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-xl overflow-hidden h-[850px] relative animate-fade-up card-print">
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-red-400 z-10"></div>
+                                        {/* iframe ดึงหน้า Refer มาแสดง */}
+                                        <iframe 
+                                            src="Referral_Hub.html" 
+                                            className="w-full h-full border-none bg-slate-50/50"
+                                            title="Referral Hub System"
+                                        ></iframe>
+                                    </div>
+                                )}
+
+                                {/* --- QUALITY & STAFF TAB --- */}
+                                {activeTab === 'quality' && (
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div className="bg-zinc-900 p-8 rounded-[2rem] border border-zinc-800 border-t-4 border-t-emerald-500 card-print">
+                                            <h4 className="text-emerald-400 font-black uppercase tracking-widest mb-6 flex items-center"><Icon name="Sparkles" className="mr-2" size={16}/> AI Analysis</h4>
+                                            <div className="space-y-4">
+                                                {aiAnalysis.map((txt, i) => (
+                                                    <div key={i} className="flex items-start text-zinc-300 text-sm font-medium">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 mr-4 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                                                        {txt}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="mt-8 pt-6 border-t border-white/5">
+                                                <button onClick={() => setModalType('edit_incidents')} className="no-print w-full py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-xs font-bold text-zinc-400">บันทึกอุบัติการณ์ความเสี่ยง</button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 card-print">
+                                            <h4 className="dark:text-white font-black uppercase tracking-widest mb-6">คุณภาพบริการ</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl text-center">
+                                                    <h5 className="text-3xl font-black text-yellow-500">{avgVal(currentYearData.quality.monthlyData, 'satisfaction').toFixed(1)}%</h5>
+                                                    <p className="text-[10px] text-zinc-400 uppercase mt-1">ความพึงพอใจ</p>
+                                                </div>
+                                                <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl text-center">
+                                                    <h5 className="text-3xl font-black text-blue-500">{avgVal(currentYearData.quality.monthlyData, 'los').toFixed(1)}</h5>
+                                                    <p className="text-[10px] text-zinc-400 uppercase mt-1">ชม. (LOS)</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setModalType('edit_quality')} className="no-print w-full mt-4 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl text-xs font-bold text-zinc-500">แก้ไขข้อมูลคุณภาพ</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'staff' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <div onClick={() => setModalType('staff_add')} className="no-print bg-zinc-100 dark:bg-zinc-900 border-2 border-dashed border-zinc-300 dark:border-zinc-800 rounded-[2rem] flex flex-col items-center justify-center p-8 cursor-pointer hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all group min-h-[200px]">
+                                            <div className="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:bg-red-600 group-hover:text-white transition-colors mb-4"><Icon name="Plus" size={24} /></div>
+                                            <span className="font-bold text-zinc-400 group-hover:text-red-600">ลงทะเบียนบุคลากร</span>
+                                        </div>
+                                        {currentYearData.staff.map(s => (
+                                            <div key={s.id} className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm relative group card-print">
+                                                <button onClick={() => {if(confirm('Delete?')) updateCurrentYear('staff', currentYearData.staff.filter(x=>x.id!==s.id))}} className="no-print absolute top-6 right-6 text-zinc-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><Icon name="Trash2" size={16} /></button>
+                                                <div className="flex items-center space-x-4 mb-6">
+                                                    <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-black text-xl">{s.name[0]}</div>
+                                                    <div><h5 className="font-bold dark:text-white">{s.name}</h5><p className="text-xs text-blue-500 font-bold uppercase">{s.position}</p></div>
+                                                </div>
+                                                <div className="text-xs text-zinc-500 font-mono space-y-1">
+                                                    <p className="flex items-center"><Icon name="Phone" size={12} className="mr-2"/> {s.phone}</p>
+                                                    <p className="flex items-center"><Icon name="Calendar" size={12} className="mr-2"/> เกษียณ: {s.retire}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                            </div>
+                        </main>
+                    </div>
+
+                    {/* --- MODALS --- */}
+                    <Modal isOpen={modalType === 'edit_clinical'} onClose={() => setModalType(null)} title="บันทึกตัวชี้วัด (Clinical KPI)">
+                        <form onSubmit={(e) => {
+                            e.preventDefault(); const f = new FormData(e.target);
+                            const nS = { ...currentYearData.clinicalStats };
+                            Object.keys(nS).forEach(k => { nS[k].count = parseInt(f.get(`${k}_count`)) || 0; nS[k].rate = parseFloat(f.get(`${k}_rate`)) || 0; });
+                            updateCurrentYear('clinicalStats', nS);
+                        }} className="space-y-6">
+                            {Object.entries(currentYearData.clinicalStats).map(([key, stat]) => (
+                                <div key={key} className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl grid grid-cols-12 gap-4 items-center">
+                                    <div className="col-span-12 md:col-span-4"><p className="text-xs font-black uppercase text-zinc-500">{stat.name}</p></div>
+                                    <div className="col-span-6 md:col-span-4"><input name={`${key}_count`} type="number" defaultValue={stat.count} placeholder="จำนวน (N)" className="w-full bg-white dark:bg-zinc-800 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-center font-bold" /></div>
+                                    <div className="col-span-6 md:col-span-4"><input name={`${key}_rate`} type="number" step="0.1" defaultValue={stat.rate} placeholder="ผลลัพธ์ (%)" className="w-full bg-white dark:bg-zinc-800 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-center font-bold text-blue-500" /></div>
+                                </div>
+                            ))}
+                            <button className="w-full bg-red-600 hover:bg-red-700 text-white p-4 rounded-xl font-black uppercase shadow-lg transition-all">บันทึกข้อมูล KPI</button>
+                        </form>
+                    </Modal>
+
+                    {/* Other modals follow similar pattern... implemented generic structure for brevity */}
+                    {['edit_triage', 'edit_workload', 'edit_ems', 'edit_quality', 'edit_incidents'].includes(modalType) && (
+                         <Modal isOpen={true} onClose={() => setModalType(null)} title="แก้ไขข้อมูลตาราง (Data Grid)" maxWidth="max-w-4xl">
+                            <form onSubmit={(e) => {
+                                e.preventDefault(); const f = new FormData(e.target);
+                                // Logic mapping based on modalType
+                                if(modalType === 'edit_triage') {
+                                    const nL = currentYearData.triageLevels.map(l => ({ ...l, monthly: FISCAL_MONTHS.map((m, mi) => ({ month: m, value: parseInt(f.get(`${l.id}_${mi}`)) || 0 })) }));
+                                    updateCurrentYear('triageLevels', nL);
+                                } else if (modalType === 'edit_workload') {
+                                    const nL = currentYearData.shiftLevels.map(l => ({ ...l, monthly: FISCAL_MONTHS.map((m, mi) => ({ month: m, value: parseInt(f.get(`${l.id}_${mi}`)) || 0 })) }));
+                                    updateCurrentYear('shiftLevels', nL);
+                                } else if (modalType === 'edit_ems') {
+                                     const nM = FISCAL_MONTHS.map((m, mi) => ({ month: m, ems: parseInt(f.get(`ems_${mi}`)), in: parseInt(f.get(`in_${mi}`)), out: parseInt(f.get(`out_${mi}`)), back: parseInt(f.get(`back_${mi}`)) }));
+                                     updateCurrentYear('emsRefer', { monthlyTotal: nM });
+                                } else if (modalType === 'edit_incidents') {
+                                    const nI = currentYearData.quality.incidents.map(inc => ({ ...inc, monthly: FISCAL_MONTHS.map((m, mi) => ({ month: m, value: parseInt(f.get(`${inc.id}_${mi}`)) || 0 })) }));
+                                    updateCurrentYear('quality', { ...currentYearData.quality, incidents: nI });
+                                } else if (modalType === 'edit_quality') {
+                                    const nM = FISCAL_MONTHS.map((m, mi) => ({
+                                        month: m,
+                                        satisfaction: parseFloat(f.get(`satisfaction_${mi}`)) || 0,
+                                        complaints: parseInt(f.get(`complaints_${mi}`)) || 0,
+                                        los: parseFloat(f.get(`los_${mi}`)) || 0
+                                    }));
+                                    updateCurrentYear('quality', { ...currentYearData.quality, monthlyData: nM });
+                                }
+                                // Add other cases as needed
+                            }}>
+                                <div className="overflow-x-auto pb-4">
+                                    <table className="w-full text-xs whitespace-nowrap">
+                                        <thead>
+                                            <tr className="text-zinc-500 border-b border-zinc-800/20">
+                                                <th className="pb-4 text-left pl-2">หัวข้อ</th>
+                                                {FISCAL_MONTHS.map(m => <th key={m} className="pb-4 px-2">{m}</th>)}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {/* Render rows based on modalType */}
+                                            {modalType === 'edit_triage' && currentYearData.triageLevels.map(l => (
+                                                <tr key={l.id}><td className="py-2 font-bold" style={{color:l.color}}>{l.name}</td>{l.monthly.map((m,i) => <td key={i}><input name={`${l.id}_${i}`} defaultValue={m.value} className="w-12 bg-zinc-100 dark:bg-zinc-800 p-1 rounded text-center"/></td>)}</tr>
+                                            ))}
+                                            {modalType === 'edit_ems' && ['ems','in','out','back'].map(k => (
+                                                <tr key={k}><td className="py-2 font-bold uppercase">{k}</td>{FISCAL_MONTHS.map((m,i) => <td key={i}><input name={`${k}_${i}`} defaultValue={currentYearData.emsRefer.monthlyTotal[i][k]} className="w-12 bg-zinc-100 dark:bg-zinc-800 p-1 rounded text-center"/></td>)}</tr>
+                                            ))}
+                                            
+                                            {/* WORKLOAD (SHIFT) EDITING - Added per user request */}
+                                            {modalType === 'edit_workload' && currentYearData.shiftLevels.map(l => (
+                                                <tr key={l.id}>
+                                                    <td className="py-2 font-bold" style={{color:l.color}}>{l.name}</td>
+                                                    {FISCAL_MONTHS.map((m, i) => (
+                                                        <td key={i} className="px-1">
+                                                            <input 
+                                                                name={`${l.id}_${i}`} 
+                                                                type="number" 
+                                                                defaultValue={l.monthly[i]?.value || 0} 
+                                                                className="w-full bg-zinc-100 dark:bg-zinc-800 p-1 rounded text-center text-xs font-medium focus:ring-1 focus:ring-blue-500 outline-none"
+                                                            />
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+
+                                            {/* INCIDENTS EDITING - Added for completeness */}
+                                            {modalType === 'edit_incidents' && currentYearData.quality.incidents.map(inc => (
+                                                <tr key={inc.id}>
+                                                    <td className="py-2 font-bold text-zinc-500">{inc.category}</td>
+                                                    {inc.monthly.map((m, i) => (
+                                                        <td key={i} className="px-1">
+                                                            <input name={`${inc.id}_${i}`} defaultValue={m.value} className="w-full bg-zinc-100 dark:bg-zinc-800 p-1 rounded text-center text-xs outline-none"/>
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+
+                                            {/* QUALITY EDITING - Added missing functionality */}
+                                            {modalType === 'edit_quality' && ['satisfaction', 'complaints', 'los'].map(k => (
+                                                <tr key={k}>
+                                                    <td className="py-2 font-bold uppercase text-zinc-500">
+                                                        {k === 'satisfaction' ? 'ความพึงพอใจ (%)' : k === 'complaints' ? 'ข้อร้องเรียน (เรื่อง)' : 'LOS (ชม.)'}
+                                                    </td>
+                                                    {FISCAL_MONTHS.map((m, i) => (
+                                                        <td key={i} className="px-1">
+                                                            <input 
+                                                                name={`${k}_${i}`} 
+                                                                type="number" 
+                                                                step={k === 'complaints' ? '1' : '0.1'}
+                                                                defaultValue={currentYearData.quality.monthlyData[i]?.[k] || 0} 
+                                                                className="w-full bg-zinc-100 dark:bg-zinc-800 p-1 rounded text-center text-xs outline-none"
+                                                            />
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <button className="w-full bg-zinc-900 text-white p-4 rounded-xl font-bold">บันทึกการเปลี่ยนแปลง</button>
+                            </form>
+                        </Modal>
+                    )}
+                    
+                    {modalType === 'staff_add' && (
+                        <Modal isOpen={true} onClose={() => setModalType(null)} title="เพิ่มบุคลากร">
+                            <form onSubmit={(e) => {
+                                e.preventDefault(); const f = new FormData(e.target);
+                                updateCurrentYear('staff', [...currentYearData.staff, { id: Date.now(), name: f.get('name'), position: f.get('position'), phone: f.get('phone'), retire: f.get('retire') }]);
+                            }} className="space-y-4">
+                                <input name="name" required placeholder="ชื่อ-นามสกุล" className="w-full bg-zinc-100 dark:bg-zinc-800 p-4 rounded-xl" />
+                                <input name="position" required placeholder="ตำแหน่ง" className="w-full bg-zinc-100 dark:bg-zinc-800 p-4 rounded-xl" />
+                                <div className="grid grid-cols-2 gap-4"><input name="phone" placeholder="เบอร์โทร" className="bg-zinc-100 dark:bg-zinc-800 p-4 rounded-xl"/><input name="retire" placeholder="เลขที่ใบประกอบ" className="bg-zinc-100 dark:bg-zinc-800 p-4 rounded-xl"/></div>
+                                <button className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold">ยืนยัน</button>
+                            </form>
+                        </Modal>
+                    )}
+
+                    {/* Notifications */}
+                    <div className="fixed top-6 right-6 z-[200] space-y-3 pointer-events-none">
+                        {notifications.map(n => (
+                            <div key={n.id} className={`pointer-events-auto flex items-center p-4 rounded-2xl shadow-xl w-72 backdrop-blur-md border border-white/10 text-white animate-slide-in ${n.type === 'error' ? 'bg-red-600/90' : 'bg-zinc-900/90'}`}>
+                                <Icon name={n.type === 'success' ? 'CheckCircle' : 'AlertCircle'} className="mr-3" size={20} />
+                                <div><h4 className="font-bold text-xs uppercase">{n.title}</h4><p className="text-[10px] opacity-80">{n.message}</p></div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <script>
+        (function runAppSource() {
+            const source = document.getElementById('app-source');
+            const root = document.getElementById('root');
+            const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+            const showError = (error) => {
+                console.error(error);
+                root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Segoe UI,Tahoma,sans-serif;background:#f8fafc;color:#0f172a;"><div style="max-width:620px;background:#fff;border:1px solid #fecdd3;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(15,23,42,.12);"><div style="font-size:13px;font-weight:800;color:#e11d48;text-transform:uppercase;letter-spacing:.08em;">Script Error</div><h1 style="margin:10px 0 8px;font-size:22px;">เปิดระบบไม่สำเร็จ</h1><p style="margin:0;color:#64748b;line-height:1.7;">' + escapeHtml(error && error.message ? error.message : error) + '</p></div></div>';
+            };
+            try {
+                if (!window.React || !window.ReactDOM || !window.Babel) throw new Error('โหลด React / ReactDOM / Babel ไม่สำเร็จ');
+                (0, eval)(Babel.transform(source.textContent, { presets: ['env'], plugins: [['transform-react-jsx', { runtime: 'classic' }]] }).code);
+            } catch (error) {
+                showError(error);
+            }
+        })();
+    </script>
+</body>
+</html>

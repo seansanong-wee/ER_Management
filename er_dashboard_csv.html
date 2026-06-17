@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ER Dashboard รพ.เสลภูมิ</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="vendor/tailwindcss.js"></script>
+    
+    <!-- React & ReactDOM (Locked to 18.2.0) -->
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="vendor/babel.min.js"></script>
+    
+    <!-- Recharts Dependencies -->
+    <script src="vendor/prop-types.min.js"></script>
+    <script src="vendor/react-is.production.min.js"></script>
+    <script src="vendor/Recharts.min.js"></script>
+
+    <!-- Phosphor Icons -->
+    <script src="vendor/phosphor-icons.js"></script>
+
+    <!-- Export PDF -->
+    <script src="vendor/html2canvas.min.js"></script>
+    <script src="vendor/jspdf.umd.min.js"></script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #dashboard-content { background-color: #f8fafc; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root">
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Prompt','Segoe UI',Tahoma,sans-serif;background:#f7fee7;color:#0f172a;">
+            <div style="max-width:520px;width:100%;background:#fff;border:1px solid #d9f99d;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(101,163,13,.14);">
+                <div style="font-size:13px;font-weight:800;color:#65a30d;letter-spacing:.08em;text-transform:uppercase;">Loading ER Dashboard CSV</div>
+                <h1 style="margin:10px 0 8px;font-size:24px;line-height:1.25;">กำลังเปิด Dashboard CSV</h1>
+                <p style="margin:0;color:#64748b;line-height:1.7;">หากหน้านี้ไม่เปลี่ยนเป็นระบบหลัก แสดงว่า React/Babel หรือไฟล์จาก CDN ยังโหลดไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรช หรือเปิดไฟล์นี้ในแท็บใหม่</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/plain" id="app-source">
+        /** @jsxRuntime classic */
+        const { useState, useMemo, useRef } = React;
+        const { 
+          BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip: RechartsTooltip, Legend, ResponsiveContainer,
+          PieChart, Pie, Cell, LineChart, Line, ReferenceLine
+        } = window.Recharts;
+
+        // ไอคอนต่างๆ
+        const Activity = ({size=24, className=''}) => <i className={`ph-bold ph-activity ${className}`}></i>;
+        const Users = ({size=24, className=''}) => <i className={`ph-bold ph-users ${className}`}></i>;
+        const Ambulance = ({size=24, className=''}) => <i className={`ph-bold ph-ambulance ${className}`}></i>;
+        const AlertCircle = ({size=24, className=''}) => <i className={`ph-bold ph-warning-circle ${className}`}></i>;
+        const HeartPulse = ({size=24, className=''}) => <i className={`ph-bold ph-heartbeat ${className}`}></i>;
+        const Calendar = ({size=24, className=''}) => <i className={`ph-bold ph-calendar-blank ${className}`}></i>;
+        const Clock = ({size=24, className=''}) => <i className={`ph-bold ph-clock ${className}`}></i>;
+        const FileText = ({size=24, className=''}) => <i className={`ph-bold ph-file-text ${className}`}></i>;
+        const ChevronDown = ({size=24, className=''}) => <i className={`ph-bold ph-caret-down ${className}`}></i>;
+        const Upload = ({size=24, className=''}) => <i className={`ph-bold ph-upload-simple ${className}`}></i>;
+        const FileSpreadsheet = ({size=24, className=''}) => <i className={`ph-bold ph-file-csv ${className}`}></i>;
+        const RotateCcw = ({size=24, className=''}) => <i className={`ph-bold ph-arrow-counter-clockwise ${className}`}></i>;
+        const AlertTriangle = ({size=24, className=''}) => <i className={`ph-bold ph-warning ${className}`}></i>;
+        const Brain = ({size=24, className=''}) => <i className={`ph-bold ph-brain ${className}`}></i>;
+        const Car = ({size=24, className=''}) => <i className={`ph-bold ph-car ${className}`}></i>;
+        const Siren = ({size=24, className=''}) => <i className={`ph-bold ph-siren ${className}`}></i>;
+        const Stethoscope = ({size=24, className=''}) => <i className={`ph-bold ph-stethoscope ${className}`}></i>;
+        const DownloadSimple = ({size=24, className=''}) => <i className={`ph-bold ph-download-simple ${className}`}></i>;
+        const UserList = ({size=24, className=''}) => <i className={`ph-bold ph-user-list ${className}`}></i>;
+        const Trash = ({size=24, className=''}) => <i className={`ph-bold ph-trash ${className}`}></i>;
+        const Plus = ({size=24, className=''}) => <i className={`ph-bold ph-plus ${className}`}></i>;
+
+        // ชุดสี ER
+        const COLORS = {
+          resus: '#ef4444', emer: '#f97316', urg: '#eab308', lessUrg: '#22c55e', nonUrg: '#94a3b8',
+          dc: '#10b981', admit: '#3b82f6', refer: '#8b5cf6', dw: '#6366f1', against: '#f59e0b', dead: '#334155',
+          stroke: '#4f46e5', stemi: '#ec4899', sepsis: '#e11d48', severeHi: '#c026d3', fastPed: '#059669',
+          traff: '#ea580c', general: '#ca8a04', ems: '#06b6d4', police: '#b45309', autopsy: '#475569',
+          ett: '#dc2626', hfnc: '#2563eb', ct: '#0891b2', pui: '#be123c'
+        };
+
+        const normalize = (str) => String(str).replace(/[^ก-๙a-zA-Z0-9]/g, '').toLowerCase();
+
+        const getNumSafe = (obj, keywords) => {
+          const keys = Object.keys(obj);
+          const normKeywords = keywords.map(normalize);
+          
+          for (const key of keys) {
+            const normKey = normalize(key);
+            if (normKeywords.includes(normKey)) {
+              const val = parseInt(obj[key], 10);
+              return isNaN(val) ? 0 : val;
+            }
+          }
+          for (const key of keys) {
+            const normKey = normalize(key);
+            if (normKeywords.some(kw => normKey.includes(kw))) {
+               const val = parseInt(obj[key], 10);
+               return isNaN(val) ? 0 : val;
+            }
+          }
+          return 0;
+        };
+
+        const safeGetDate = (obj) => {
+          const keys = Object.keys(obj);
+          const target = ['วดป', 'วันเดือนปี', 'วันที่', 'date'];
+          for (const key of keys) {
+            if (target.some(t => normalize(key).includes(t))) return obj[key];
+          }
+          return '';
+        };
+
+        const safeGetShift = (obj) => {
+          const keys = Object.keys(obj);
+          for (const key of keys) {
+            if (normalize(key) === 'เวร' || normalize(key) === 'shift') return String(obj[key]).trim();
+          }
+          return '';
+        };
+
+        const safeGetString = (obj, keywords) => {
+          const keys = Object.keys(obj);
+          const normKeywords = keywords.map(normalize);
+          for (const key of keys) {
+            if (normKeywords.some(kw => normalize(key).includes(kw))) return obj[key] || '';
+          }
+          return '';
+        };
+
+        const parseUniversalDate = (raw) => {
+            if (!raw) return null;
+            let d = String(raw).split(' ')[0].trim();
+            if (d.includes('-')) {
+                const parts = d.split('-');
+                if(parts.length===3) return { y: parseInt(parts[0],10), m: parseInt(parts[1],10), d: parseInt(parts[2],10) };
+            } else if (d.includes('/')) {
+                const parts = d.split('/');
+                if(parts.length===3) {
+                    if (parts[0].length === 4) return { y: parseInt(parts[0],10), m: parseInt(parts[1],10), d: parseInt(parts[2],10) };
+                    let month = parseInt(parts[1], 10);
+                    let day = parseInt(parts[0], 10);
+                    if (month > 12) { month = parseInt(parts[0], 10); day = parseInt(parts[1], 10); } 
+                    return { y: parseInt(parts[2],10), m: month, d: day };
+                }
+            }
+            return null;
+        }
+
+        function ErDashboard() {
+          const [rawData, setRawData] = useState([]);
+          const [selectedMonth, setSelectedMonth] = useState('All');
+          const [selectedShift, setSelectedShift] = useState('All'); 
+          const [isExporting, setIsExporting] = useState(false);
+          const fileInputRef = useRef(null);
+          
+          // State สำหรับ Custom Modals
+          const [showClearConfirm, setShowClearConfirm] = useState(false);
+          const [errorMessage, setErrorMessage] = useState('');
+
+          const formatDate = (dateStr) => {
+            const parsed = parseUniversalDate(dateStr);
+            if (!parsed) return dateStr;
+            return `${parsed.d.toString().padStart(2,'0')}/${parsed.m.toString().padStart(2,'0')}/${parsed.y}`;
+          };
+
+          const getMonthYear = (dateStr) => {
+            const parsed = parseUniversalDate(dateStr);
+            if (!parsed) return '';
+            return `${parsed.m}/${parsed.y}`;
+          };
+
+          const parseDateForSort = (dateStr) => {
+            const parsed = parseUniversalDate(dateStr);
+            if (!parsed) return 0;
+            return new Date(parsed.y, parsed.m - 1, parsed.d).getTime();
+          };
+
+          const isProblem = (text) => {
+            if (!text) return false;
+            const t = String(text).trim();
+            if (t === '') return false;
+            const ignore = ['ไม่มี', '-', '_', '0', '.', 'ไม่มี.', 'ไม่มี_', '..'];
+            if (ignore.includes(t)) return false;
+            return true;
+          };
+
+          const handleExportPDF = async () => {
+            setIsExporting(true);
+            const element = document.getElementById('dashboard-content');
+            if (!element) { setIsExporting(false); return; }
+            try {
+              const problemTable = document.getElementById('problem-table-container');
+              const originalMaxHeight = problemTable.style.maxHeight;
+              const originalOverflow = problemTable.style.overflow;
+              problemTable.style.maxHeight = 'none';
+              problemTable.style.overflow = 'visible';
+
+              const canvas = await html2canvas(element, { scale: 1.5, useCORS: true, backgroundColor: '#f8fafc' });
+              const imgData = canvas.toDataURL('image/png');
+              const pdf = new window.jspdf.jsPDF({
+                orientation: canvas.width > canvas.height ? 'l' : 'p',
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+              });
+              
+              pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+              pdf.save(`ER_Dashboard_${selectedMonth === 'All' ? 'Total' : selectedMonth.replace('/','-')}_${selectedShift}.pdf`);
+
+              problemTable.style.maxHeight = originalMaxHeight;
+              problemTable.style.overflow = originalOverflow;
+            } catch (error) {
+              console.error('Error generating PDF', error);
+              setErrorMessage('เกิดข้อผิดพลาดในการสร้างไฟล์ PDF');
+            } finally {
+              setIsExporting(false);
+            }
+          };
+
+          const handleFileUpload = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              const buffer = evt.target.result;
+              let text = '';
+              try {
+                text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+              } catch (err) {
+                text = new TextDecoder('windows-874').decode(buffer);
+              }
+              if (!/[\u0E00-\u0E7F]/.test(text)) {
+                 const altText = new TextDecoder('windows-874').decode(buffer);
+                 if (/[\u0E00-\u0E7F]/.test(altText)) text = altText;
+              }
+              const parsed = parseCSV(text);
+              if (parsed && parsed.length > 0) {
+                setRawData(prevData => {
+                  const dataMap = new Map();
+                  
+                  const makeUniqueKey = (row) => {
+                    const d = safeGetDate(row);
+                    const s = safeGetShift(row);
+                    const parsedDate = parseUniversalDate(d);
+                    const dateStr = parsedDate ? `${parsedDate.y}-${parsedDate.m}-${parsedDate.d}` : String(d).trim();
+                    return `${dateStr}_${String(s).trim()}`.toLowerCase();
+                  };
+
+                  prevData.forEach(row => {
+                    dataMap.set(makeUniqueKey(row), row);
+                  });
+
+                  parsed.forEach(row => {
+                    if (safeGetDate(row) && safeGetShift(row)) {
+                       dataMap.set(makeUniqueKey(row), row);
+                    }
+                  });
+
+                  return Array.from(dataMap.values());
+                });
+
+                setSelectedMonth('All');
+                setSelectedShift('All');
+              } else {
+                setErrorMessage('ไม่พบข้อมูล หรือรูปแบบไฟล์ไม่ถูกต้อง กรุณาตรวจสอบว่าเป็นไฟล์ CSV/TSV');
+              }
+              if (fileInputRef.current) fileInputRef.current.value = '';
+            };
+            reader.readAsArrayBuffer(file);
+          };
+
+          const handleClearData = () => {
+            setShowClearConfirm(true);
+          };
+
+          const confirmClearData = () => {
+             setRawData([]);
+             setSelectedMonth('All');
+             setSelectedShift('All');
+             setShowClearConfirm(false);
+          };
+
+          const parseCSV = (text) => {
+            const lines = text.split(/\r\n|\r|\n/).filter(line => line.replace(/,/g, '').trim() !== '');
+            if (lines.length < 2) return [];
+
+            const delimiter = lines[0].indexOf('\t') !== -1 ? '\t' : ',';
+            const parseLine = (line) => {
+              let result = [], curVal = '', inQuotes = false;
+              for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (inQuotes) {
+                  if (char === '"') {
+                    if (i + 1 < line.length && line[i+1] === '"') { curVal += '"'; i++; } 
+                    else { inQuotes = false; }
+                  } else { curVal += char; }
+                } else {
+                  if (char === '"') { inQuotes = true; } 
+                  else if (char === delimiter) { result.push(curVal); curVal = ''; } 
+                  else { curVal += char; }
+                }
+              }
+              result.push(curVal);
+              return result.map(v => v.trim());
+            };
+
+            const rawHeaders = parseLine(lines[0]);
+            const headers = rawHeaders.map(h => h.replace(/^\uFEFF/, '').trim());
+
+            return lines.slice(1).map(line => {
+              const values = parseLine(line);
+              const obj = {};
+              headers.forEach((header, i) => { if (header) obj[header] = values[i] || ''; });
+              return obj;
+            });
+          };
+
+          const availableMonths = useMemo(() => {
+            if (rawData.length === 0) return ['All'];
+            const months = new Set(
+              rawData.map(d => getMonthYear(safeGetDate(d))).filter(m => m !== '')
+            );
+            return ['All', ...Array.from(months)];
+          }, [rawData]);
+
+          const filteredData = useMemo(() => {
+            let data = rawData;
+            if (selectedMonth !== 'All') data = data.filter(d => getMonthYear(safeGetDate(d)) === selectedMonth);
+            if (selectedShift !== 'All') data = data.filter(d => safeGetShift(d).includes(selectedShift));
+            return data;
+          }, [rawData, selectedMonth, selectedShift]);
+
+          const kpis = useMemo(() => {
+            return filteredData.reduce((acc, curr) => {
+              const shift = safeGetShift(curr);
+              
+              acc.total += getNumSafe(curr, ['ยอดผู้ป่วยรวม', 'ยอดรวม', 'total']);
+              acc.admit += getNumSafe(curr, ['admit', 'แอดมิท']);
+              acc.refer += getNumSafe(curr, ['refer', 'รีเฟอร์']);
+              acc.dead += getNumSafe(curr, ['dead', 'ตาย']); 
+              acc.cpr += getNumSafe(curr, ['cprสำเร็จ']) + getNumSafe(curr, ['cprเสียชีวิต']);
+              acc.revisit += getNumSafe(curr, ['casererevisit', 'rerevisit', 'revisit']);
+              acc.ems += getNumSafe(curr, ['ออกเหตุ', 'ems']);
+              
+              acc.resus += getNumSafe(curr, ['resuscitation', 'resucitation']);
+              acc.emer += getNumSafe(curr, ['emergency']);
+              acc.urg += getNumSafe(curr, ['urgent']);
+              acc.lessUrg += getNumSafe(curr, ['lessurgent']);
+              acc.nonUrg += getNumSafe(curr, ['nonurgent']);
+              
+              acc.dc += getNumSafe(curr, ['จำหน่าย', 'd/c', 'dc']);
+              acc.dw += getNumSafe(curr, ['d/w', 'dw', 'ล้างแผล']); 
+              acc.againstAdvice += getNumSafe(curr, ['ไม่สมัครใจรักษา', 'ไม่สมัครใจ']);
+              
+              acc.stroke += getNumSafe(curr, ['stroke']);
+              acc.stemi += getNumSafe(curr, ['stemi']);
+              acc.sepsis += getNumSafe(curr, ['sepsis']);
+              acc.severeHi += getNumSafe(curr, ['severehi']);
+              acc.fastPed += getNumSafe(curr, ['fastเด็ก', 'fastped']);
+              
+              acc.traff += getNumSafe(curr, ['อุบัติเหตุจราจร', 'จราจร']);
+              acc.generalTraff += getNumSafe(curr, ['อุบัติเหตุทั่วไป', 'ทั่วไป']);
+              acc.police += getNumSafe(curr, ['คดี']);
+              acc.autopsy += getNumSafe(curr, ['ชันสูตร']);
+
+              acc.ett += getNumSafe(curr, ['onett', 'ett']);
+              acc.hfnc += getNumSafe(curr, ['onhfnc', 'hfnc']);
+              acc.ct += getNumSafe(curr, ['ct']);
+              acc.pui += getNumSafe(curr, ['pui']);
+
+              const psychoVal = getNumSafe(curr, ['จิตเวชฉุกเฉิน', 'จิตเวช', 'ผู้ป่วยจิตเวช']); 
+              const traumaVal = getNumSafe(curr, ['อุบัติเหตุจราจร', 'จราจร']) + getNumSafe(curr, ['อุบัติเหตุทั่วไป', 'ทั่วไป']);
+              const criticalVal = getNumSafe(curr, ['resuscitation', 'resucitation']) + getNumSafe(curr, ['emergency']);
+
+              acc.psycho.total += psychoVal;
+              acc.trauma.total += traumaVal;
+              acc.critical.total += criticalVal;
+
+              if (shift.includes('เช้า')) {
+                acc.psycho.morning += psychoVal; acc.trauma.morning += traumaVal; acc.critical.morning += criticalVal;
+              } else if (shift.includes('บ่าย')) {
+                acc.psycho.afternoon += psychoVal; acc.trauma.afternoon += traumaVal; acc.critical.afternoon += criticalVal;
+              } else if (shift.includes('ดึก')) {
+                acc.psycho.night += psychoVal; acc.trauma.night += traumaVal; acc.critical.night += criticalVal;
+              }
+
+              return acc;
+            }, { 
+              total: 0, admit: 0, refer: 0, dead: 0, cpr: 0, revisit: 0, ems: 0, 
+              resus: 0, emer: 0, urg: 0, lessUrg: 0, nonUrg: 0, dc: 0, dw: 0, againstAdvice: 0,
+              stroke: 0, stemi: 0, sepsis: 0, severeHi: 0, fastPed: 0, traff: 0, generalTraff: 0, police: 0, autopsy: 0,
+              ett: 0, hfnc: 0, ct: 0, pui: 0,
+              psycho: { total: 0, morning: 0, afternoon: 0, night: 0 },
+              trauma: { total: 0, morning: 0, afternoon: 0, night: 0 },
+              critical: { total: 0, morning: 0, afternoon: 0, night: 0 },
+            });
+          }, [filteredData]);
+
+          const leaderData = useMemo(() => {
+            const leaders = {};
+            filteredData.forEach(d => {
+              let leaderName = safeGetString(d, ['incharge', 'หัวหน้าเวร']);
+              if (leaderName && leaderName.trim() !== '') {
+                leaderName = leaderName.trim();
+                if (!leaders[leaderName]) leaders[leaderName] = 0;
+                leaders[leaderName] += getNumSafe(d, ['ยอดผู้ป่วยรวม', 'ยอดรวม', 'total']);
+              }
+            });
+
+            return Object.entries(leaders)
+              .map(([name, value]) => ({ name, value }))
+              .sort((a, b) => b.value - a.value)
+              .slice(0, 10); 
+          }, [filteredData]);
+
+          const triageData = [
+            { name: 'Resuscitation', value: kpis.resus, color: COLORS.resus },
+            { name: 'Emergency', value: kpis.emer, color: COLORS.emer },
+            { name: 'Urgent', value: kpis.urg, color: COLORS.urg },
+            { name: 'Less Urgent', value: kpis.lessUrg, color: COLORS.lessUrg },
+            { name: 'Non Urgent', value: kpis.nonUrg, color: COLORS.nonUrg },
+          ].filter(d => d.value > 0);
+
+          const dispositionData = [
+            { name: 'D/C (กลับบ้าน)', value: kpis.dc, fill: COLORS.dc },
+            { name: 'Admit', value: kpis.admit, fill: COLORS.admit },
+            { name: 'Refer', value: kpis.refer, fill: COLORS.refer },
+            { name: 'D/W (ล้างแผล)', value: kpis.dw, fill: COLORS.dw },
+            { name: 'ไม่สมัครใจ', value: kpis.againstAdvice, fill: COLORS.against },
+            { name: 'เสียชีวิต', value: kpis.dead, fill: COLORS.dead },
+          ];
+
+          const shiftData = useMemo(() => {
+            const shifts = { 'เช้า': 0, 'บ่าย': 0, 'ดึก': 0 };
+            filteredData.forEach(d => {
+              const shift = safeGetShift(d);
+              if (shift.includes('เช้า')) shifts['เช้า'] += getNumSafe(d, ['ยอดผู้ป่วยรวม', 'ยอดรวม', 'total']);
+              else if (shift.includes('บ่าย')) shifts['บ่าย'] += getNumSafe(d, ['ยอดผู้ป่วยรวม', 'ยอดรวม', 'total']);
+              else if (shift.includes('ดึก')) shifts['ดึก'] += getNumSafe(d, ['ยอดผู้ป่วยรวม', 'ยอดรวม', 'total']);
+            });
+            return [
+              { name: 'เวรเช้า', value: shifts['เช้า'], fill: '#f59e0b' },   
+              { name: 'เวรบ่าย', value: shifts['บ่าย'], fill: '#3b82f6' },   
+              { name: 'เวรดึก', value: shifts['ดึก'], fill: '#4f46e5' },     
+            ];
+          }, [filteredData]);
+
+          const criticalData = [
+            { name: 'Stroke FT', value: kpis.stroke, fill: COLORS.stroke },
+            { name: 'STEMI', value: kpis.stemi, fill: COLORS.stemi },
+            { name: 'Sepsis', value: kpis.sepsis, fill: COLORS.sepsis },
+            { name: 'Severe HI', value: kpis.severeHi, fill: COLORS.severeHi },
+            { name: 'Fast เด็ก', value: kpis.fastPed, fill: COLORS.fastPed },
+          ];
+
+          const traumaData = [
+            { name: 'จราจร', value: kpis.traff, fill: COLORS.traff },
+            { name: 'ทั่วไป', value: kpis.generalTraff, fill: COLORS.general },
+            { name: 'ออกเหตุ', value: kpis.ems, fill: COLORS.ems },
+            { name: 'คดี', value: kpis.police, fill: COLORS.police },
+            { name: 'ชันสูตร', value: kpis.autopsy, fill: COLORS.autopsy },
+          ];
+
+          const procedureData = [
+            { name: 'On ETT', value: kpis.ett, fill: COLORS.ett },
+            { name: 'HFNC', value: kpis.hfnc, fill: COLORS.hfnc },
+            { name: 'CT Scan', value: kpis.ct, fill: COLORS.ct },
+            { name: 'PUI', value: kpis.pui, fill: COLORS.pui },
+          ];
+
+          const trendData = useMemo(() => {
+            if (selectedMonth === 'All') {
+              const monthly = {};
+              filteredData.forEach(d => {
+                const rawDate = safeGetDate(d);
+                if(!rawDate || rawDate.replace(/,/g, '').trim() === '') return;
+                const monthYear = getMonthYear(rawDate);
+                if (!monthly[monthYear]) {
+                  monthly[monthYear] = { monthYear, total: 0, days: new Set(), sortDate: rawDate };
+                }
+                monthly[monthYear].total += getNumSafe(d, ['ยอดผู้ป่วยรวม', 'ยอดรวม', 'total']);
+                monthly[monthYear].days.add(rawDate.split(' ')[0]);
+              });
+              return Object.values(monthly).map(m => ({
+                label: m.monthYear,
+                value: Math.round(m.total / m.days.size),
+                sortDate: m.sortDate,
+                tooltipName: 'ค่าเฉลี่ยผู้ป่วย/วัน'
+              })).sort((a, b) => parseDateForSort(a.sortDate) - parseDateForSort(b.sortDate));
+            } else {
+              const daily = {};
+              filteredData.forEach(d => {
+                const rawDate = safeGetDate(d);
+                if(!rawDate || rawDate.replace(/,/g, '').trim() === '') return;
+                const displayDate = formatDate(rawDate);
+                if (!daily[displayDate]) {
+                  daily[displayDate] = { label: displayDate, sortDate: rawDate, value: 0 };
+                }
+                daily[displayDate].value += getNumSafe(d, ['ยอดผู้ป่วยรวม', 'ยอดรวม', 'total']);
+              });
+              return Object.values(daily)
+                .map(d => ({ ...d, tooltipName: 'จำนวนผู้ป่วยรวม' }))
+                .sort((a, b) => parseDateForSort(a.sortDate) - parseDateForSort(b.sortDate));
+            }
+          }, [filteredData, selectedMonth]);
+
+          const averageValue = useMemo(() => {
+            if (trendData.length === 0) return 0;
+            const sum = trendData.reduce((acc, curr) => acc + curr.value, 0);
+            return Math.round(sum / trendData.length);
+          }, [trendData]);
+
+          const problemsList = useMemo(() => {
+            return filteredData
+              .filter(d => isProblem(safeGetString(d, ['ปัญหา'])))
+              .map(d => ({
+                date: formatDate(safeGetDate(d)),
+                shift: safeGetShift(d),
+                leader: safeGetString(d, ['incharge', 'หัวหน้าเวร']),
+                problem: safeGetString(d, ['ปัญหา'])
+              }));
+          }, [filteredData]);
+
+          const chartProps = { axisLine: false, tickLine: false, tick: { fontSize: 12, fill: '#64748b' } };
+
+          if (rawData.length === 0) {
+            return (
+              <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 relative">
+                
+                {/* Error Modal */}
+                {errorMessage && (
+                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl transform transition-all">
+                      <div className="flex items-center gap-3 mb-4 text-rose-500">
+                        <AlertTriangle size={28} />
+                        <h3 className="text-xl font-bold">แจ้งเตือน</h3>
+                      </div>
+                      <p className="text-slate-600 mb-8 font-medium">{errorMessage}</p>
+                      <button 
+                        onClick={() => setErrorMessage('')}
+                        className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-2xl transition-colors"
+                      >
+                        ปิด
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-200 text-center max-w-lg w-full">
+                   <div className="bg-blue-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+                     <FileSpreadsheet size={44} className="text-blue-600" />
+                   </div>
+                   <h1 className="text-3xl font-bold text-slate-800 mb-2">ER Dashboard</h1>
+                   <p className="text-slate-500 mb-2 font-medium">รพ.เสลภูมิ</p>
+                   <p className="text-sm text-slate-400 mb-8 px-4 leading-relaxed">
+                     กรุณาอัปโหลดไฟล์สรุปเวร (CSV/TSV) เพื่อแสดงผล
+                   </p>
+                   
+                   <input type="file" accept=".csv,.tsv,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                   <button 
+                     onClick={() => fileInputRef.current.click()}
+                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg"
+                   >
+                     <Upload size={20} className="text-white" /> เลือกไฟล์เพื่อนำเข้าข้อมูล
+                   </button>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="min-h-screen text-slate-800 font-sans p-4 md:p-6 lg:p-8 relative">
+              
+              {/* Error Modal */}
+              {errorMessage && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                  <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl transform transition-all">
+                    <div className="flex items-center gap-3 mb-4 text-rose-500">
+                      <AlertTriangle size={28} />
+                      <h3 className="text-xl font-bold">แจ้งเตือน</h3>
+                    </div>
+                    <p className="text-slate-600 mb-8 font-medium">{errorMessage}</p>
+                    <button 
+                      onClick={() => setErrorMessage('')}
+                      className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-2xl transition-colors"
+                    >
+                      ปิด
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Confirm Clear Data Modal */}
+              {showClearConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                  <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl transform transition-all">
+                    <div className="flex items-center gap-3 mb-4 text-rose-500">
+                      <AlertTriangle size={28} />
+                      <h3 className="text-xl font-bold">ยืนยันการล้างข้อมูล</h3>
+                    </div>
+                    <p className="text-slate-600 mb-8 font-medium">คุณต้องการล้างข้อมูลทั้งหมดที่แสดงอยู่ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => setShowClearConfirm(false)}
+                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-2xl transition-colors"
+                      >
+                        ยกเลิก
+                      </button>
+                      <button 
+                        onClick={confirmClearData}
+                        className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-2xl transition-colors"
+                      >
+                        ล้างข้อมูล
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Dashboard Content Container (สำหรับทำ Export PDF) */}
+              <div id="dashboard-content" className="pb-8">
+                {/* Header & Controls */}
+                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4 bg-white p-4 lg:px-6 rounded-3xl shadow-sm border border-slate-200">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-red-500 text-white p-3.5 rounded-2xl shadow-sm">
+                      <Activity size={24} className="text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">ER Dashboard</h1>
+                      <p className="text-sm text-slate-500 font-medium">โรงพยาบาลเสลภูมิ <span className="text-slate-400 font-normal">({rawData.length} เวร)</span></p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-3" data-html2canvas-ignore="true">
+                    
+                    {/* ตัวกรองเวร */}
+                    <div className="flex items-center gap-2 bg-slate-100 px-4 py-2.5 rounded-2xl border border-slate-200">
+                      <Clock size={18} className="text-slate-500" />
+                      <div className="relative">
+                        <select 
+                          className="appearance-none bg-transparent pl-1 pr-6 focus:outline-none font-bold text-slate-700 cursor-pointer text-sm"
+                          value={selectedShift}
+                          onChange={(e) => setSelectedShift(e.target.value)}
+                        >
+                          <option value="All">ทุกเวร</option>
+                          <option value="เช้า">เวรเช้า</option>
+                          <option value="บ่าย">เวรบ่าย</option>
+                          <option value="ดึก">เวรดึก</option>
+                        </select>
+                        <ChevronDown size={16} className="absolute right-0 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* ตัวกรองเดือน */}
+                    <div className="flex items-center gap-2 bg-slate-100 px-4 py-2.5 rounded-2xl border border-slate-200">
+                      <Calendar size={18} className="text-slate-500" />
+                      <div className="relative">
+                        <select 
+                          className="appearance-none bg-transparent pl-1 pr-6 focus:outline-none font-bold text-slate-700 cursor-pointer text-sm"
+                          value={selectedMonth}
+                          onChange={(e) => setSelectedMonth(e.target.value)}
+                        >
+                          {availableMonths.map(m => (
+                            <option key={m} value={m}>{m === 'All' ? 'แสดงทุกเดือน' : m}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={16} className="absolute right-0 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                      </div>
+                    </div>
+                    
+                    {/* ปุ่ม Export PDF */}
+                    <button 
+                      onClick={handleExportPDF}
+                      disabled={isExporting}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold transition-colors text-sm shadow-sm ${
+                        isExporting ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      }`}
+                    >
+                      <DownloadSimple size={16} className={isExporting ? "text-slate-500" : "text-white"} /> 
+                      {isExporting ? 'กำลังบันทึก...' : 'บันทึก PDF'}
+                    </button>
+
+                    <input type="file" accept=".csv,.tsv,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                    
+                    {/* ปุ่มนำเข้าข้อมูล / Append Data */}
+                    <button 
+                      onClick={() => fileInputRef.current.click()}
+                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-2xl font-bold hover:bg-blue-700 transition-colors text-sm shadow-sm"
+                    >
+                      <Plus size={16} className="text-white" /> นำเข้าข้อมูลเพิ่ม
+                    </button>
+
+                    {/* ปุ่มล้างข้อมูล */}
+                    <button 
+                      onClick={handleClearData}
+                      className="flex items-center gap-2 bg-white text-rose-500 border border-rose-200 px-4 py-2.5 rounded-2xl font-bold hover:bg-rose-50 transition-colors text-sm shadow-sm"
+                    >
+                      <Trash size={16} className="text-rose-500" /> ล้างข้อมูล
+                    </button>
+                  </div>
+                </div>
+
+                {/* KPI Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+                  {[
+                    { label: 'ยอดผู้ป่วยรวม', value: kpis.total, icon: Users, color: 'text-white', bg: 'bg-blue-500' },
+                    { label: 'Admit', value: kpis.admit, icon: FileText, color: 'text-white', bg: 'bg-emerald-500' },
+                    { label: 'Refer', value: kpis.refer, icon: Ambulance, color: 'text-white', bg: 'bg-violet-500' },
+                    { label: 'Revisit 24hr', value: kpis.revisit, icon: RotateCcw, color: 'text-white', bg: 'bg-amber-500' },
+                    { label: 'ออกเหตุ EMS', value: kpis.ems, icon: Activity, color: 'text-white', bg: 'bg-cyan-500' },
+                    { label: 'CPR รวม', value: kpis.cpr, icon: HeartPulse, color: 'text-white', bg: 'bg-red-500' }
+                  ].map((kpi, idx) => (
+                    <div key={idx} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 transition hover:shadow-md">
+                      <div className="flex justify-between items-start mb-3">
+                        <p className="text-sm text-slate-500 font-bold">{kpi.label}</p>
+                        <div className={`${kpi.bg} p-2 rounded-xl shadow-sm`}>
+                          <kpi.icon size={18} className={kpi.color} />
+                        </div>
+                      </div>
+                      <p className="text-3xl font-black text-slate-800">{kpi.value.toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Breakdowns by Shift */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-indigo-600 rounded-3xl p-5 shadow-md border border-indigo-700">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center gap-2 text-white">
+                        <div className="bg-white/20 p-2 rounded-xl"><Brain size={18} className="text-white"/></div>
+                        <h3 className="font-bold text-white">ผู้ป่วยจิตเวช (รายเวร)</h3>
+                      </div>
+                      <span className="text-3xl font-black text-white">{kpis.psycho.total}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-white/10 rounded-2xl p-2 text-center">
+                         <p className="text-[11px] text-indigo-100 font-bold mb-0.5">เช้า</p>
+                         <p className="text-lg font-bold text-white">{kpis.psycho.morning}</p>
+                      </div>
+                      <div className="bg-white/10 rounded-2xl p-2 text-center">
+                         <p className="text-[11px] text-indigo-100 font-bold mb-0.5">บ่าย</p>
+                         <p className="text-lg font-bold text-white">{kpis.psycho.afternoon}</p>
+                      </div>
+                      <div className="bg-white/10 rounded-2xl p-2 text-center">
+                         <p className="text-[11px] text-indigo-100 font-bold mb-0.5">ดึก</p>
+                         <p className="text-lg font-bold text-white">{kpis.psycho.night}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-orange-500 rounded-3xl p-5 shadow-md border border-orange-600">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center gap-2 text-white">
+                        <div className="bg-white/20 p-2 rounded-xl"><Car size={18} className="text-white"/></div>
+                        <h3 className="font-bold text-white">อุบัติเหตุรวม (รายเวร)</h3>
+                      </div>
+                      <span className="text-3xl font-black text-white">{kpis.trauma.total}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-white/10 rounded-2xl p-2 text-center">
+                         <p className="text-[11px] text-orange-100 font-bold mb-0.5">เช้า</p>
+                         <p className="text-lg font-bold text-white">{kpis.trauma.morning}</p>
+                      </div>
+                      <div className="bg-white/10 rounded-2xl p-2 text-center">
+                         <p className="text-[11px] text-orange-100 font-bold mb-0.5">บ่าย</p>
+                         <p className="text-lg font-bold text-white">{kpis.trauma.afternoon}</p>
+                      </div>
+                      <div className="bg-white/10 rounded-2xl p-2 text-center">
+                         <p className="text-[11px] text-orange-100 font-bold mb-0.5">ดึก</p>
+                         <p className="text-lg font-bold text-white">{kpis.trauma.night}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-rose-500 rounded-3xl p-5 shadow-md border border-rose-600">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center gap-2 text-white">
+                        <div className="bg-white/20 p-2 rounded-xl"><Siren size={18} className="text-white" /></div>
+                        <h3 className="font-bold text-white">วิกฤต Resus+Emer</h3>
+                      </div>
+                      <span className="text-3xl font-black text-white">{kpis.critical.total}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-white/10 rounded-2xl p-2 text-center">
+                         <p className="text-[11px] text-rose-100 font-bold mb-0.5">เช้า</p>
+                         <p className="text-lg font-bold text-white">{kpis.critical.morning}</p>
+                      </div>
+                      <div className="bg-white/10 rounded-2xl p-2 text-center">
+                         <p className="text-[11px] text-rose-100 font-bold mb-0.5">บ่าย</p>
+                         <p className="text-lg font-bold text-white">{kpis.critical.afternoon}</p>
+                      </div>
+                      <div className="bg-white/10 rounded-2xl p-2 text-center">
+                         <p className="text-[11px] text-rose-100 font-bold mb-0.5">ดึก</p>
+                         <p className="text-lg font-bold text-white">{kpis.critical.night}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row: Charts */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                  <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 className="text-base font-bold mb-6 flex items-center gap-2 text-slate-800">
+                      <Activity size={18} className="text-blue-500" /> ระดับความรุนแรง (Triage)
+                    </h2>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={triageData}
+                            cx="50%" cy="50%"
+                            innerRadius={55} outerRadius={85}
+                            paddingAngle={4}
+                            dataKey="value"
+                            stroke="none"
+                            label={({ percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
+                            labelLine={false}
+                          >
+                            {triageData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                          </Pie>
+                          <RechartsTooltip 
+                            formatter={(value) => [`${value} ราย`, 'จำนวน']}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
+                          />
+                          <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} iconType="circle"/>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-slate-800">
+                      <FileText size={18} className="text-emerald-500" /> การจำหน่ายผู้ป่วย (Disposition)
+                    </h2>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={dispositionData} layout="vertical" margin={{ top: 0, right: 20, left: 25, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                          <XAxis type="number" {...chartProps} />
+                          <YAxis dataKey="name" type="category" {...chartProps} />
+                          <RechartsTooltip 
+                            cursor={{fill: '#f1f5f9'}} 
+                            formatter={(value) => [`${value} ราย`, 'จำนวน']}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
+                          />
+                          <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={20}>
+                            {dispositionData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* ภาระงานรายบุคคล (หัวหน้าเวร Top 10) */}
+                  <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-slate-800">
+                      <UserList size={18} className="text-indigo-500" /> ภาระงานหัวหน้าเวร (ผู้ป่วยรับผิดชอบ)
+                    </h2>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={leaderData} layout="vertical" margin={{ top: 0, right: 20, left: 20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                          <XAxis type="number" {...chartProps} />
+                          <YAxis dataKey="name" type="category" width={80} {...chartProps} />
+                          <RechartsTooltip 
+                            cursor={{fill: '#f1f5f9'}} 
+                            formatter={(value) => [`${value} ราย`, 'ยอดรวมผู้ป่วย']}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                          />
+                          <Bar dataKey="value" fill="#818cf8" radius={[0, 8, 8, 0]} barSize={16} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 2: Critical Diseases, Trauma & Procedures */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                  <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-slate-800">
+                      <HeartPulse size={18} className="text-rose-500" /> กลุ่มโรคฉุกเฉินวิกฤต
+                    </h2>
+                    <div className="h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={criticalData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                          <XAxis dataKey="name" {...chartProps} />
+                          <YAxis {...chartProps} />
+                          <RechartsTooltip 
+                            cursor={{fill: '#f1f5f9'}} 
+                            formatter={(value) => [`${value} ราย`, 'จำนวน']}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                          />
+                          <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={28}>
+                            {criticalData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-slate-800">
+                      <Ambulance size={18} className="text-orange-500" /> อุบัติเหตุและเหตุฉุกเฉินนอก รพ.
+                    </h2>
+                    <div className="h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={traumaData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                          <XAxis dataKey="name" {...chartProps} />
+                          <YAxis {...chartProps} />
+                          <RechartsTooltip 
+                            cursor={{fill: '#f1f5f9'}} 
+                            formatter={(value) => [`${value} ราย`, 'จำนวน']}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                          />
+                          <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={28}>
+                            {traumaData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-slate-800">
+                      <Stethoscope size={18} className="text-cyan-500" /> หัตถการและการคัดกรองพิเศษ
+                    </h2>
+                    <div className="h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={procedureData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                          <XAxis dataKey="name" {...chartProps} />
+                          <YAxis {...chartProps} />
+                          <RechartsTooltip 
+                            cursor={{fill: '#f1f5f9'}} 
+                            formatter={(value) => [`${value} ราย`, 'จำนวน']}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                          />
+                          <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={28}>
+                            {procedureData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 3: Daily Trend Line Chart */}
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-6">
+                  <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-slate-800">
+                    <Calendar size={18} className="text-blue-600" /> 
+                    {selectedMonth === 'All' && selectedShift === 'All' ? 'แนวโน้มค่าเฉลี่ยผู้ป่วยต่อวัน (รายเดือน)' : 'แนวโน้มผู้ป่วยรายวัน'}
+                  </h2>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={trendData} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <XAxis dataKey="label" {...chartProps} minTickGap={10}/>
+                        <YAxis {...chartProps} />
+                        <RechartsTooltip 
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', color: '#1e293b', fontWeight: 'bold' }} 
+                          formatter={(value, name, props) => [`${value} ราย`, props.payload.tooltipName]}
+                        />
+                        <ReferenceLine 
+                          y={averageValue} 
+                          stroke="#ef4444" 
+                          strokeDasharray="3 3" 
+                          label={{ position: 'top', value: `เฉลี่ย: ${averageValue}`, fill: '#ef4444', fontSize: 13, fontWeight: 'bold' }} 
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="value" 
+                          name="จำนวน" 
+                          stroke="#3b82f6" 
+                          strokeWidth={3} 
+                          dot={{ r: 4, strokeWidth: 0, fill: '#3b82f6' }} 
+                          activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} 
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Row 4: Problem Tracker Table */}
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden" id="problem-table-container">
+                  <div className="p-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <h2 className="text-base font-bold flex items-center gap-2 text-slate-800">
+                      <AlertTriangle size={18} className="text-red-500" /> ติดตามปัญหาและเหตุการณ์ในเวร
+                    </h2>
+                    <span className="bg-red-500 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-sm">
+                      {problemsList.length} รายการ
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto max-h-96 overflow-y-auto custom-scrollbar">
+                    {problemsList.length > 0 ? (
+                      <table className="w-full text-sm text-left">
+                        <thead className="text-[11px] font-bold text-slate-500 uppercase bg-white sticky top-0 border-b border-slate-200 z-10">
+                          <tr>
+                            <th className="px-6 py-4 w-32 tracking-wider">วันที่</th>
+                            <th className="px-6 py-4 w-24 tracking-wider">เวร</th>
+                            <th className="px-6 py-4 w-48 tracking-wider">หัวหน้าเวร</th>
+                            <th className="px-6 py-4 tracking-wider">รายละเอียดปัญหา</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {problemsList.map((row, index) => (
+                            <tr key={index} className="bg-white border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                              <td className="px-6 py-4 text-slate-600 font-bold">{row.date}</td>
+                              <td className="px-6 py-4">
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold
+                                  ${row.shift.includes('เช้า') ? 'bg-amber-100 text-amber-700' : 
+                                    row.shift.includes('บ่าย') ? 'bg-blue-100 text-blue-700' : 
+                                    'bg-indigo-100 text-indigo-700'}`}>
+                                  {row.shift}
+                               </span>
+                              </td>
+                              <td className="px-6 py-4 font-bold text-slate-700">{row.leader}</td>
+                              <td className="px-6 py-4 text-slate-600 font-medium leading-relaxed">{row.problem}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                       <div className="p-12 text-center flex flex-col items-center">
+                         <div className="bg-slate-100 p-4 rounded-full mb-4">
+                           <AlertTriangle size={28} className="text-slate-400"/>
+                         </div>
+                         <p className="text-slate-500 font-bold">ไม่มีบันทึกปัญหาในช่วงเวลาที่เลือก</p>
+                       </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ErDashboard />);
+    </script>
+    <script>
+        (function runAppSource() {
+            const source = document.getElementById('app-source');
+            const root = document.getElementById('root');
+            const showError = (error) => {
+                console.error(error);
+                root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Segoe UI,Tahoma,sans-serif;background:#f8fafc;color:#0f172a;"><div style="max-width:620px;background:#fff;border:1px solid #fecdd3;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(15,23,42,.12);"><div style="font-size:13px;font-weight:800;color:#e11d48;text-transform:uppercase;letter-spacing:.08em;">Script Error</div><h1 style="margin:10px 0 8px;font-size:22px;">เปิด Dashboard CSV ไม่สำเร็จ</h1><p style="margin:0 0 12px;color:#64748b;line-height:1.7;">' + String(error && error.message ? error.message : error).replace(/[&<>"']/g, function (char) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]; }) + '</p></div></div>';
+            };
+            try {
+                if (!window.React || !window.ReactDOM || !window.Babel) {
+                    throw new Error('โหลด React / ReactDOM / Babel ไม่สำเร็จ');
+                }
+                const compiled = Babel.transform(source.textContent, {
+                    presets: ['env'],
+                    plugins: [['transform-react-jsx', { runtime: 'classic' }]]
+                }).code;
+                (0, eval)(compiled);
+            } catch (error) {
+                showError(error);
+            }
+        })();
+    </script>
+</body>
+</html>

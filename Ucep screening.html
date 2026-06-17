@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบคัดกรอง UCEP อัจฉริยะ (รพ.เสลภูมิ)</title>
+    
+    <!-- React & ReactDOM -->
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="vendor/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="vendor/tailwindcss.js"></script>
+    
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Print Styles */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; }
+            .shadow-xl, .shadow-lg, .shadow-md { box-shadow: none !important; }
+            .border { border: 1px solid #ddd !important; }
+            .bg-gradient-to-r { background: none !important; color: black !important; }
+            .text-transparent { color: black !important; -webkit-text-fill-color: black !important; }
+            thead th { background-color: #f3f4f6 !important; color: black !important; }
+            /* Force background colors for status pills */
+            .bg-red-100 { background-color: #fee2e2 !important; -webkit-print-color-adjust: exact; }
+            .bg-slate-100 { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-800">
+    <div id="root">
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Sarabun','Segoe UI',Tahoma,sans-serif;background:#f8fafc;color:#0f172a;">
+            <div style="max-width:520px;width:100%;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(15,23,42,.12);">
+                <div style="font-size:13px;font-weight:800;color:#2563eb;letter-spacing:.08em;text-transform:uppercase;">Loading UCEP Screening</div>
+                <h1 style="margin:10px 0 8px;font-size:24px;line-height:1.25;">กำลังเปิดระบบคัดกรอง UCEP</h1>
+                <p style="margin:0;color:#64748b;line-height:1.7;">หากหน้านี้ไม่เปลี่ยนเป็นระบบหลัก แสดงว่า React/Babel หรือไฟล์จาก CDN ยังโหลดไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรช หรือเปิดไฟล์นี้ในแท็บใหม่</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/plain" id="app-source">
+        /** @jsxRuntime classic */
+        const { useState, useMemo } = React;
+
+        // --- Icons (SVG Components) ---
+        const IconBase = ({ size = 24, className = "", children }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Upload = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></IconBase>;
+        const FileText = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>;
+        const AlertCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></IconBase>;
+        const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
+        const Activity = (props) => <IconBase {...props}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></IconBase>;
+        const Download = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></IconBase>;
+        const Search = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></IconBase>;
+        const HeartPulse = (props) => <IconBase {...props}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-2 1.5 2h3.28"/></IconBase>;
+        const User = (props) => <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>;
+        const Printer = (props) => <IconBase {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></IconBase>;
+        const Trash2 = (props) => <IconBase {...props}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></IconBase>;
+
+        // --- Logic Functions ---
+        const parseCSV = (text) => {
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        currentCell += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    currentRow.push(currentCell.trim());
+                    currentCell = '';
+                } else if ((char === '\r' || char === '\n') && !inQuotes) {
+                    if (currentCell || currentRow.length > 0) {
+                        currentRow.push(currentCell.trim());
+                        rows.push(currentRow);
+                    }
+                    currentRow = [];
+                    currentCell = '';
+                    if (char === '\r' && nextChar === '\n') i++;
+                } else {
+                    currentCell += char;
+                }
+            }
+            if (currentCell || currentRow.length > 0) {
+                currentRow.push(currentCell.trim());
+                rows.push(currentRow);
+            }
+            return rows;
+        };
+
+        const UCEP_CRITERIA = [
+            {
+                category: 'หมดสติ/ไม่รู้สึกตัว',
+                keywords: ['หมดสติ', 'ไม่รู้สึกตัว', 'ไม่ตอบสนอง', 'ปลุกไม่ตื่น', 'Stupor', 'Coma', 'Unconscious', 'ซึม']
+            },
+            {
+                category: 'หายใจลำบาก/ทางเดินหายใจ',
+                keywords: ['หายใจเร็ว', 'หอบ', 'หายใจเหนื่อย', 'หายใจติดขัด', 'เขียว', 'Dyspnea', 'Air hunger', 'หายใจลำบาก']
+            },
+            {
+                category: 'เจ็บหน้าอกรุนแรง',
+                keywords: ['เจ็บหน้าอก', 'แน่นหน้าอก', 'Chest pain', 'Angina', 'เจ็บอก']
+            },
+            {
+                category: 'แขนขาอ่อนแรง/Stroke/ชัก',
+                keywords: ['อ่อนแรง', 'แขนขาอ่อนแรง', 'พูดไม่ชัด', 'ปากเบี้ยว', 'ลิ้นแข็ง', 'ชัก', 'เกร็ง', 'Seizure', 'Weakness', 'Hemiparesis', 'ชักเกร็งกระตุก', 'ไม่พูด']
+            },
+            {
+                category: 'ภาวะเลือดออกฉุกเฉิน',
+                keywords: ['อาเจียนเป็นเลือด', 'เลือดออกมาก', 'เลือดออกทางช่องคลอด', 'Hematemesis', 'Vaginal bleeding']
+            },
+            {
+                category: 'อุบัติเหตุ/กระดูกผิดรูป',
+                keywords: ['ต้นขาผิดรูป', 'Deformed thigh']
+            },
+            {
+                category: 'ระบบไหลเวียนโลหิต/วิกฤต',
+                keywords: ['Shock', 'ความดันต่ำ', 'BP drop', 'Cardiac arrest', 'CPR', 'ปั๊มหัวใจ', 'เสียเลือดมาก']
+            }
+        ];
+
+        const checkUcepStatus = (symptomText) => {
+            if (!symptomText) return null;
+            const text = symptomText.toLowerCase();
+
+            // Special Case: DTX=HI ร่วมกับ อาการเหนื่อย (Hyperglycemic Crisis check)
+            // ตรวจสอบทั้งคำว่า DTX=HI และ อาการเหนื่อย/หอบ ในประโยคเดียวกัน
+            if ((text.includes('dtx=hi') || text.includes('dtx hi') || text.includes('dtx = hi')) && 
+                (text.includes('เหนื่อย') || text.includes('หอบ') || text.includes('หายใจลำบาก'))) {
+                return 'ภาวะน้ำตาลในเลือดสูงวิกฤต (DTX=HI+เหนื่อย)';
+            }
+
+            for (const criteria of UCEP_CRITERIA) {
+                for (const keyword of criteria.keywords) {
+                    if (text.includes(keyword.toLowerCase())) {
+                        return criteria.category;
+                    }
+                }
+            }
+            return null;
+        };
+
+        // --- Main Component ---
+        function App() {
+            const [data, setData] = useState([]);
+            const [headers, setHeaders] = useState([]);
+            const [isLoading, setIsLoading] = useState(false);
+            const [filterType, setFilterType] = useState('all'); 
+            const [searchTerm, setSearchTerm] = useState('');
+
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                setIsLoading(true);
+                const reader = new FileReader();
+
+                reader.onload = (e) => {
+                    try {
+                        const text = e.target.result;
+                        const rawRows = parseCSV(text);
+
+                        if (rawRows.length < 2) {
+                            alert("ไฟล์ดูเหมือนจะไม่มีข้อมูลเพียงพอ");
+                            setIsLoading(false);
+                            return;
+                        }
+
+                        let headerIndex = rawRows.findIndex(row => row.some(cell => cell.includes('อาการ') || cell.includes('HN')));
+                        if (headerIndex === -1) headerIndex = 0;
+
+                        const headerRow = rawRows[headerIndex];
+                        const dataRows = rawRows.slice(headerIndex + 1);
+
+                        const symptomIndex = headerRow.findIndex(h => h.includes('อาการ') || h.toLowerCase().includes('cc'));
+                        const hnIndex = headerRow.findIndex(h => h.toLowerCase().includes('hn'));
+                        const nameIndex = headerRow.findIndex(h => h.includes('ชื่อ'));
+
+                        const processedData = dataRows.map((row, index) => {
+                            const rowData = {};
+                            headerRow.forEach((h, i) => {
+                                rowData[h] = row[i] || '';
+                            });
+
+                            const symptoms = symptomIndex !== -1 ? row[symptomIndex] : '';
+                            const ucepReason = checkUcepStatus(symptoms);
+
+                            return {
+                                id: index,
+                                raw: rowData,
+                                hn: hnIndex !== -1 ? row[hnIndex] : 'N/A',
+                                name: nameIndex !== -1 ? row[nameIndex] : 'N/A',
+                                symptoms: symptoms,
+                                isUcep: !!ucepReason,
+                                ucepReason: ucepReason
+                            };
+                        }).filter(item => item.hn !== 'N/A' && item.hn !== '');
+
+                        setHeaders(headerRow);
+                        setData(processedData);
+                        setFilterType('all');
+                    } catch (error) {
+                        console.error("Error parsing CSV:", error);
+                        alert("เกิดข้อผิดพลาดในการอ่านไฟล์ CSV");
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+
+                reader.readAsText(file);
+            };
+
+            const resetData = () => {
+                if(confirm("ต้องการล้างข้อมูลทั้งหมดหรือไม่?")) {
+                    setData([]);
+                    setHeaders([]);
+                    setSearchTerm('');
+                    setFilterType('all');
+                }
+            };
+
+            const filteredData = useMemo(() => {
+                return data.filter(item => {
+                    const matchesSearch = 
+                        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        item.hn.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        item.symptoms.toLowerCase().includes(searchTerm.toLowerCase());
+
+                    if (filterType === 'ucep') return item.isUcep && matchesSearch;
+                    if (filterType === 'normal') return !item.isUcep && matchesSearch;
+                    return matchesSearch;
+                });
+            }, [data, filterType, searchTerm]);
+
+            const stats = useMemo(() => {
+                return {
+                    total: data.length,
+                    ucep: data.filter(d => d.isUcep).length,
+                    normal: data.filter(d => !d.isUcep).length
+                };
+            }, [data]);
+
+            const exportCSV = () => {
+                if (data.length === 0) return;
+                const exportHeaders = [...headers, 'ผลการคัดกรอง UCEP', 'เหตุผลคัดกรอง'];
+                const csvContent = [
+                    exportHeaders.join(','),
+                    ...filteredData.map(item => {
+                        const originalValues = headers.map(h => `"${(item.raw[h] || '').replace(/"/g, '""')}"`);
+                        return [...originalValues, item.isUcep ? 'เข้าข่าย' : 'ปกติ', item.ucepReason || '-'].join(',');
+                    })
+                ].join('\n');
+
+                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'UCEP_Screening_Result.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50 flex flex-col font-sans selection:bg-red-100">
+                    {/* Top Background Banner - Hidden on Print */}
+                    <div className="bg-gradient-to-r from-red-700 via-rose-600 to-red-500 h-64 w-full absolute top-0 left-0 z-0 shadow-lg no-print"></div>
+
+                    {/* Main Content Area */}
+                    <div className="relative z-10 max-w-7xl mx-auto p-6 space-y-8 flex-grow w-full">
+                        
+                        {/* Header Section */}
+                        <div className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-white/20 flex flex-col md:flex-row justify-between items-center gap-6 mt-4">
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="bg-red-100 p-2.5 rounded-xl shadow-inner no-print">
+                                        <HeartPulse className="text-red-600" size={32} />
+                                    </div>
+                                    <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-700 to-rose-600">
+                                        ระบบคัดกรอง UCEP อัจฉริยะ
+                                    </h1>
+                                </div>
+                                <p className="text-slate-500 font-medium pl-1">
+                                    ช่วยคัดแยกผู้ป่วยฉุกเฉินวิกฤต (Universal Coverage for Emergency Patients)
+                                </p>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-3 justify-center no-print">
+                                <label className="cursor-pointer bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 text-white px-6 py-3 rounded-2xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transform">
+                                    <Upload size={20} />
+                                    <span className="font-medium">นำเข้าไฟล์ CSV</span>
+                                    <input type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" />
+                                </label>
+                                {data.length > 0 && (
+                                    <>
+                                        <button onClick={exportCSV} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white px-6 py-3 rounded-2xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transform">
+                                            <Download size={20} />
+                                            <span className="font-medium">Export</span>
+                                        </button>
+                                        <button onClick={() => window.print()} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-6 py-3 rounded-2xl flex items-center gap-2 transition-all shadow-md hover:shadow-lg">
+                                            <Printer size={20} />
+                                            <span className="font-medium">พิมพ์</span>
+                                        </button>
+                                        <button onClick={resetData} className="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-3 rounded-2xl flex items-center transition-all shadow-sm">
+                                            <Trash2 size={20} />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {isLoading && (
+                            <div className="bg-white/80 backdrop-blur rounded-3xl p-12 text-center shadow-lg border border-red-100">
+                                <div className="animate-spin rounded-full h-14 w-14 border-4 border-red-100 border-t-red-600 mx-auto"></div>
+                                <p className="mt-4 text-red-600 font-medium animate-pulse">กำลังวิเคราะห์ข้อมูลอาการ...</p>
+                            </div>
+                        )}
+
+                        {!isLoading && data.length > 0 && (
+                            <div className="animate-fade-in-up space-y-6">
+                                {/* Stats Cards */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
+                                    <div className="bg-white p-6 rounded-2xl shadow-md border border-slate-100 flex items-center justify-between hover:shadow-lg transition-shadow">
+                                        <div>
+                                            <p className="text-slate-400 text-sm font-semibold uppercase tracking-wider">ผู้ป่วยทั้งหมด</p>
+                                            <h3 className="text-4xl font-black text-slate-700 mt-1">{stats.total}</h3>
+                                        </div>
+                                        <div className="p-4 bg-slate-50 rounded-2xl text-slate-400">
+                                            <FileText size={32} />
+                                        </div>
+                                    </div>
+
+                                    <div 
+                                        className="bg-gradient-to-br from-red-500 to-rose-600 p-6 rounded-2xl shadow-lg shadow-red-200 cursor-pointer transform transition-transform hover:scale-105" 
+                                        onClick={() => setFilterType('ucep')}
+                                    >
+                                        <div className="flex items-center justify-between text-white">
+                                            <div>
+                                                <p className="text-red-100 text-sm font-semibold uppercase tracking-wider">เข้าข่าย UCEP</p>
+                                                <h3 className="text-4xl font-black mt-1">{stats.ucep}</h3>
+                                            </div>
+                                            <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
+                                                <AlertCircle size={32} />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div 
+                                        className="bg-white p-6 rounded-2xl shadow-md border border-slate-100 cursor-pointer hover:shadow-lg transition-shadow group" 
+                                        onClick={() => setFilterType('normal')}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-emerald-600 text-sm font-semibold uppercase tracking-wider group-hover:text-emerald-700">อาการทั่วไป</p>
+                                                <h3 className="text-4xl font-black text-emerald-600 mt-1 group-hover:text-emerald-700">{stats.normal}</h3>
+                                            </div>
+                                            <div className="p-4 bg-emerald-50 rounded-2xl text-emerald-500 group-hover:bg-emerald-100 transition-colors">
+                                                <CheckCircle size={32} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Table */}
+                                <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+                                    {/* Toolbar - Hidden on Print */}
+                                    <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between gap-4 bg-slate-50/50 no-print">
+                                        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                                            <button onClick={() => setFilterType('all')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterType === 'all' ? 'bg-slate-700 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>ทั้งหมด</button>
+                                            <button onClick={() => setFilterType('ucep')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterType === 'ucep' ? 'bg-red-500 text-white shadow' : 'text-slate-500 hover:bg-red-50 hover:text-red-600'}`}>UCEP เท่านั้น</button>
+                                        </div>
+                                        <div className="relative group">
+                                            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"><Search size={18} /></div>
+                                            <input type="text" placeholder="ค้นหาชื่อ, HN, อาการ..." className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 w-full sm:w-72 transition-all shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                        </div>
+                                    </div>
+
+                                    <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                                                <tr>
+                                                    <th className="p-5 whitespace-nowrap text-xs uppercase tracking-wide bg-slate-50">สถานะ</th>
+                                                    <th className="p-5 whitespace-nowrap text-xs uppercase tracking-wide bg-slate-50">HN</th>
+                                                    <th className="p-5 whitespace-nowrap text-xs uppercase tracking-wide bg-slate-50">ชื่อ-สกุล</th>
+                                                    <th className="p-5 text-xs uppercase tracking-wide w-1/3 bg-slate-50">อาการ (CC)</th>
+                                                    <th className="p-5 whitespace-nowrap text-xs uppercase tracking-wide bg-slate-50">เกณฑ์ที่ตรวจพบ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {filteredData.map((item) => (
+                                                    <tr key={item.id} className={`hover:bg-slate-50/80 transition-colors group ${item.isUcep ? 'bg-red-50/30' : ''}`}>
+                                                        <td className="p-5 align-top">
+                                                            {item.isUcep ? (
+                                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-600 border border-red-200 shadow-sm"><Activity size={12} className="mr-1" /> UCEP</span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">ทั่วไป</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-5 align-top font-mono text-slate-500 text-sm">{item.hn}</td>
+                                                        <td className="p-5 align-top font-semibold text-slate-700">{item.name}</td>
+                                                        <td className="p-5 align-top text-slate-600 text-sm leading-relaxed">{item.symptoms}</td>
+                                                        <td className="p-5 align-top">
+                                                            {item.isUcep ? (
+                                                                <div className="text-red-600 text-sm font-semibold bg-white border border-red-100 px-3 py-1.5 rounded-lg shadow-sm inline-block">{item.ucepReason}</div>
+                                                            ) : (
+                                                                <span className="text-slate-300">-</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {filteredData.length === 0 && (
+                                                    <tr><td colSpan="5" className="p-12 text-center text-slate-400">ไม่พบข้อมูลที่ค้นหา</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-500 text-right flex justify-between items-center no-print">
+                                        <span>เวอร์ชั่น 1.6.0 (Final Complete Version)</span>
+                                        <span>แสดงผล {filteredData.length} จาก {data.length} รายการ</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {!isLoading && data.length === 0 && (
+                            <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-16 text-center animate-fade-in relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 to-rose-500"></div>
+                                <div className="w-24 h-24 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                                    <Upload size={40} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-slate-800 mb-2">เริ่มต้นใช้งาน</h3>
+                                <p className="text-slate-500 mb-8 max-w-md mx-auto">
+                                    อัปโหลดไฟล์ CSV เพื่อให้ระบบช่วยคัดกรองผู้ป่วยตามเกณฑ์ UCEP 24 ชั่วโมง โดยอัตโนมัติ
+                                </p>
+                                <label className="cursor-pointer bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-2xl inline-flex items-center gap-3 transition-all shadow-lg shadow-red-200 hover:shadow-xl hover:-translate-y-1 transform">
+                                    <Upload size={22} />
+                                    <span className="text-lg font-semibold">เลือกไฟล์ CSV</span>
+                                    <input type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" />
+                                </label>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer - Full Width Red Bar */}
+                    <footer className="relative z-10 w-full bg-gradient-to-r from-rose-400 to-red-600 py-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] mt-auto no-print">
+                        <div className="flex flex-col items-center justify-center space-y-3">
+                            <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm border border-white/30 shadow-sm">
+                                <User className="text-white w-6 h-6" />
+                            </div>
+                            <p className="text-red-50 text-base">
+                                <span className="font-semibold text-white drop-shadow-sm">ผู้พัฒนา:</span> นายทวี แสนสนอง
+                            </p>
+                            <p className="text-red-600 text-sm font-bold bg-white px-5 py-1.5 rounded-full shadow-lg">
+                                หน.ER โรงพยาบาลเสลภูมิ
+                            </p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <script>
+        (function runAppSource() {
+            const source = document.getElementById('app-source');
+            const root = document.getElementById('root');
+            const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+            const showError = (error) => {
+                console.error(error);
+                root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Segoe UI,Tahoma,sans-serif;background:#f8fafc;color:#0f172a;"><div style="max-width:620px;background:#fff;border:1px solid #fecdd3;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(15,23,42,.12);"><div style="font-size:13px;font-weight:800;color:#e11d48;text-transform:uppercase;letter-spacing:.08em;">Script Error</div><h1 style="margin:10px 0 8px;font-size:22px;">เปิดระบบไม่สำเร็จ</h1><p style="margin:0;color:#64748b;line-height:1.7;">' + escapeHtml(error && error.message ? error.message : error) + '</p></div></div>';
+            };
+            try {
+                if (!window.React || !window.ReactDOM || !window.Babel) throw new Error('โหลด React / ReactDOM / Babel ไม่สำเร็จ');
+                (0, eval)(Babel.transform(source.textContent, { presets: ['env'], plugins: [['transform-react-jsx', { runtime: 'classic' }]] }).code);
+            } catch (error) {
+                showError(error);
+            }
+        })();
+    </script>
+</body>
+</html>
