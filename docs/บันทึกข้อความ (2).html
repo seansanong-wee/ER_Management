@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบออกรายงานบันทึกข้อความ - โรงพยาบาลเสลภูมิ (พร้อม Template)</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@100;300;400;500;600;700&family=Anuphan:wght@100;300;400;500;600;700&family=Prompt:wght@100;300;400;500;600;700&family=Kanit:wght@100;300;400;500;600;700&family=Mitr:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="vendor/tailwindcss.js"></script>
+    <script src="vendor/fontawesome-all.min.js"></script>
+
+    <style>
+        /* =========================================
+           การตั้งค่าฟอนต์ตามมาตรฐานงานสารบรรณ
+           ========================================= */
+        @font-face {
+            font-family: 'TH Sarabun IT9';
+            src: local('TH Sarabun New'), local('Sarabun');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        :root {
+            --font-main: 'TH Sarabun IT9', 'Sarabun', sans-serif;
+            --size-content: 16pt;
+            --size-header: 16pt;
+            --size-title: 20pt;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: #f0f4f8;
+        }
+
+        .gov-doc {
+            font-family: var(--font-main);
+            color: #000;
+            line-height: 1.5;
+        }
+
+        .gov-title {
+            font-size: var(--size-title);
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .gov-header {
+            font-size: var(--size-header);
+            font-weight: bold;
+        }
+
+        .gov-content {
+            font-size: var(--size-content);
+            font-weight: normal;
+        }
+
+        .gov-indent {
+            text-indent: 2.5cm;
+        }
+        
+        .dotted-line {
+            border-bottom: 1px dotted #000;
+            display: inline-block;
+            min-height: 1em;
+            line-height: 1.5;
+            padding-left: 5px;
+            padding-right: 5px;
+            color: #000;
+        }
+
+        .garuda {
+            height: 2.0cm;
+            width: auto;
+            object-fit: contain;
+            transition: all 0.3s ease;
+            cursor: move;
+        }
+
+        .garuda-container {
+            position: absolute;
+            left: 0;
+            top: -1;
+            height: 1.5cm;
+            cursor: move;
+        }
+
+        /* ส่วนที่ลากได้ */
+        .draggable-section {
+            cursor: move;
+            position: relative;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+
+        .draggable-section:hover {
+            outline: 2px dashed #3b82f6;
+            outline-offset: 2px;
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .draggable-section.dragging {
+            opacity: 0.8;
+            z-index: 1000;
+            outline: 2px solid #3b82f6;
+        }
+
+        /* =========================================
+           การจำลองกระดาษ A4
+           ========================================= */
+        .a4-paper {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 2.5cm 2cm 2cm 3cm; 
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin: 0 auto;
+            position: relative;
+            box-sizing: border-box;
+            display: none; 
+        }
+
+        .show-paper { display: block; }
+
+        /* Editable Content Area */
+        .editable-field {
+            min-height: 1.2em;
+            padding: 2px 4px;
+            border-radius: 2px;
+            transition: background-color 0.2s ease, outline 0.2s ease;
+            cursor: text;
+            outline: none;
+        }
+
+        .editable-field:hover {
+            background-color: #f0f9ff;
+            outline: 1px solid #bfdbfe;
+        }
+
+        .editable-field:focus {
+            background-color: #fff;
+            outline: 2px solid #3b82f6;
+            cursor: text;
+        }
+
+        .editable-field[contenteditable="true"]:empty:before {
+            content: attr(data-placeholder);
+            color: #9ca3af;
+        }
+
+        /* Content Editor */
+        #contentEditor {
+            min-height: 200px;
+            padding: 10px;
+            border: 2px dashed #e5e7eb;
+            border-radius: 4px;
+            background: white;
+            cursor: text;
+            line-height: 1.8;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #contentEditor:focus {
+            border-color: #3b82f6;
+            border-style: solid;
+            background-color: #fefeff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        #contentEditor:hover {
+            border-color: #94a3b8;
+            background-color: #fafbfc;
+        }
+
+        #contentEditor p {
+            margin-bottom: 0.5em;
+        }
+
+        /* ทำให้ทุกส่วนแก้ไขได้ */
+        .full-editable {
+            cursor: text;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .full-editable:hover {
+            background-color: rgba(191, 219, 254, 0.1);
+        }
+
+        .full-editable:focus {
+            background-color: rgba(191, 219, 254, 0.2);
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+
+        /* Thai Justify */
+        .thai-justify {
+            text-align: justify;
+            text-justify: inter-word;
+            word-spacing: 0.1em;
+            letter-spacing: 0.03em;
+            hyphens: none;
+            -webkit-hyphens: none;
+            -moz-hyphens: none;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .thai-justify-precise {
+            text-align: justify;
+            text-justify: inter-cluster;
+            word-spacing: 0.18em;
+            letter-spacing: 0.04em;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Toolbar Styles */
+        .toolbar {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .toolbar-btn {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+
+        .toolbar-btn:hover {
+            background: #e0f2fe;
+            border-color: #3b82f6;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+
+        .toolbar-btn:active {
+            transform: translateY(0);
+        }
+
+        .toolbar-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .toolbar-separator {
+            width: 1px;
+            height: 28px;
+            background: #cbd5e1;
+            margin: 0 6px;
+        }
+
+        .spacing-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .spacing-control:hover {
+            border-color: #94a3b8;
+        }
+
+        .spacing-control label {
+            font-size: 13px;
+            color: #4b5563;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .spacing-control input[type="number"],
+        .spacing-control select {
+            padding: 5px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .spacing-control input[type="number"]:focus,
+        .spacing-control select:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .spacing-control input[type="number"] {
+            width: 75px;
+        }
+
+        .spacing-control select {
+            width: 150px;
+        }
+
+        /* Color Picker */
+        .color-picker {
+            width: 45px;
+            height: 32px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .color-picker:hover {
+            border-color: #94a3b8;
+        }
+
+        /* Garuda Size Controller */
+        .garuda-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .garuda-control label {
+            font-size: 13px;
+            color: #4b5563;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .garuda-control input[type="range"] {
+            width: 110px;
+        }
+
+        .garuda-control .text-xs {
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 45px;
+        }
+
+        /* Scale Control Panel */
+        .scale-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .scale-panel.active {
+            display: block;
+        }
+
+        .scale-panel h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1e40af;
+        }
+
+        /* Template Manager Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .template-item {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .template-item:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+            transform: translateX(4px);
+        }
+
+        .template-item h4 {
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 4px;
+        }
+
+        .template-item p {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .template-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .template-actions button {
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: none;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .btn-use {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-use:hover {
+            background: #2563eb;
+        }
+
+        .btn-edit {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #d97706;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+
+        /* Print Settings */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            body { 
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            body * { 
+                visibility: hidden;
+            }
+            
+            .a4-paper, 
+            .a4-paper * { 
+                visibility: visible;
+            }
+            
+            .a4-paper {
+                position: absolute;
+                left: 0 !important; 
+                top: 0 !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                margin: 0 !important;
+                padding: 2.5cm 2cm 2cm 3cm !important;
+                box-shadow: none !important;
+                border: none !important;
+                display: block !important;
+                background: white !important;
+                page-break-after: auto;
+            }
+            
+            .no-print { 
+                display: none !important;
+                visibility: hidden !important;
+            }
+            
+            .dotted-line {
+                border-bottom: 1px dotted #000 !important;
+                visibility: visible !important;
+            }
+            
+            .editable-field {
+                outline: none !important;
+                background: transparent !important;
+                padding: 2px 4px !important;
+            }
+            
+            #contentEditor {
+                border: none !important;
+                padding: 0 !important;
+                background: transparent !important;
+            }
+            
+            p, div { 
+                break-inside: avoid;
+                orphans: 3;
+                widows: 3;
+            }
+            
+            .garuda {
+                display: block !important;
+                visibility: visible !important;
+            }
+
+            .draggable-section:hover {
+                outline: none !important;
+                background: transparent !important;
+            }
+
+            .scale-panel, .modal {
+                display: none !important;
+            }
+        }
+
+        .form-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+            outline: none;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <nav class="bg-blue-600 text-white shadow-lg sticky top-0 z-50 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-white text-blue-600 p-2 rounded-full w-10 h-10 flex items-center justify-center">
+                    <i class="fa-solid fa-hospital text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold leading-tight" style="font-size: 22px;">โรงพยาบาลเสลภูมิ</h1>
+                    <p class="text-blue-100" style="font-size: 15px;">ระบบบันทึกข้อความอิเล็กทรอนิกส์ (TH Sarabun IT9 ๑๖pt)</p>
+                </div>
+            </div>
+            <button onclick="window.print()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded text-sm transition hidden md:block">
+                <i class="fa-solid fa-print mr-1"></i> พิมพ์เอกสาร
+            </button>
+        </div>
+    </nav>
+
+    <!-- Template Manager Modal -->
+    <div id="templateModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">
+                    <i class="fa-solid fa-folder-open mr-2 text-blue-600"></i>
+                    จัดการ Template
+                </h3>
+                <button onclick="closeTemplateModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="templateList" class="mb-4">
+                <!-- Templates will be loaded here -->
+            </div>
+            
+            <div class="text-center text-gray-400 py-8" id="emptyTemplateMessage" style="display: none;">
+                <i class="fa-solid fa-inbox text-4xl mb-2"></i>
+                <p>ยังไม่มี Template ที่บันทึกไว้</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Template Modal -->
+    <div id="saveTemplateModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">
+                    <i class="fa-solid fa-save mr-2 text-green-600"></i>
+                    บันทึก Template
+                </h3>
+                <button onclick="closeSaveTemplateModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block mb-2 text-sm font-bold text-gray-700">ชื่อ Template</label>
+                    <input type="text" id="templateName" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="ตัวอย่าง: บันทึกขออนุมัติงบประมาณ">
+                </div>
+                
+                <div>
+                    <label class="block mb-2 text-sm font-bold text-gray-700">หมายเหตุ (ไม่บังคับ)</label>
+                    <textarea id="templateNote" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg" rows="2" placeholder="เช่น: ใช้สำหรับขออนุมัติโครงการทั่วไป"></textarea>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="saveTemplate()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                        <i class="fa-solid fa-check mr-2"></i>บันทึก
+                    </button>
+                    <button onclick="closeSaveTemplateModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-2 px-4 rounded-lg transition">
+                        <i class="fa-solid fa-times mr-2"></i>ยกเลิก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto p-4 md:p-6 flex flex-col lg:flex-row gap-6">
+        
+        <div class="w-full lg:w-4/12 xl:w-1/3 no-print">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden sticky top-20">
+                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <h2 class="font-bold text-gray-700">
+                        <i class="fa-solid fa-pen-nib mr-2 text-blue-500"></i>ข้อมูลบันทึก
+                    </h2>
+                </div>
+                
+                <div class="p-6 max-h-[calc(100vh-200px)] overflow-y-auto custom-scrollbar">
+                    <!-- Template Management Buttons -->
+                    <div class="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                        <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group text-purple-600"></i>
+                            จัดการ Template
+                        </h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="openSaveTemplateModal()" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-plus"></i>
+                                <span class="text-sm">บันทึก Template</span>
+                            </button>
+                            <button onclick="openTemplateModal()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-folder-open"></i>
+                                <span class="text-sm">เรียกใช้ Template</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <form id="memoForm" class="space-y-4">
+                        <!-- Form will be generated here -->
+                    </form>
+                </div>
+
+                <div class="p-4 bg-gray-50 border-t border-gray-200 grid grid-cols-4 gap-2">
+                    <button onclick="generateMemo()" class="col-span-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-export"></i> แสดงตัวอย่าง
+                    </button>
+                    <button onclick="resetForm()" class="col-span-1 bg-white border border-gray-300 text-gray-600 hover:bg-gray-100 font-bold py-2.5 px-4 rounded-lg shadow-sm transition text-center" title="ล้างข้อมูล">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full lg:w-8/12 xl:w-2/3 flex flex-col items-center">
+            
+            <div id="actionBar" class="w-full max-w-[210mm] mb-4 hidden justify-between items-center bg-white p-2 px-4 rounded-lg shadow-sm border border-gray-200 no-print">
+                <div class="text-sm text-gray-500">
+                    <i class="fa-solid fa-arrows-alt mr-1"></i> ลาก = เลื่อนตำแหน่ง | คลิกขวา = ปรับขนาด/ระยะ
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded text-sm font-medium shadow-sm flex items-center gap-2 transition">
+                        <i class="fa-solid fa-print"></i> พิมพ์ / PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div id="toolbar" class="toolbar w-full max-w-[210mm] mb-4 no-print" style="display: none;">
+                <!-- แถวที่ 1: การจัดรูปแบบข้อความ -->
+                <div class="flex gap-2 items-center flex-wrap w-full mb-2">
+                    <!-- Font Family -->
+                    <div class="spacing-control">
+                        <label>ฟอนต์:</label>
+                        <select id="fontFamily" onchange="changeFontFamily(this.value)">
+                            <option value="'TH Sarabun IT9', 'Sarabun', sans-serif" selected>TH Sarabun IT9</option>
+                            <option value="'Sarabun', sans-serif">Sarabun</option>
+                            <option value="'Anuphan', sans-serif">Anuphan</option>
+                            <option value="'Prompt', sans-serif">Prompt</option>
+                            <option value="'Kanit', sans-serif">Kanit</option>
+                            <option value="'Mitr', sans-serif">Mitr</option>
+                            <option value="'THSarabunNew', 'TH Sarabun New', serif">TH Sarabun New</option>
+                            <option value="'Cordia New', 'CordiaUPC', serif">Cordia New</option>
+                            <option value="'Browallia New', 'BrowalliaUPC', serif">Browallia New</option>
+                            <option value="Arial, sans-serif">Arial</option>
+                            <option value="'Times New Roman', serif">Times New Roman</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Font Size -->
+                    <div class="spacing-control">
+                        <label>ขนาด:</label>
+                        <select id="fontSize" onchange="changeFontSize(this.value)">
+                            <option value="8">๘pt</option>
+                            <option value="9">๙pt</option>
+                        <option value="10">๑๐pt</option>
+                        <option value="11">๑๑pt</option>
+                        <option value="12">๑๒pt</option>
+                        <option value="14" selected>๑๔pt</option>
+                        <option value="16">๑๖pt</option>
+                        <option value="18">๑๘pt</option>
+                        <option value="20">๒๐pt</option>
+                        <option value="22">๒๒pt</option>
+                        <option value="24">๒๔pt</option>
+                        <option value="26">๒๖pt</option>
+                        <option value="28">๒๘pt</option>
+                        <option value="36">๓๖pt</option>
+                        <option value="48">๔๘pt</option>
+                        <option value="72">๗๒pt</option>
+                    </select>
+                </div>
+                
+                <div class="toolbar-separator"></div>
+                
+                <!-- Bold, Italic, Underline -->
+                <button type="button" class="toolbar-btn" onclick="formatDoc('bold')" title="ตัวหนา (Ctrl+B)">
+                    <i class="fa-solid fa-bold"></i>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatDoc('italic')" title="ตัวเอียง (Ctrl+I)">
+                    <i class="fa-solid fa-italic"></i>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatDoc('underline')" title="ขีดเส้นใต้ (Ctrl+U)">
+                    <i class="fa-solid fa-underline"></i>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatDoc('strikeThrough')" title="ขีดทับ">
+                    <i class="fa-solid fa-strikethrough"></i>
+                </button>
+                
+                <div class="toolbar-separator"></div>
+                
+                <!-- Text Color -->
+                <div class="spacing-control">
+                    <label>สีตัวอักษร:</label>
+                    <input type="color" id="textColor" class="color-picker" value="#000000" onchange="changeTextColor(this.value)">
+                </div>
+                
+                <!-- Background Color -->
+                <div class="spacing-control">
+                    <label>สีพื้นหลัง:</label>
+                    <input type="color" id="bgColor" class="color-picker" value="#ffffff" onchange="changeBgColor(this.value)">
+                </div>
+            </div>
+
+            <!-- แถวที่ 2: การจัดตำแหน่งและการกระจาย -->
+            <div class="flex gap-2 items-center flex-wrap w-full mb-2">
+                <button type="button" class="toolbar-btn" onclick="formatDoc('justifyLeft')" title="ชิดซ้าย">
+                    <i class="fa-solid fa-align-left"></i>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatDoc('justifyCenter')" title="กึ่งกลาง">
+                    <i class="fa-solid fa-align-center"></i>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatDoc('justifyRight')" title="ชิดขวา">
+                    <i class="fa-solid fa-align-right"></i>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="applyThaiJustify()" title="กระจายแบบไทย">
+                    <i class="fa-solid fa-text-width"></i> กระจาย
+                </button>
+                <button type="button" class="toolbar-btn" onclick="applyThaiJustifyPrecise()" title="กระจายแบบไทยแม่นยำ">
+                    <i class="fa-solid fa-align-justify"></i> กระจายแม่นยำ
+                </button>
+                
+                <div class="toolbar-separator"></div>
+                
+                <button type="button" class="toolbar-btn" onclick="formatDoc('insertUnorderedList')" title="รายการแบบจุด">
+                    <i class="fa-solid fa-list-ul"></i>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatDoc('insertOrderedList')" title="รายการแบบตัวเลข">
+                    <i class="fa-solid fa-list-ol"></i>
+                </button>
+                
+                <div class="toolbar-separator"></div>
+                
+                <button type="button" class="toolbar-btn" onclick="formatDoc('indent')" title="เพิ่มระยะย่อหน้า">
+                    <i class="fa-solid fa-indent"></i>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatDoc('outdent')" title="ลดระยะย่อหน้า">
+                    <i class="fa-solid fa-outdent"></i>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="applyIndent()" title="ย่อหน้า 2.5cm">
+                    <i class="fa-solid fa-paragraph"></i> ย่อหน้า
+                </button>
+            </div>
+
+            <!-- แถวที่ 3: การปรับระยะห่าง -->
+            <div class="flex gap-2 items-center flex-wrap w-full mb-2">
+                <!-- ระยะห่างบรรทัด -->
+                <div class="spacing-control">
+                    <label>ระยะบรรทัด:</label>
+                    <input type="number" id="lineHeight" min="0.5" max="3" step="0.05" value="1.8" 
+                           onchange="changeLineHeight(this.value)" oninput="updateThaiNumber('lineHeightValue', this.value)">
+                    <span id="lineHeightValue" class="text-xs">๑.๘</span>
+                </div>
+                
+                <!-- ระยะห่างคำ -->
+                <div class="spacing-control">
+                    <label>ระยะคำ:</label>
+                    <input type="number" id="wordSpacing" min="0" max="0.5" step="0.005" value="0.1" 
+                           onchange="changeWordSpacing(this.value)" oninput="updateThaiNumber('wordSpacingValue', this.value)">
+                    <span id="wordSpacingValue" class="text-xs">๐.๑</span>
+                </div>
+                
+                <!-- ระยะห่างตัวอักษร -->
+                <div class="spacing-control">
+                    <label>ระยะอักษร:</label>
+                    <input type="number" id="letterSpacing" min="-0.1" max="0.5" step="0.005" value="0.03" 
+                           onchange="changeLetterSpacing(this.value)" oninput="updateThaiNumber('letterSpacingValue', this.value)">
+                    <span id="letterSpacingValue" class="text-xs">๐.๐๓</span>
+                </div>
+                
+                <div class="toolbar-separator"></div>
+                
+                <button type="button" class="toolbar-btn" onclick="formatDoc('subscript')" title="ตัวห้อย">
+                    <i class="fa-solid fa-subscript"></i>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatDoc('superscript')" title="ตัวยก">
+                    <i class="fa-solid fa-superscript"></i>
+                </button>
+                
+                <div class="toolbar-separator"></div>
+                
+                <button type="button" class="toolbar-btn" onclick="formatDoc('removeFormat')" title="ล้างรูปแบบ">
+                    <i class="fa-solid fa-eraser"></i> ล้างรูปแบบ
+                </button>
+            </div>
+
+            <!-- แถวที่ 4: ควบคุมครุฑ -->
+            <div class="flex gap-2 items-center flex-wrap w-full">
+                <div class="garuda-control">
+                    <label><i class="fa-solid fa-up-down mr-1"></i>ครุฑ (บน-ล่าง):</label>
+                    <input type="range" id="garudaPosition" min="-2" max="2" step="0.1" value="0" 
+                           onchange="changeGarudaPosition(this.value)" oninput="updateThaiNumber('garudaPositionValue', this.value, 'cm')">
+                    <span id="garudaPositionValue" class="text-xs">๐cm</span>
+                </div>
+                
+                <div class="garuda-control">
+                    <label><i class="fa-solid fa-expand mr-1"></i>ขนาดครุฑ:</label>
+                    <input type="range" id="garudaSize" min="0.8" max="3" step="0.1" value="1.5" 
+                           onchange="changeGarudaSize(this.value)" oninput="updateThaiNumber('garudaSizeValue', this.value, 'cm')">
+                    <span id="garudaSizeValue" class="text-xs">๑.๕cm</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scale Control Panel -->
+        <div id="scalePanel" class="scale-panel no-print">
+            <h4><i class="fa-solid fa-sliders mr-2"></i>ปรับขนาด: <span id="selectedElement"></span></h4>
+            <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-2">
+                    <label class="text-xs w-20">ขนาดฟอนต์:</label>
+                    <input type="range" id="scaleFont" min="8" max="72" step="1" value="14" 
+                           oninput="scaleElementFont(this.value)">
+                    <span id="scaleFontValue" class="text-xs font-bold">๑๔pt</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs w-20">ขยาย (Scale):</label>
+                    <input type="range" id="scaleSize" min="0.5" max="2" step="0.05" value="1" 
+                           oninput="scaleElementSize(this.value)">
+                    <span id="scaleSizeValue" class="text-xs font-bold">๑๐๐%</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs w-20">ระยะบน-ล่าง:</label>
+                    <input type="range" id="scaleMarginY" min="-50" max="50" step="1" value="0" 
+                           oninput="scaleElementMarginY(this.value)">
+                    <span id="scaleMarginYValue" class="text-xs font-bold">๐px</span>
+                </div>
+                <button onclick="closeScalePanel()" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-xs mt-2">ปิด</button>
+            </div>
+        </div>
+
+        <div id="documentPreview" class="a4-paper gov-doc">
+            
+            <div class="relative h-[1.5cm] mb-6">
+                <div id="garudaContainer" class="garuda-container">
+                    <img 
+                        id="garudaImg"
+                        src="https://lh3.googleusercontent.com/d/1L17GNdt-GDF0Xs-mnO9BLkCOKpUqvAo1"
+                        class="garuda"
+                        alt="ตราครุฑ"
+                        onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Garuda_Emblem_of_Thailand.svg/800px-Garuda_Emblem_of_Thailand.svg.png'"
+                    />
+                </div>
+                
+                <div class="w-full h-full flex items-end justify-center">
+                    <h1 id="docTitle" class="gov-title tracking-widest mt-2 full-editable draggable-section" contenteditable="true" data-section="title">บันทึกข้อความ</h1>
+                </div>
+            </div>
+
+            <!-- ส่วนราชการ -->
+            <div id="sectionRow" class="flex items-baseline w-full mb-1 draggable-section" data-section="section">
+                <span class="gov-header whitespace-nowrap mr-2 full-editable" style="min-width: 2.5cm;" contenteditable="true">ส่วนราชการ</span>
+                <span id="out-section" class="gov-content editable-field dotted-line flex-grow break-words full-editable" contenteditable="true"></span>
+            </div>
+
+            <!-- ที่ และ วันที่ -->
+            <div class="flex items-baseline w-full mb-1">
+                <div id="docNumRow" class="flex items-baseline w-[50%] mr-4 draggable-section" data-section="docnum">
+                    <span class="gov-header whitespace-nowrap mr-2 full-editable" style="min-width: 1cm;" contenteditable="true">ที่</span>
+                    <span id="out-docNum" class="gov-content editable-field dotted-line flex-grow full-editable" contenteditable="true"></span>
+                </div>
+                <div id="dateRow" class="flex items-baseline w-[50%] draggable-section" data-section="date">
+                    <span class="gov-header whitespace-nowrap mr-2 full-editable" contenteditable="true">วันที่</span>
+                    <span id="out-date" class="gov-content editable-field dotted-line flex-grow full-editable" contenteditable="true"></span>
+                </div>
+            </div>
+
+            <!-- เรื่อง -->
+            <div id="subjectRow" class="flex items-baseline w-full mb-1 draggable-section" data-section="subject">
+                <span class="gov-header whitespace-nowrap mr-2 full-editable" style="min-width: 1.0cm;" contenteditable="true">เรื่อง</span>
+                <span id="out-subject" class="gov-content editable-field dotted-line flex-grow break-words full-editable" contenteditable="true"></span>
+            </div>
+
+            <!-- เรียน -->
+            <div id="recipientRow" class="flex items-baseline w-full pt-1 mb-4 draggable-section" data-section="recipient">
+                <span class="gov-header whitespace-nowrap mr-2 full-editable" style="min-width: 1.0cm;" contenteditable="true">เรียน</span>
+                <span id="out-recipient" class="gov-content editable-field dotted-line flex-grow break-words full-editable" contenteditable="true" style="padding-right: 100px;"></span>
+            </div>
+
+            <!-- เนื้อหา -->
+            <div id="contentSection" class="draggable-section" data-section="content">
+                <div id="contentEditor" class="gov-content w-full text-justify leading-relaxed mb-8 break-words pt-2 full-editable" 
+                     contenteditable="true" style="min-height: 200px; line-height: 1.8; word-spacing: 0.1em; letter-spacing: 0.03em;">
+                </div>
+            </div>
+
+            <!-- ส่วนลงท้าย -->
+            <div id="closingSection" class="flex justify-start mb-10 pl-16 gov-content draggable-section" data-section="closing">
+                <div id="out-closing" class="editable-field text-left min-w-[200px] full-editable" contenteditable="true"></div>
+            </div>
+
+            <!-- ส่วนลงนาม -->
+            <div id="signatureSection" class="flex justify-end mt-10 pr-6 gov-content draggable-section" data-section="signature">
+                <div class="flex flex-col items-center justify-center min-w-[250px]">
+                    <div class="mb-6 text-center w-full full-editable" contenteditable="true">
+                        (ลงชื่อ)...........................................................
+                    </div>
+                    <div class="text-center w-full mb-1">
+                        ( <span id="out-sign" class="editable-field full-editable" contenteditable="true"></span> )
+                    </div>
+                    <div id="out-position" class="editable-field text-center w-full full-editable" contenteditable="true"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="emptyState" class="bg-white border-2 border-dashed border-gray-300 rounded-xl p-10 text-center w-full max-w-[210mm] h-[400px] flex flex-col justify-center items-center text-gray-400 no-print mt-4 shadow-sm">
+            <div class="bg-gray-100 p-6 rounded-full mb-4">
+                <i class="fa-solid fa-file-contract text-4xl text-gray-400"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-600 mb-2">เริ่มสร้างบันทึกข้อความ</h3>
+            <p class="text-sm">กรอกข้อมูลหรือเลือก Template แล้วกดปุ่ม "แสดงตัวอย่าง"</p>
+        </div>
+
+    </div>
+</div>
+<script>
+    // ==========================================
+    // GLOBAL VARIABLES
+    // ==========================================
+    let currentScaleElement = null;
+    let editingTemplateId = null;
+
+    // ==========================================
+    // 1. THAI NUMBER CONVERSION
+    // ==========================================
+    function toThaiNumber(num) {
+        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return String(num).split('').map(digit => {
+            return /\d/.test(digit) ? thaiDigits[parseInt(digit)] : digit;
+        }).join('');
+    }
+
+    function convertToThaiNumbers(text) {
+        return text.replace(/\d/g, (digit) => {
+            const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+            return thaiDigits[parseInt(digit)];
+        });
+    }
+
+    function updateThaiNumber(elementId, value, suffix = '') {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.innerText = toThaiNumber(value) + suffix;
+        }
+    }
+
+    // ==========================================
+    // 2. TEMPLATE MANAGEMENT SYSTEM
+    // ==========================================
+    
+    // Load templates from localStorage
+    function getTemplates() {
+        const templates = localStorage.getItem('memoTemplates');
+        return templates ? JSON.parse(templates) : [];
+    }
+
+    // Save templates to localStorage
+    function setTemplates(templates) {
+        localStorage.setItem('memoTemplates', JSON.stringify(templates));
+    }
+
+    // Open Save Template Modal
+    function openSaveTemplateModal() {
+        const modal = document.getElementById('saveTemplateModal');
+        const nameInput = document.getElementById('templateName');
+        const noteInput = document.getElementById('templateNote');
+        
+        if (modal) {
+            nameInput.value = '';
+            noteInput.value = '';
+            modal.classList.add('active');
+            nameInput.focus();
+        }
+    }
+
+    // Close Save Template Modal
+    function closeSaveTemplateModal() {
+        const modal = document.getElementById('saveTemplateModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+        editingTemplateId = null;
+    }
+
+    // Save Template
+    function saveTemplate() {
+        const name = document.getElementById('templateName').value.trim();
+        const note = document.getElementById('templateNote').value.trim();
+        
+        if (!name) {
+            alert('กรุณาระบุชื่อ Template');
+            return;
+        }
+        
+        // Collect form data
+        const templateData = {
+            id: editingTemplateId || Date.now().toString(),
+            name: name,
+            note: note,
+            createdAt: editingTemplateId ? getTemplates().find(t => t.id === editingTemplateId).createdAt : new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            data: {}
+        };
+        
+        // Get all form fields
+        formFields.forEach(field => {
+            const inputEl = document.getElementById(field.id);
+            if (inputEl) {
+                templateData.data[field.id] = inputEl.value;
+            }
+        });
+        
+        // Save to localStorage
+        let templates = getTemplates();
+        
+        if (editingTemplateId) {
+            // Update existing template
+            const index = templates.findIndex(t => t.id === editingTemplateId);
+            if (index !== -1) {
+                templates[index] = templateData;
+            }
+        } else {
+            // Add new template
+            templates.push(templateData);
+        }
+        
+        setTemplates(templates);
+        
+        closeSaveTemplateModal();
+        alert(editingTemplateId ? 'แก้ไข Template สำเร็จ!' : 'บันทึก Template สำเร็จ!');
+        editingTemplateId = null;
+    }
+
+    // Open Template Manager Modal
+    function openTemplateModal() {
+        const modal = document.getElementById('templateModal');
+        if (modal) {
+            modal.classList.add('active');
+            loadTemplateList();
+        }
+    }
+
+    // Close Template Modal
+    function closeTemplateModal() {
+        const modal = document.getElementById('templateModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+
+    // Load Template List
+    function loadTemplateList() {
+        const templates = getTemplates();
+        const listContainer = document.getElementById('templateList');
+        const emptyMessage = document.getElementById('emptyTemplateMessage');
+        
+        if (templates.length === 0) {
+            listContainer.innerHTML = '';
+            emptyMessage.style.display = 'block';
+            return;
+        }
+        
+        emptyMessage.style.display = 'none';
+        listContainer.innerHTML = '';
+        
+        templates.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).forEach(template => {
+            const item = document.createElement('div');
+            item.className = 'template-item';
+            
+            const updatedDate = new Date(template.updatedAt).toLocaleString('th-TH', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            item.innerHTML = `
+                <h4><i class="fa-solid fa-file-alt mr-2"></i>${template.name}</h4>
+                ${template.note ? `<p><i class="fa-solid fa-sticky-note mr-1"></i>${template.note}</p>` : ''}
+                <p class="text-xs text-gray-400"><i class="fa-solid fa-clock mr-1"></i>อัปเดต: ${updatedDate}</p>
+                <div class="template-actions">
+                    <button onclick="useTemplate('${template.id}')" class="btn-use">
+                        <i class="fa-solid fa-download mr-1"></i>ใช้งาน
+                    </button>
+                    <button onclick="editTemplate('${template.id}')" class="btn-edit">
+                        <i class="fa-solid fa-edit mr-1"></i>แก้ไข
+                    </button>
+                    <button onclick="deleteTemplate('${template.id}')" class="btn-delete">
+                        <i class="fa-solid fa-trash mr-1"></i>ลบ
+                    </button>
+                </div>
+            `;
+            
+            listContainer.appendChild(item);
+        });
+    }
+
+    // Use Template
+    function useTemplate(templateId) {
+        const templates = getTemplates();
+        const template = templates.find(t => t.id === templateId);
+        
+        if (!template) {
+            alert('ไม่พบ Template');
+            return;
+        }
+        
+        // Fill form with template data
+        Object.keys(template.data).forEach(fieldId => {
+            const inputEl = document.getElementById(fieldId);
+            if (inputEl) {
+                inputEl.value = template.data[fieldId];
+            }
+        });
+        
+        closeTemplateModal();
+        alert(`โหลด Template "${template.name}" สำเร็จ!`);
+    }
+
+    // Edit Template
+    function editTemplate(templateId) {
+        const templates = getTemplates();
+        const template = templates.find(t => t.id === templateId);
+        
+        if (!template) {
+            alert('ไม่พบ Template');
+            return;
+        }
+        
+        // Fill form with template data first
+        Object.keys(template.data).forEach(fieldId => {
+            const inputEl = document.getElementById(fieldId);
+            if (inputEl) {
+                inputEl.value = template.data[fieldId];
+            }
+        });
+        
+        // Close template list modal
+        closeTemplateModal();
+        
+        // Open save modal with template info
+        editingTemplateId = templateId;
+        const nameInput = document.getElementById('templateName');
+        const noteInput = document.getElementById('templateNote');
+        
+        nameInput.value = template.name;
+        noteInput.value = template.note || '';
+        
+        const modal = document.getElementById('saveTemplateModal');
+        if (modal) {
+            modal.classList.add('active');
+        }
+    }
+
+    // Delete Template
+    function deleteTemplate(templateId) {
+        const templates = getTemplates();
+        const template = templates.find(t => t.id === templateId);
+        
+        if (!template) {
+            alert('ไม่พบ Template');
+            return;
+        }
+        
+        if (!confirm(`คุณต้องการลบ Template "${template.name}" ใช่หรือไม่?`)) {
+            return;
+        }
+        
+        const newTemplates = templates.filter(t => t.id !== templateId);
+        setTemplates(newTemplates);
+        loadTemplateList();
+        alert('ลบ Template สำเร็จ!');
+    }
+
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        const templateModal = document.getElementById('templateModal');
+        const saveModal = document.getElementById('saveTemplateModal');
+        
+        if (event.target === templateModal) {
+            closeTemplateModal();
+        }
+        if (event.target === saveModal) {
+            closeSaveTemplateModal();
+        }
+    }
+
+    // ==========================================
+    // 3. CONFIGURATION
+    // ==========================================
+    const formFields = [
+        { 
+            id: 'section', 
+            label: 'ส่วนราชการ', 
+            type: 'text', 
+            placeholder: 'ระบุหน่วยงาน...',
+            default: 'งานบริหารทั่วไป โรงพยาบาลเสลภูมิ จังหวัดร้อยเอ็ด'
+        },
+        { 
+            id: 'docNum', 
+            label: 'ที่ (เลขหนังสือ)', 
+            type: 'text', 
+            placeholder: 'รอ.0033...',
+            default: 'รอ.0033.301/'
+        },
+        { 
+            id: 'date', 
+            label: 'วันที่', 
+            type: 'date',
+            default: 'TODAY'
+        },
+        { 
+            id: 'subject', 
+            label: 'เรื่อง', 
+            type: 'text', 
+            placeholder: 'ระบุชื่อเรื่อง...',
+            default: 'ขออนุมัติแผนการดำเนินงานและงบประมาณ'
+        },
+        { 
+            id: 'recipient', 
+            label: 'เรียน (ตำแหน่งผู้รับ)', 
+            type: 'text', 
+            placeholder: 'ระบุตำแหน่ง...',
+            default: 'ผู้อำนวยการโรงพยาบาลเสลภูมิ'
+        },
+        { 
+            id: 'content', 
+            label: 'เนื้อหาข้อความ', 
+            type: 'textarea', 
+            rows: 12,
+            placeholder: 'พิมพ์เนื้อหา...',
+            default: `ด้วยกลุ่มงานบริหารทั่วไป มีความประสงค์จะดำเนินโครงการพัฒนาศักยภาพบุคลากร เพื่อเพิ่มประสิทธิภาพในการปฏิบัติงาน ประจำปีงบประมาณ 2568 โดยมีวัตถุประสงค์เพื่อให้บุคลากรมีความรู้ความเข้าใจเกี่ยวกับเทคโนโลยีสารสนเทศสมัยใหม่ และสามารถนำมาประยุกต์ใช้ในการปฏิบัติงานได้อย่างมีประสิทธิภาพ
+ในการนี้ กลุ่มงานบริหารทั่วไป จึงใคร่ขออนุมัติดำเนินโครงการดังกล่าว ในวันที่ 25 ธันวาคม 2568 ณ ห้องประชุมชั้น 2 โรงพยาบาลเสลภูมิ โดยมีกลุ่มเป้าหมายเป็นเจ้าหน้าที่จำนวน 50 คน ทั้งนี้ได้แนบรายละเอียดโครงการและงบประมาณมาพร้อมนี้แล้ว`
+},
+{
+id: 'closing',
+label: 'ส่วนลงท้าย',
+type: 'select',
+options: [
+'จึงเรียนมาเพื่อโปรดพิจารณา',
+'จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติ',
+'จึงเรียนมาเพื่อโปรดทราบ',
+'จึงเรียนมาเพื่อโปรดสั่งการ',
+'จึงเรียนมาเพื่อโปรดลงนาม'
+]
+},
+{
+id: 'sign',
+label: 'ชื่อ-สกุล ผู้ลงนาม',
+type: 'text',
+default: 'นายแพทย์ทดสอบ ระบบดี'
+},
+{
+id: 'position',
+label: 'ตำแหน่ง',
+type: 'text',
+default: 'นายแพทย์ชำนาญการ'
+}
+];
+// ==========================================
+// 4. HELPER FUNCTIONS
+// ==========================================
+function getTodayDate() {
+    return new Date().toISOString().split('T')[0];
+}
+
+function formatThaiDate(dateString) {
+    if(!dateString) return "-";
+    const date = new Date(dateString);
+    const months = [
+        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+    ];
+    const day = toThaiNumber(date.getDate());
+    const year = toThaiNumber(date.getFullYear() + 543);
+    return `${day} ${months[date.getMonth()]} ${year}`;
+}
+
+// ==========================================
+// 5. FORMATTING FUNCTIONS
+// ==========================================
+function formatDoc(command, value = null) {
+    document.execCommand(command, false, value);
+    updateToolbar();
+}
+
+function changeFontFamily(font) {
+    formatDoc('fontName', font);
+    const editor = document.getElementById('contentEditor');
+    if (editor) {
+        editor.style.fontFamily = font;
+    }
+}
+
+function changeFontSize(size) {
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0 && !selection.isCollapsed) {
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style.fontSize = size + 'pt';
+        
+        try {
+            range.surroundContents(span);
+        } catch (e) {
+            const fragment = range.extractContents();
+            span.appendChild(fragment);
+            range.insertNode(span);
+        }
+        selection.removeAllRanges();
+    } else {
+        const editor = document.getElementById('contentEditor');
+        if (editor) {
+            editor.style.fontSize = size + 'pt';
+        }
+    }
+}
+
+function changeTextColor(color) {
+    formatDoc('foreColor', color);
+}
+
+function changeBgColor(color) {
+    formatDoc('hiliteColor', color);
+}
+
+function changeLineHeight(value) {
+    const editor = document.getElementById('contentEditor');
+    if (editor) {
+        editor.style.lineHeight = value;
+        
+        const paragraphs = editor.querySelectorAll('p');
+        paragraphs.forEach(p => {
+            p.style.lineHeight = value;
+        });
+    }
+}
+
+function changeWordSpacing(value) {
+    const editor = document.getElementById('contentEditor');
+    if (editor) {
+        editor.style.wordSpacing = value + 'em';
+        
+        const paragraphs = editor.querySelectorAll('p');
+        paragraphs.forEach(p => {
+            p.style.wordSpacing = value + 'em';
+        });
+    }
+}
+
+function changeLetterSpacing(value) {
+    const editor = document.getElementById('contentEditor');
+    if (editor) {
+        editor.style.letterSpacing = value + 'em';
+        
+        const paragraphs = editor.querySelectorAll('p');
+        paragraphs.forEach(p => {
+            p.style.letterSpacing = value + 'em';
+        });
+    }
+}
+
+function changeGarudaSize(value) {
+    const garuda = document.getElementById('garudaImg');
+    if (garuda) {
+        garuda.style.height = value + 'cm';
+    }
+}
+
+function changeGarudaPosition(value) {
+    const container = document.getElementById('garudaContainer');
+    if (container) {
+        container.style.top = value + 'cm';
+    }
+}
+
+function applyIndent() {
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        
+        let paragraph = container.nodeType === 3 ? container.parentNode : container;
+        while (paragraph && paragraph.nodeName !== 'P' && paragraph.nodeName !== 'DIV' && paragraph.id !== 'contentEditor') {
+            paragraph = paragraph.parentNode;
+        }
+        
+        if (paragraph && paragraph.id !== 'contentEditor') {
+            paragraph.style.textIndent = '2.5cm';
+        }
+    }
+}
+
+function applyThaiJustify() {
+    const editor = document.getElementById('contentEditor');
+    if (editor) {
+        const paragraphs = editor.querySelectorAll('p');
+        
+        paragraphs.forEach(p => {
+            p.style.textAlign = 'justify';
+            p.style.textJustify = 'inter-word';
+            p.style.wordSpacing = document.getElementById('wordSpacing').value + 'em';
+            p.style.letterSpacing = document.getElementById('letterSpacing').value + 'em';
+            p.classList.add('thai-justify');
+        });
+    }
+}
+
+function applyThaiJustifyPrecise() {
+    const editor = document.getElementById('contentEditor');
+    if (editor) {
+        const paragraphs = editor.querySelectorAll('p');
+        
+        paragraphs.forEach(p => {
+            p.style.textAlign = 'justify';
+            p.style.textJustify = 'inter-cluster';
+            p.style.wordSpacing = '0.18em';
+            p.style.letterSpacing = '0.04em';
+            p.classList.add('thai-justify-precise');
+        });
+        
+        document.getElementById('wordSpacing').value = '0.18';
+        document.getElementById('letterSpacing').value = '0.04';
+        updateThaiNumber('wordSpacingValue', '0.18');
+        updateThaiNumber('letterSpacingValue', '0.04');
+    }
+}
+
+function updateToolbar() {
+    const commands = ['bold', 'italic', 'underline', 'strikeThrough'];
+    commands.forEach(cmd => {
+        const btn = document.querySelector(`button[onclick*="${cmd}"]`);
+        if (btn) {
+            if (document.queryCommandState(cmd)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
+    });
+}
+
+// ==========================================
+// 6. SCALE CONTROL PANEL
+// ==========================================
+function openScalePanel(element) {
+    currentScaleElement = element;
+    const panel = document.getElementById('scalePanel');
+    if (panel) {
+        panel.classList.add('active');
+    }
+    
+    const currentFontSize = parseInt(window.getComputedStyle(element).fontSize) || 14;
+    const currentScale = parseFloat(element.style.transform?.match(/scale\(([^)]+)\)/)?.[1]) || 1;
+    const currentMarginY = parseInt(element.style.marginTop) || 0;
+    
+    const scaleFontEl = document.getElementById('scaleFont');
+    const scaleSizeEl = document.getElementById('scaleSize');
+    const scaleMarginYEl = document.getElementById('scaleMarginY');
+    
+    if (scaleFontEl) scaleFontEl.value = currentFontSize;
+    if (scaleSizeEl) scaleSizeEl.value = currentScale;
+    if (scaleMarginYEl) scaleMarginYEl.value = currentMarginY;
+    
+    const scaleFontValue = document.getElementById('scaleFontValue');
+    const scaleSizeValue = document.getElementById('scaleSizeValue');
+    const scaleMarginYValue = document.getElementById('scaleMarginYValue');
+    
+    if (scaleFontValue) scaleFontValue.innerText = toThaiNumber(currentFontSize) + 'pt';
+    if (scaleSizeValue) scaleSizeValue.innerText = toThaiNumber(Math.round(currentScale * 100)) + '%';
+    if (scaleMarginYValue) scaleMarginYValue.innerText = toThaiNumber(currentMarginY) + 'px';
+    
+    const sectionName = element.dataset.section || element.id || 'ส่วนที่เลือก';
+    const selectedElement = document.getElementById('selectedElement');
+    if (selectedElement) {
+        selectedElement.innerText = sectionName;
+    }
+}
+
+function closeScalePanel() {
+    const panel = document.getElementById('scalePanel');
+    if (panel) {
+        panel.classList.remove('active');
+    }
+    currentScaleElement = null;
+}
+
+function scaleElementFont(size) {
+    if (!currentScaleElement) return;
+    currentScaleElement.style.fontSize = size + 'pt';
+    const scaleFontValue = document.getElementById('scaleFontValue');
+    if (scaleFontValue) {
+        scaleFontValue.innerText = toThaiNumber(size) + 'pt';
+    }
+}
+
+function scaleElementSize(scale) {
+    if (!currentScaleElement) return;
+    const currentTransform = currentScaleElement.style.transform || '';
+    const translateMatch = currentTransform.match(/translate\(([^)]+)\)/);
+    const translateValue = translateMatch ? translateMatch[0] : '';
+    
+    currentScaleElement.style.transform = `${translateValue} scale(${scale})`;
+    const scaleSizeValue = document.getElementById('scaleSizeValue');
+    if (scaleSizeValue) {
+        scaleSizeValue.innerText = toThaiNumber(Math.round(scale * 100)) + '%';
+    }
+}
+
+function scaleElementMarginY(margin) {
+    if (!currentScaleElement) return;
+    currentScaleElement.style.marginTop = margin + 'px';
+    currentScaleElement.style.marginBottom = margin + 'px';
+    const scaleMarginYValue = document.getElementById('scaleMarginYValue');
+    if (scaleMarginYValue) {
+        scaleMarginYValue.innerText = toThaiNumber(margin) + 'px';
+    }
+}
+
+// ==========================================
+// 7. DRAGGING SECTIONS
+// ==========================================
+function makeSectionsDraggable() {
+    const sections = document.querySelectorAll('.draggable-section');
+    
+    sections.forEach(section => {
+        let isDragging = false;
+        let startX, startY;
+        let initialX = 0, initialY = 0;
+        
+        const style = window.getComputedStyle(section);
+        const matrix = new DOMMatrix(style.transform);
+        initialX = matrix.m41;
+        initialY = matrix.m42;
+        
+        section.addEventListener('mousedown', function(e) {
+            if (e.button !== 0) return;
+            if (e.target.contentEditable === 'true' || e.target.closest('[contenteditable="true"]')) {
+                return;
+            }
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            section.classList.add('dragging');
+            e.preventDefault();
+        });
+        
+        section.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            openScalePanel(section);
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            initialX += deltaX;
+            initialY += deltaY;
+            
+            const currentScale = parseFloat(section.style.transform?.match(/scale\(([^)]+)\)/)?.[1]) || 1;
+            section.style.transform = `translate(${initialX}px, ${initialY}px) scale(${currentScale})`;
+            
+            startX = e.clientX;
+            startY = e.clientY;
+        });
+        
+        document.addEventListener('mouseup', function() {
+            if (isDragging) {
+                isDragging = false;
+                section.classList.remove('dragging');
+            }
+        });
+    });
+}
+
+// ==========================================
+// 8. CORE LOGIC
+// ==========================================
+const formContainer = document.getElementById('memoForm');
+
+function initForm() {
+    if (!formContainer) return;
+    formContainer.innerHTML = '';
+    
+    formFields.forEach(field => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex flex-col';
+
+        const label = document.createElement('label');
+        label.htmlFor = field.id;
+        label.className = 'mb-1.5 text-sm font-bold text-gray-700';
+        label.innerText = field.label;
+        wrapper.appendChild(label);
+
+        let input;
+        if (field.type === 'select') {
+            input = document.createElement('select');
+            field.options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.innerText = opt;
+                input.appendChild(option);
+            });
+        } else if (field.type === 'textarea') {
+            input = document.createElement('textarea');
+            input.rows = field.rows || 5;
+        } else {
+            input = document.createElement('input');
+            input.type = field.type;
+        }
+
+        input.id = field.id;
+        input.className = 'form-input w-full px-3 py-2.5 border border-gray-300 rounded-lg text-gray-800 bg-white focus:outline-none transition-colors text-sm font-sans';
+        if (field.placeholder) input.placeholder = field.placeholder;
+        
+        if (field.default === 'TODAY') {
+            input.value = getTodayDate();
+        } else if (field.default) {
+            input.value = field.default;
+        }
+        
+        wrapper.appendChild(input);
+        formContainer.appendChild(wrapper);
+    });
+}
+
+function generateMemo() {
+    if(event) event.preventDefault();
+
+    formFields.forEach(field => {
+        if (field.id === 'content') return;
+
+        const inputEl = document.getElementById(field.id);
+        if (!inputEl) return;
+        
+        let inputVal = inputEl.value;
+        const outputElem = document.getElementById(`out-${field.id}`);
+        
+        if (outputElem) {
+            if (field.type === 'date') {
+                outputElem.innerText = formatThaiDate(inputVal);
+            } else {
+                outputElem.innerText = convertToThaiNumbers(inputVal || '');
+            }
+        }
+    });
+
+    const contentInput = document.getElementById('content');
+    if (!contentInput) return;
+    
+    let contentText = contentInput.value;
+    contentText = convertToThaiNumbers(contentText);
+    
+    const contentEditor = document.getElementById('contentEditor');
+    if (!contentEditor) return;
+    
+    contentEditor.innerHTML = '';
+
+    const paragraphs = contentText.split('\n');
+    
+    const lineHeightEl = document.getElementById('lineHeight');
+    const wordSpacingEl = document.getElementById('wordSpacing');
+    const letterSpacingEl = document.getElementById('letterSpacing');
+    
+    paragraphs.forEach(line => {
+        if (line.trim() !== "") {
+            const p = document.createElement('p');
+            p.style.textIndent = '2.5cm';
+            p.style.marginBottom = '0.5em';
+            p.style.textAlign = 'justify';
+            p.style.lineHeight = lineHeightEl ? lineHeightEl.value : '1.8';
+            p.style.wordSpacing = (wordSpacingEl ? wordSpacingEl.value : '0.1') + 'em';
+            p.style.letterSpacing = (letterSpacingEl ? letterSpacingEl.value : '0.03') + 'em';
+            p.innerText = line;
+            contentEditor.appendChild(p);
+        } else {
+            const br = document.createElement('br');
+            contentEditor.appendChild(br);
+        }
+    });
+
+    const emptyState = document.getElementById('emptyState');
+    const documentPreview = document.getElementById('documentPreview');
+    const actionBar = document.getElementById('actionBar');
+    const toolbar = document.getElementById('toolbar');
+    
+    if (emptyState) emptyState.classList.add('hidden');
+    if (documentPreview) documentPreview.classList.add('show-paper');
+    if (actionBar) {
+        actionBar.classList.remove('hidden');
+        actionBar.classList.add('flex');
+    }
+    if (toolbar) toolbar.style.display = 'block';
+
+    setupEditableFields();
+    makeSectionsDraggable();
+
+    if(window.innerWidth < 1024 && documentPreview) {
+        documentPreview.scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
+}
+
+function setupEditableFields() {
+    const allEditableElements = document.querySelectorAll('.full-editable, [contenteditable="true"]');
+    
+    allEditableElements.forEach(element => {
+        element.addEventListener('focus', function() {
+            this.style.minHeight = '1.2em';
+        });
+        
+        element.addEventListener('input', function(e) {
+            if (this.id === 'contentEditor') {
+                const selection = window.getSelection();
+                if (!selection.rangeCount) return;
+                
+                const range = selection.getRangeAt(0);
+                const startOffset = range.startOffset;
+                const textNode = range.startContainer;
+                
+                if (textNode.nodeType === Node.TEXT_NODE) {
+                    const originalText = textNode.textContent;
+                    const convertedText = convertToThaiNumbers(originalText);
+                    
+                    if (originalText !== convertedText) {
+                        textNode.textContent = convertedText;
+                        
+                        const newRange = document.createRange();
+                        newRange.setStart(textNode, Math.min(startOffset, textNode.length));
+                        newRange.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(newRange);
+                    }
+                }
+            }
+        });
+    });
+
+    const contentEditor = document.getElementById('contentEditor');
+    if (contentEditor) {
+        contentEditor.addEventListener('keyup', updateToolbar);
+        contentEditor.addEventListener('mouseup', updateToolbar);
+    }
+    
+    document.addEventListener('keydown', function(e) {
+        if (document.activeElement.contentEditable === 'true' || document.activeElement.getAttribute('contenteditable') === 'true') {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key.toLowerCase()) {
+                    case 'b':
+                        e.preventDefault();
+                        formatDoc('bold');
+                        break;
+                    case 'i':
+                        e.preventDefault();
+                        formatDoc('italic');
+                        break;
+                    case 'u':
+                        e.preventDefault();
+                        formatDoc('underline');
+                        break;
+                }
+            }
+        }
+    });
+}
+
+function resetForm() {
+    initForm(); 
+    
+    const emptyState = document.getElementById('emptyState');
+    const documentPreview = document.getElementById('documentPreview');
+    const actionBar = document.getElementById('actionBar');
+    const toolbar = document.getElementById('toolbar');
+    const contentEditor = document.getElementById('contentEditor');
+    
+    if (emptyState) emptyState.classList.remove('hidden');
+    if (documentPreview) documentPreview.classList.remove('show-paper');
+    if (actionBar) {
+        actionBar.classList.add('hidden');
+        actionBar.classList.remove('flex');
+    }
+    if (toolbar) toolbar.style.display = 'none';
+    if (contentEditor) contentEditor.innerHTML = '';
+    
+    closeScalePanel();
+    
+    const garuda = document.getElementById('garudaImg');
+    const garudaContainer = document.getElementById('garudaContainer');
+    const garudaSlider = document.getElementById('garudaSize');
+    const garudaPositionSlider = document.getElementById('garudaPosition');
+    
+    if (garuda) garuda.style.height = '1.5cm';
+    if (garudaContainer) garudaContainer.style.top = '0cm';
+    if (garudaSlider) garudaSlider.value = '1.5';
+    if (garudaPositionSlider) garudaPositionSlider.value = '0';
+    
+    updateThaiNumber('garudaSizeValue', '1.5', 'cm');
+    updateThaiNumber('garudaPositionValue', '0', 'cm');
+    
+    const sections = document.querySelectorAll('.draggable-section');
+    sections.forEach(section => {
+        section.style.transform = 'translate(0, 0) scale(1)';
+        section.style.marginTop = '0';
+        section.style.marginBottom = '0';
+        section.style.fontSize = '';
+    });
+    
+    const lineHeight = document.getElementById('lineHeight');
+    const wordSpacing = document.getElementById('wordSpacing');
+    const letterSpacing = document.getElementById('letterSpacing');
+    const fontSize = document.getElementById('fontSize');
+    const fontFamily = document.getElementById('fontFamily');
+    
+    if (lineHeight) lineHeight.value = '1.8';
+    if (wordSpacing) wordSpacing.value = '0.1';
+    if (letterSpacing) letterSpacing.value = '0.03';
+    if (fontSize) fontSize.selectedIndex = 5;
+    if (fontFamily) fontFamily.selectedIndex = 0;
+    
+    updateThaiNumber('lineHeightValue', '1.8');
+    updateThaiNumber('wordSpacingValue', '0.1');
+    updateThaiNumber('letterSpacingValue', '0.03');
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.onload = initForm;
+</script>
+</body>
+</html>

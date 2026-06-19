@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital X-ray Sync (Red/Black 3D Theme)</title>
+    
+    <!-- Libraries -->
+    <script src="vendor/tailwindcss.js"></script>
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <script src="vendor/babel.min.js"></script>
+    <script src="vendor/lucide.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            background-color: #09090b; /* Zinc 950 */
+            color: #e4e4e7; /* Zinc 200 */
+            -webkit-tap-highlight-color: transparent; 
+            background-image: radial-gradient(circle at 50% 0%, #2a0a0a 0%, #09090b 70%);
+            min-height: 100vh;
+        }
+
+        /* 3D Glass Effect */
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-panel-light {
+            background: rgba(39, 39, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Neon Glow */
+        .glow-red { box-shadow: 0 0 15px rgba(220, 38, 38, 0.4); }
+        .glow-blue { box-shadow: 0 0 15px rgba(37, 99, 235, 0.4); }
+        
+        /* 3D Button */
+        .btn-3d-red {
+            background: linear-gradient(145deg, #b91c1c, #991b1b);
+            border-top: 1px solid #ef4444;
+            box-shadow: 0 4px 0 #7f1d1d, 0 5px 10px rgba(0,0,0,0.5);
+            transition: all 0.1s;
+        }
+        .btn-3d-red:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #7f1d1d, inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .btn-3d-zinc {
+            background: linear-gradient(145deg, #3f3f46, #27272a);
+            border-top: 1px solid #52525b;
+            box-shadow: 0 4px 0 #18181b, 0 5px 10px rgba(0,0,0,0.5);
+            transition: all 0.1s;
+        }
+        .btn-3d-zinc:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #18181b, inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        /* Animations */
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        .animate-scanline {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, transparent, rgba(220, 38, 38, 0.1), transparent);
+            animation: scanline 2s linear infinite;
+            pointer-events: none;
+        }
+
+        .animate-bounce-short { animation: bounce 0.5s infinite; }
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .popup-anim { animation: fade-in-up 0.3s ease-out forwards; }
+
+        /* Flash Alert Animation */
+        @keyframes flash-alert {
+            0%, 100% { box-shadow: 0 0 30px rgba(220, 38, 38, 0.8); border-color: rgba(220, 38, 38, 1); background-color: rgba(69, 10, 10, 0.95); transform: scale(1.02); }
+            50% { box-shadow: 0 0 5px rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.3); background-color: rgba(24, 24, 27, 0.9); transform: scale(1); }
+        }
+        .animate-flash { animation: flash-alert 1s infinite; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #18181b; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Sarabun','Segoe UI',Tahoma,sans-serif;background:#09090b;color:#f8fafc;">
+            <div style="max-width:520px;width:100%;background:#18181b;border:1px solid #3f3f46;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(0,0,0,.28);">
+                <div style="font-size:13px;font-weight:800;color:#f87171;letter-spacing:.08em;text-transform:uppercase;">Loading X-ray Sync</div>
+                <h1 style="margin:10px 0 8px;font-size:24px;line-height:1.25;">กำลังเปิดระบบติดตาม X-ray</h1>
+                <p style="margin:0;color:#a1a1aa;line-height:1.7;">หากหน้านี้ไม่เปลี่ยนเป็นระบบหลัก แสดงว่า React/Babel หรือไฟล์จาก CDN ยังโหลดไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรช หรือเปิดไฟล์นี้ในแท็บใหม่</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/plain" id="app-source">
+        /** @jsxRuntime classic */
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- Helper: Icons ---
+        const createIcon = (iconName) => ({ size = 24, className = "", ...props }) => {
+            const iconData = lucide.icons[iconName] || lucide.icons.HelpCircle;
+            return (
+                <svg {...props} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {iconData.map(([tag, attrs], i) => React.createElement(tag, { ...attrs, key: i }))}
+                </svg>
+            );
+        };
+
+        const Icons = {
+            Activity: createIcon('Activity'), Ambulance: createIcon('Ambulance'), FileText: createIcon('FileText'),
+            Plus: createIcon('Plus'), X: createIcon('X'), Database: createIcon('Database'), Camera: createIcon('Camera'),
+            Image: createIcon('Image'), Bell: createIcon('Bell'), AlertCircle: createIcon('AlertCircle'),
+            CheckCircle: createIcon('CheckCircle'), User: createIcon('User'), Loader2: createIcon('Loader2'),
+            Monitor: createIcon('Monitor'), Zap: createIcon('Zap'), LogOut: createIcon('LogOut'), Lock: createIcon('Lock'),
+            Code: createIcon('Code'), Settings: createIcon('Settings'), Maximize: createIcon('Maximize'), Minimize: createIcon('Minimize')
+        };
+
+        // --- Helper: Image Compression (Optimized for GAS) ---
+        const compressImage = (file) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        // ปรับลดความกว้างลงเหลือ 600px เพื่อลดขนาดไฟล์เวลาแปลงเป็น Base64
+                        const MAX_WIDTH = 600; 
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > MAX_WIDTH) { 
+                            height *= MAX_WIDTH / width; 
+                            width = MAX_WIDTH; 
+                        }
+                        
+                        canvas.width = width; 
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // เติมพื้นหลังสีขาวป้องกันกรณีภาพต้นฉบับเป็น PNG โปร่งใส
+                        ctx.fillStyle = "#FFFFFF";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // พยายามแปลงเป็น WebP ก่อน (ขนาดจะเล็กกว่า JPEG มาก) โดยลด Quality ลงเหลือ 0.5 (50%)
+                        let compressedDataUrl = canvas.toDataURL('image/webp', 0.5);
+                        
+                        // ถ้าเบราว์เซอร์เก่าไม่รองรับ WebP (มันจะคืนค่าเป็น image/png) ให้สลับไปใช้ JPEG แทน
+                        if (compressedDataUrl.startsWith('data:image/png') || compressedDataUrl === 'data:,') {
+                            compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                        }
+                        
+                        resolve(compressedDataUrl);
+                    }
+                }
+            });
+        };
+
+        // --- Helper: Convert Google Drive Link to Direct Image URL ---
+        const getRenderableImageUrl = (url) => {
+            if (!url) return null;
+            // ถ้าเป็นลิงก์ของ Google Drive ให้สกัดเอา ID มาดึงรูปแบบ Thumbnail ถึงจะแสดงในเว็บได้
+            if (url.includes('drive.google.com')) {
+                const match = url.match(/id=([^&]+)/);
+                if (match && match[1]) {
+                    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1200`;
+                }
+            }
+            return url; // ถ้าไม่ใช่ลิงก์ Google Drive ก็คืนค่าเดิมกลับไป
+        };
+
+        // --- Sound Helper ---
+        const playAlertSound = () => {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                // ใช้ Waveform แบบ Sawtooth (ฟันเลื่อย) เสียงจะแหลมและดังกว่า Sine
+                osc.type = 'sawtooth'; 
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                const now = ctx.currentTime;
+                
+                // Siren Effect: กวาดเสียงขึ้นและลง (Wail Siren)
+                osc.frequency.setValueAtTime(600, now); // เริ่มที่ 600Hz
+                osc.frequency.linearRampToValueAtTime(1500, now + 0.4); // หวีดขึ้นไป 1500Hz
+                osc.frequency.linearRampToValueAtTime(600, now + 0.8);  // หวีดลงมา 600Hz
+                
+                // Volume Control (Loud)
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.6, now + 0.4); // ดังสุดตอนเสียงแหลม
+                gain.gain.linearRampToValueAtTime(0.3, now + 0.8);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0); // ค่อยๆ เงียบ
+                
+                osc.start(now);
+                osc.stop(now + 1.0); // เล่นเสียงยาว 1 วินาที
+            } catch (e) { console.error("Sound error", e); }
+        };
+
+        const api = {
+            async post(url, action, data = {}) {
+                if (!url) throw new Error("Please set API URL");
+                const response = await fetch(url + `?action=${action}`, { 
+                    method: 'POST', 
+                    body: JSON.stringify(data),
+                    redirect: 'follow'
+                });
+                return await response.json();
+            },
+            async get(url, action) {
+                if (!url) throw new Error("Please set API URL");
+                const response = await fetch(url + `?action=${action}`, { redirect: 'follow' });
+                return await response.json();
+            }
+        };
+
+        // --- DARK MODE STATUS COLORS ---
+        const STATUS_FLOW = {
+            WAITING: { label: 'รอ X-ray', color: 'bg-yellow-900/30 text-yellow-300 border border-yellow-700/50 shadow-[0_0_10px_rgba(234,179,8,0.2)]' },
+            READY_FOR_PATIENT: { label: 'กำลัง X-ray', color: 'bg-blue-900/30 text-blue-300 border border-blue-700/50 shadow-[0_0_10px_rgba(59,130,246,0.2)]' },
+            ARRIVED_XRAY: { label: 'ถึงห้อง X-ray', color: 'bg-purple-900/30 text-purple-300 border border-purple-700/50 shadow-[0_0_10px_rgba(168,85,247,0.2)]' },
+            DONE: { label: 'เสร็จสิ้น', color: 'bg-green-900/30 text-green-300 border border-green-700/50 shadow-[0_0_10px_rgba(34,197,94,0.2)]' },
+        };
+
+        const PRIORITY_LEVELS = {
+            STAT: { label: 'STAT ด่วนที่สุด', color: 'bg-gradient-to-r from-red-700 to-red-600 text-white animate-pulse border border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.6)]' },
+            URGENT: { label: 'URGENT ด่วน', color: 'bg-gradient-to-r from-orange-700 to-orange-600 text-white border border-orange-500' },
+            ROUTINE: { label: 'ROUTINE ปกติ', color: 'bg-gradient-to-r from-emerald-700 to-emerald-600 text-white border border-emerald-500' },
+        };
+
+        // --- DEVELOPER FOOTER COMPONENT ---
+        const DeveloperFooter = ({ className }) => (
+            <div className={`text-center py-6 relative z-10 ${className}`}>
+                <div className="flex items-center justify-center gap-3 mb-2 opacity-50">
+                    <div className="h-px w-12 bg-gradient-to-r from-transparent to-red-500"></div>
+                    <span className="text-[10px] text-red-500 font-bold uppercase tracking-[0.2em] flex items-center gap-1">
+                        <Icons.Code size={10} /> Developer
+                    </span>
+                    <div className="h-px w-12 bg-gradient-to-l from-transparent to-red-500"></div>
+                </div>
+                <div className="space-y-0.5">
+                    <p className="text-sm text-slate-300 font-light tracking-wide">นายทวี แสนสนอง</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">หัวหน้างานอุบัติเหตุฉุกเฉินและนิติเวช</p>
+                    <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider">โรงพยาบาลเสลภูมิ</p>
+                </div>
+            </div>
+        );
+
+        // --- LOGIN COMPONENT ---
+        const LoginScreen = ({ onLogin }) => {
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (username === 'ER' && password === '1234') {
+                    onLogin('er');
+                } else if (username === 'xr' && password === '1234') {
+                    onLogin('xray');
+                } else {
+                    setError('Username หรือ Password ไม่ถูกต้อง');
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+                    <div className="fixed inset-0 z-0 pointer-events-none opacity-20" 
+                         style={{backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)', backgroundSize: '30px 30px'}}>
+                    </div>
+                    
+                    <div className="glass-panel p-8 rounded-2xl w-full max-w-sm relative z-10 border border-zinc-700 shadow-[0_0_50px_rgba(220,38,38,0.2)] mb-8">
+                        <div className="text-center mb-8">
+                             <div className="w-16 h-16 bg-gradient-to-br from-red-600 to-black rounded-2xl border border-red-500 flex items-center justify-center text-white font-bold shadow-[0_0_20px_rgba(220,38,38,0.6)] transform rotate-3 mx-auto mb-4">
+                                <Icons.Zap size={32} className="text-white fill-current" />
+                            </div>
+                            <h1 className="text-2xl font-bold text-white tracking-wider">HOS<span className="text-red-500">SYNC</span></h1>
+                            <p className="text-slate-500 text-sm uppercase tracking-widest mt-1">Authentication</p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Username</label>
+                                <div className="relative">
+                                    <div className="absolute left-3 top-3.5 text-zinc-500"><Icons.User size={16}/></div>
+                                    <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-black/40 border border-zinc-700 p-3 pl-10 rounded-xl text-white focus:border-red-500 outline-none transition-colors" placeholder="ER หรือ xr" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Password</label>
+                                <div className="relative">
+                                    <div className="absolute left-3 top-3.5 text-zinc-500"><Icons.Lock size={16}/></div>
+                                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-black/40 border border-zinc-700 p-3 pl-10 rounded-xl text-white focus:border-red-500 outline-none transition-colors" placeholder="••••" />
+                                </div>
+                            </div>
+                            
+                            {error && (
+                                <div className="p-3 bg-red-900/20 border border-red-900/50 rounded-lg text-red-400 text-xs text-center flex items-center justify-center gap-2 animate-bounce-short">
+                                    <Icons.AlertCircle size={14}/> {error}
+                                </div>
+                            )}
+
+                            <button type="submit" className="w-full btn-3d-red text-white py-3 rounded-xl font-bold uppercase text-sm mt-4 shadow-lg hover:shadow-red-900/50 transition-all transform active:scale-95">
+                                Login System
+                            </button>
+                        </form>
+                    </div>
+
+                    <DeveloperFooter />
+                </div>
+            );
+        };
+
+        function App() {
+            const [config, setConfig] = useState(() => {
+                const saved = localStorage.getItem('hos_xray_config_v3');
+                return saved ? JSON.parse(saved) : { 
+                    apiUrl: 'https://script.google.com/macros/s/AKfycbz4hrSQk5YS8Ml4wgVC7ko_k10w60eQlH3ovw_MEG60ceXX1q5tqI13tbfBjt0hVdLsOA/exec', 
+                    useMock: false 
+                };
+            });
+            const [showConfig, setShowConfig] = useState(false);
+            const [isLoading, setIsLoading] = useState(false);
+            const [activeTab, setActiveTab] = useState(null); 
+            const [orders, setOrders] = useState([]);
+            const [showOrderForm, setShowOrderForm] = useState(false);
+            const [newOrderAlert, setNewOrderAlert] = useState(null);
+            const [userRole, setUserRole] = useState(null); 
+            const [viewImage, setViewImage] = useState(null); 
+            const [isFullscreen, setIsFullscreen] = useState(false);
+            const [connectionStatus, setConnectionStatus] = useState('connecting');
+            
+            const prevOrdersRef = useRef([]);
+
+            // Init Mock Data
+            const mockInitialData = [
+                {
+                    id: 'DEMO-001', hn: '66001234', patientName: 'นายสมชาย ใจดี', type: 'Portable Chest', priority: 'STAT', transport: 'เตียง', status: 'WAITING', note: 'Demo Data',
+                    createdAt: new Date().toISOString(), logs: [], attachment: null
+                }
+            ];
+
+            useEffect(() => {
+                localStorage.setItem('hos_xray_config_v3', JSON.stringify(config));
+                fetchData();
+                let interval;
+                if (!config.useMock && config.apiUrl) { interval = setInterval(fetchData, 5000); }
+                return () => clearInterval(interval);
+            }, [config]);
+
+            useEffect(() => {
+                if (prevOrdersRef.current.length > 0) {
+                    const newIncomingOrders = orders.filter(o => 
+                        !prevOrdersRef.current.find(po => po.id === o.id) && o.status === 'WAITING'
+                    );
+                    if (newIncomingOrders.length > 0) {
+                        setNewOrderAlert(newIncomingOrders[0]);
+                    }
+                }
+                prevOrdersRef.current = orders;
+            }, [orders]);
+
+            useEffect(() => {
+                let interval;
+                if (newOrderAlert) {
+                    playAlertSound(); 
+                    interval = setInterval(() => {
+                        playAlertSound();
+                    }, 2000); 
+                }
+                return () => clearInterval(interval);
+            }, [newOrderAlert]);
+
+            const toggleFullscreen = () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch((e) => console.log(e));
+                    setIsFullscreen(true);
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen(); 
+                        setIsFullscreen(false);
+                    }
+                }
+            };
+
+            const fetchData = async () => {
+                if (config.useMock) {
+                    if (orders.length === 0) setOrders(mockInitialData);
+                    setConnectionStatus('mock');
+                    return;
+                }
+                if (!config.apiUrl) {
+                    setConnectionStatus('offline');
+                    return; 
+                }
+
+                try {
+                    const res = await api.get(config.apiUrl, 'get_orders');
+                    if (res && res.orders) {
+                        setOrders(res.orders);
+                        setConnectionStatus('online');
+                    }
+                } catch (err) { 
+                    console.log("API Connection Error:", err.message);
+                    setConnectionStatus('error');
+                    // แสดง Mock Data ชั่วคราวเมื่อเกิด Error เพื่อให้หน้าจอทำงานต่อไปได้
+                    if (orders.length === 0) {
+                        setOrders(mockInitialData);
+                    }
+                } 
+            };
+
+            const handleCreateOrder = async (orderData) => {
+                setIsLoading(true);
+                const payload = { ...orderData };
+                if (config.useMock) {
+                    setTimeout(() => {
+                        const newOrder = {
+                            id: `ORD-${Date.now().toString().slice(-4)}`,
+                            ...payload, status: 'WAITING', createdAt: new Date().toISOString(), logs: []
+                        };
+                        setOrders(prev => [newOrder, ...prev]);
+                        setIsLoading(false); setShowOrderForm(false);
+                    }, 500);
+                } else {
+                    if (!config.apiUrl) {
+                        alert('กรุณาตั้งค่า API URL ก่อนใช้งาน');
+                        setIsLoading(false);
+                        return;
+                    }
+                    try {
+                        await api.post(config.apiUrl, 'create_order', payload);
+                        await fetchData(); setShowOrderForm(false);
+                    } catch (err) { alert('Error: ' + err.message); }
+                    setIsLoading(false);
+                }
+            };
+
+            const updateStatus = async (orderId, newStatus) => {
+                const prevStatusOrders = [...orders];
+                setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+                if (!config.useMock) {
+                    if (!config.apiUrl) return;
+                    try { await api.post(config.apiUrl, 'update_status', { orderId, newStatus }); } 
+                    catch (err) { alert('Update failed'); setOrders(prevStatusOrders); }
+                }
+            };
+
+            // Test Alert Trigger
+            const triggerTestAlert = () => {
+                setNewOrderAlert({
+                    id: 'TEST-ALERT',
+                    patientName: 'ทดสอบ แจ้งเตือน',
+                    type: 'Test System',
+                    priority: 'STAT',
+                    transport: '-',
+                    status: 'WAITING'
+                });
+            };
+
+            if (!userRole) {
+                return <LoginScreen onLogin={(role) => {
+                    setUserRole(role);
+                    setActiveTab(role === 'er' ? 'er' : 'xray'); 
+                }} />;
+            }
+
+            return (
+                <div className="min-h-screen pb-28 relative overflow-hidden">
+                    <div className="fixed inset-0 z-0 pointer-events-none opacity-20" 
+                         style={{backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)', backgroundSize: '30px 30px'}}>
+                    </div>
+
+                    {/* Navbar */}
+                    <nav className="glass-panel border-b border-red-900/30 sticky top-0 z-30 shadow-lg shadow-black/50">
+                        <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center relative overflow-hidden">
+                            <div className="flex items-center gap-3 z-10">
+                                <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-black rounded-lg border border-red-500 flex items-center justify-center text-white font-bold shadow-[0_0_15px_rgba(220,38,38,0.5)] transform rotate-3">
+                                    <Icons.Zap size={20} className="text-white fill-current" />
+                                </div>
+                                <div>
+                                    <h1 className="font-bold text-xl leading-none text-white tracking-wider flex items-center gap-2">
+                                        HOS<span className="text-red-500">SYNC</span>
+                                    </h1>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                                            connectionStatus === 'online' ? 'bg-green-500' : 
+                                            connectionStatus === 'error' ? 'bg-red-500' : 
+                                            connectionStatus === 'mock' ? 'bg-yellow-500' : 'bg-slate-500'
+                                        }`}></div>
+                                        <span className={`text-[10px] font-mono tracking-widest uppercase ${
+                                            connectionStatus === 'online' ? 'text-green-400' : 
+                                            connectionStatus === 'error' ? 'text-red-400' : 
+                                            connectionStatus === 'mock' ? 'text-yellow-400' : 'text-slate-400'
+                                        }`}>
+                                            {connectionStatus === 'online' ? 'System Online' : 
+                                             connectionStatus === 'error' ? 'API Error' : 
+                                             connectionStatus === 'mock' ? 'Mock Mode' : 'Connecting'}
+                                        </span>
+                                        <span className="text-[10px] text-red-400 font-bold px-1.5 py-0.5 border border-red-900 rounded bg-red-900/20">{userRole.toUpperCase()}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 z-10">
+                                <button onClick={toggleFullscreen} className="p-2 rounded-full bg-zinc-800/50 border border-zinc-700 text-slate-400 hover:text-white hover:border-white/50 transition-all hidden md:flex" title="Full Screen">
+                                    {isFullscreen ? <Icons.Minimize size={18} /> : <Icons.Maximize size={18} />}
+                                </button>
+                                <button onClick={() => setShowConfig(true)} className="p-2 rounded-full bg-zinc-800/50 border border-zinc-700 text-slate-400 hover:text-red-400 hover:border-red-500/50 transition-all">
+                                    <Icons.Database size={18} />
+                                </button>
+                                <button onClick={() => { setUserRole(null); setActiveTab(null); }} className="p-2 rounded-full bg-red-900/30 border border-red-800 text-red-400 hover:bg-red-800 hover:text-white transition-all">
+                                    <Icons.LogOut size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* Alert Popup (Blinking & Persistent) */}
+                    {newOrderAlert && (
+                        <div className="fixed top-24 right-4 left-4 md:left-auto md:w-96 glass-panel rounded-xl border-l-4 border-red-500 z-50 p-4 popup-anim animate-flash flex items-start gap-3 cursor-pointer shadow-[0_10px_40px_rgba(0,0,0,0.8)]" onClick={() => setNewOrderAlert(null)}>
+                            <div className="bg-white p-2 rounded-full text-red-600 shrink-0 animate-bounce">
+                                <Icons.Bell size={24} fill="currentColor" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-white text-lg">⚠️ คำสั่ง X-ray ใหม่!</h3>
+                                <div className="bg-black/30 rounded p-2 mt-1 border border-white/10">
+                                    <p className="text-sm text-red-100"><span className="font-bold text-white">{newOrderAlert.patientName}</span></p>
+                                    <div className="flex gap-2 mt-1">
+                                        <span className="text-xs bg-red-600 text-white px-1.5 rounded">{newOrderAlert.priority}</span>
+                                        <span className="text-xs text-slate-300">{newOrderAlert.type}</span>
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-red-300 mt-2 animate-pulse uppercase tracking-widest text-center border-t border-white/10 pt-1">แตะเพื่อรับทราบ / หยุดเสียง</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Main Content */}
+                    <main className="max-w-7xl mx-auto px-6 py-8 relative z-10 min-h-[70vh]">
+                        {activeTab === 'er' && (
+                            <div className="space-y-6 animate-[fade-in-up_0.3s]">
+                                <div className="flex justify-between items-end">
+                                    <div>
+                                        <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">ER Dashboard</h2>
+                                        <p className="text-slate-500 text-sm font-light">ติดตามสถานะและคำสั่งการรักษา</p>
+                                    </div>
+                                    <button onClick={() => setShowOrderForm(true)} className="btn-3d-red text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold tracking-wide">
+                                        <Icons.Plus size={20} strokeWidth={3} /> <span className="uppercase text-sm">New Order</span>
+                                    </button>
+                                </div>
+
+                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
+                                    {orders.filter(o => o.status !== 'DONE').map(order => (
+                                        <div key={order.id} className="glass-panel p-5 rounded-2xl relative group overflow-hidden transition-all hover:border-red-500/30 hover:shadow-[0_0_20px_rgba(220,38,38,0.1)]">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-red-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+
+                                            <div className="flex flex-col md:flex-row justify-between items-start gap-4 relative z-10">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <span className={`px-2 py-0.5 text-[10px] font-bold tracking-wider rounded border ${PRIORITY_LEVELS[order.priority]?.color}`}>{order.priority.split(' ')[0]}</span>
+                                                        <span className="text-slate-400 text-xs font-mono bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">HN: {order.hn}</span>
+                                                    </div>
+                                                    <h3 className="font-bold text-xl text-white mb-1 tracking-tight">{order.patientName}</h3>
+                                                    <div className="flex flex-wrap gap-2 text-sm text-slate-300">
+                                                        <span className="flex items-center gap-1"><Icons.Activity size={14} className="text-red-500"/> {order.type}</span>
+                                                        <span className="text-zinc-600">|</span>
+                                                        <span className="flex items-center gap-1"><Icons.Ambulance size={14} className="text-red-500"/> {order.transport}</span>
+                                                    </div>
+                                                    {order.attachment && (
+                                                        <button onClick={() => setViewImage(order.attachment)} className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-900/30 hover:bg-blue-800/50 text-blue-300 rounded-lg text-xs font-medium border border-blue-800/50 transition-colors cursor-pointer hover:scale-105 active:scale-95">
+                                                            <Icons.Image size={14} /> ดูรูปใบ Order
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-col items-end gap-3 w-full md:w-auto">
+                                                    <div className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${STATUS_FLOW[order.status]?.color}`}>
+                                                        {STATUS_FLOW[order.status]?.label || order.status}
+                                                    </div>
+                                                    {order.status === 'READY_FOR_PATIENT' && (
+                                                        <button disabled className="mt-1 w-full md:w-auto btn-3d-zinc opacity-70 text-slate-300 px-4 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-2">
+                                                            <Icons.Loader2 className="animate-spin" size={14}/> กำลังดำเนินการ...
+                                                        </button>
+                                                    )}
+                                                    {order.status === 'WAITING' && (
+                                                        <button onClick={() => updateStatus(order.id, 'CANCELLED')} className="text-red-500/70 text-xs hover:text-red-400 hover:underline transition-colors">
+                                                            ยกเลิกคำสั่ง
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {orders.filter(o => o.status !== 'DONE').length === 0 && (
+                                        <div className="text-center py-20 glass-panel rounded-2xl border-dashed border-2 border-zinc-800 col-span-full">
+                                            <div className="bg-zinc-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-zinc-700 shadow-inner">
+                                                <Icons.Monitor size={40} className="text-zinc-700" />
+                                            </div>
+                                            <p className="text-slate-500">ระบบว่าง ไม่มีรายการค้าง</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'xray' && (
+                            <div className="space-y-6 animate-[fade-in-up_0.3s]">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-gradient-to-br from-red-900 to-black rounded-xl border border-red-800 shadow-lg shadow-red-900/20">
+                                        <Icons.Activity size={28} className="text-red-500"/>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-3xl font-bold text-white">X-ray Worklist</h2>
+                                        <p className="text-slate-500 text-sm">รายการรอตรวจ (Real-time)</p>
+                                    </div>
+                                </div>
+                                <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                                    {orders.filter(o => o.status !== 'DONE' && o.status !== 'CANCELLED').map(order => (
+                                        <div key={order.id} className={`glass-panel rounded-2xl overflow-hidden relative transition-all duration-300 ${order.priority === 'STAT' ? 'border-l-4 border-l-red-600 shadow-[0_0_30px_rgba(220,38,38,0.15)]' : 'border-l-4 border-l-blue-600'}`}>
+                                            {order.priority === 'STAT' && <div className="absolute top-0 right-0 bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-md z-20">STAT 🔥</div>}
+                                            
+                                            <div className="p-6 relative z-10 flex flex-col h-full">
+                                                <div className="flex flex-col md:flex-row justify-between gap-6 mb-6 flex-1">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="text-xs font-mono text-slate-400 bg-black/40 px-2 py-0.5 rounded border border-zinc-700">HN: {order.hn}</span>
+                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${PRIORITY_LEVELS[order.priority]?.color}`}>{order.priority}</span>
+                                                        </div>
+                                                        <h3 className="font-bold text-2xl text-white mb-2">{order.patientName}</h3>
+                                                        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm text-slate-300">
+                                                            <p><span className="text-slate-500 text-xs uppercase">Type:</span> {order.type}</p>
+                                                            <p><span className="text-slate-500 text-xs uppercase">Transport:</span> {order.transport}</p>
+                                                            {order.note && <p className="col-span-2 mt-2 text-yellow-500/80 bg-yellow-900/10 p-2 rounded border border-yellow-900/30 text-xs">Note: {order.note}</p>}
+                                                        </div>
+                                                    </div>
+                                                    {order.attachment ? (
+                                                        <div className="shrink-0 flex flex-col items-center">
+                                                            <button onClick={() => setViewImage(order.attachment)} className="mb-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-[10px] px-3 py-1.5 rounded shadow-lg shadow-blue-900/50 flex items-center gap-1 font-bold tracking-wider transition-all hover:scale-105 active:scale-95">
+                                                                <Icons.Image size={14}/> ดูใบ Order
+                                                            </button>
+                                                            <div onClick={() => setViewImage(order.attachment)} className="block relative group w-28 h-28 cursor-pointer">
+                                                                <img src={getRenderableImageUrl(order.attachment)} className="w-full h-full rounded-lg border border-zinc-600 shadow-lg object-cover bg-white group-hover:scale-105 transition-transform" />
+                                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg border border-blue-500/50">
+                                                                    <Icons.Maximize size={24} className="text-white"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="shrink-0 w-24 h-24 bg-zinc-900/50 rounded-lg border border-dashed border-zinc-700 flex flex-col items-center justify-center text-zinc-600">
+                                                            <Icons.FileText size={24} />
+                                                            <span className="text-[10px] mt-2">No Image</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Action Bar */}
+                                                <div className="pt-5 border-t border-zinc-800 flex items-center justify-between mt-auto">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] text-slate-500 uppercase tracking-widest">Status</span>
+                                                        <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wider ${STATUS_FLOW[order.status]?.color}`}>
+                                                            {STATUS_FLOW[order.status]?.label || order.status}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        {order.status === 'WAITING' && (
+                                                            <button onClick={() => updateStatus(order.id, 'READY_FOR_PATIENT')} className="btn-3d-zinc hover:bg-zinc-700 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+                                                                <Icons.CheckCircle size={14} className="text-green-500"/> รับงาน
+                                                            </button>
+                                                        )}
+                                                        {order.status === 'READY_FOR_PATIENT' && (
+                                                            <button onClick={() => updateStatus(order.id, 'ARRIVED_XRAY')} className="btn-3d-red text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 animate-pulse">
+                                                                <Icons.User size={14}/> ถึงห้องตรวจ
+                                                            </button>
+                                                        )}
+                                                        {order.status === 'ARRIVED_XRAY' && (
+                                                            <button onClick={() => updateStatus(order.id, 'DONE')} className="bg-green-600 hover:bg-green-500 border-t border-green-400 shadow-[0_4px_0_#14532d] active:shadow-none active:translate-y-1 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all">
+                                                                ✓ เสร็จสิ้น
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        
+                        <DeveloperFooter className="mt-12" />
+                    </main>
+
+                    {viewImage && (
+                        <div className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 popup-anim" onClick={() => setViewImage(null)}>
+                            <div className="absolute top-4 right-4 flex gap-3">
+                                <a href={viewImage} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-white transition-colors p-3 rounded-full flex items-center justify-center shadow-lg" title="เปิดแท็บใหม่">
+                                    <Icons.Maximize size={20} />
+                                </a>
+                                <button className="bg-red-600/80 hover:bg-red-500 text-white transition-colors p-3 rounded-full flex items-center justify-center shadow-lg" title="ปิด">
+                                    <Icons.X size={20} />
+                                </button>
+                            </div>
+                            <img src={getRenderableImageUrl(viewImage)} className="max-w-full max-h-[85vh] rounded-lg shadow-[0_0_30px_rgba(255,255,255,0.1)] border border-zinc-700 bg-white" onClick={(e) => e.stopPropagation()} />
+                        </div>
+                    )}
+
+                    {showOrderForm && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 popup-anim">
+                            <OrderForm onClose={() => setShowOrderForm(false)} onSubmit={handleCreateOrder} isSubmitting={isLoading} />
+                        </div>
+                    )}
+
+                    {showConfig && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="glass-panel rounded-2xl p-6 w-full max-w-sm border border-zinc-700">
+                                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Icons.Settings size={20}/> System Config</h3>
+                                <div className="space-y-4">
+                                    <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-red-500/50 transition-colors">
+                                        <input type="checkbox" checked={config.useMock} onChange={e => setConfig({...config, useMock: e.target.checked})} className="w-5 h-5 rounded accent-red-600"/>
+                                        <span className="text-sm text-slate-300">Demo Mode (Simulation)</span>
+                                    </label>
+                                    {!config.useMock && (
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-red-500 mb-1 uppercase tracking-widest">Google App Script URL</label>
+                                            <input type="text" placeholder="https://script.google.com/..." value={config.apiUrl} onChange={e => setConfig({...config, apiUrl: e.target.value})} className="w-full bg-black/50 border border-zinc-700 p-3 rounded-xl text-sm text-white focus:border-red-500 outline-none transition-colors"/>
+                                        </div>
+                                    )}
+                                    
+                                    <div className="border-t border-zinc-800 pt-4 mt-2">
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">System Test</label>
+                                        <button onClick={triggerTestAlert} className="w-full bg-yellow-900/50 text-yellow-200 border border-yellow-700/50 py-3 rounded-xl font-bold uppercase text-sm hover:bg-yellow-800/50 transition-colors flex items-center justify-center gap-2">
+                                            <Icons.Bell size={16} /> 🔔 ทดสอบแจ้งเตือน
+                                        </button>
+                                    </div>
+
+                                    <button onClick={() => setShowConfig(false)} className="w-full btn-3d-red text-white py-3 rounded-xl font-bold mt-4 uppercase text-sm">Save & Close</button>
+                                </div>
+                                <DeveloperFooter className="mt-6 pt-6 border-t border-zinc-800" />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const OrderForm = ({ onClose, onSubmit, isSubmitting }) => {
+            const [form, setForm] = useState({ hn: '', patientName: '', type: 'Portable Chest', priority: 'STAT', transport: 'เตียง', note: '', attachment: null });
+            const [isCompressing, setIsCompressing] = useState(false);
+            const handleFile = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    setIsCompressing(true);
+                    try {
+                        const resizedBase64 = await compressImage(file);
+                        setForm({ ...form, attachment: resizedBase64 });
+                    } catch (err) {
+                        console.error("Compression error:", err);
+                        alert("เกิดข้อผิดพลาดในการปรับขนาดรูปภาพ");
+                    }
+                    setIsCompressing(false);
+                }
+            };
+
+            return (
+                <div className="glass-panel w-full max-w-md rounded-2xl p-6 shadow-2xl overflow-y-auto max-h-[90vh] border border-zinc-700 relative">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-transparent"></div>
+                    <div className="flex justify-between items-center mb-6 pb-4 border-b border-zinc-800">
+                        <h3 className="font-bold text-xl text-white flex items-center gap-2"><Icons.Plus size={20} className="text-red-500"/> New X-ray Order</h3>
+                        <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors"><Icons.X size={24}/></button>
+                    </div>
+                    
+                    <div className="space-y-5">
+                        <div className="grid grid-cols-3 gap-4">
+                             <div className="col-span-1">
+                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">HN Number</label>
+                                <input className="w-full bg-black/40 border border-zinc-700 p-3 rounded-xl text-white focus:border-red-500 outline-none transition-colors" placeholder="12345" value={form.hn} onChange={e => setForm({...form, hn: e.target.value})} />
+                            </div>
+                            <div className="col-span-2">
+                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Patient Name</label>
+                                <input className="w-full bg-black/40 border border-zinc-700 p-3 rounded-xl text-white focus:border-red-500 outline-none transition-colors" placeholder="ชื่อ-สกุล" value={form.patientName} onChange={e => setForm({...form, patientName: e.target.value})} />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Exam Type</label>
+                            <input className="w-full bg-black/40 border border-zinc-700 p-3 rounded-xl text-white focus:border-red-500 outline-none transition-colors" placeholder="Ex. Portable Chest" value={form.type} onChange={e => setForm({...form, type: e.target.value})} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Priority</label>
+                                <select className="w-full bg-black/40 border border-zinc-700 p-3 rounded-xl text-white focus:border-red-500 outline-none" value={form.priority} onChange={e => setForm({...form, priority: e.target.value})}>
+                                    <option value="ROUTINE">ROUTINE</option>
+                                    <option value="URGENT">URGENT</option>
+                                    <option value="STAT">STAT 🔥</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Transport</label>
+                                <input className="w-full bg-black/40 border border-zinc-700 p-3 rounded-xl text-white focus:border-red-500 outline-none" placeholder="เตียง/รถนั่ง" value={form.transport} onChange={e => setForm({...form, transport: e.target.value})} />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">ใบ Order แพทย์ (รูปภาพ)</label>
+                            <div className="border-2 border-dashed border-zinc-700 bg-black/20 rounded-xl p-6 text-center cursor-pointer hover:border-red-500/50 hover:bg-red-900/10 relative transition-all group">
+                                <input type="file" accept="image/*" onChange={handleFile} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                                {isCompressing ? (
+                                    <div className="flex flex-col items-center justify-center text-red-500">
+                                        <Icons.Loader2 size={32} className="animate-spin mb-2" />
+                                        <span className="text-xs uppercase font-bold">กำลังประมวลผลรูป...</span>
+                                    </div>
+                                ) : form.attachment ? (
+                                    <div className="relative z-20">
+                                        <img src={form.attachment} className="h-32 mx-auto rounded-lg shadow-lg border border-zinc-600 object-contain bg-black" />
+                                        <button onClick={(e) => {e.preventDefault(); setForm({...form, attachment: null})}} className="absolute -top-3 -right-3 bg-red-600 text-white rounded-full p-1.5 shadow-md hover:scale-110 transition-transform"><Icons.X size={14}/></button>
+                                        <p className="text-xs text-green-400 font-bold mt-2 flex items-center justify-center gap-1 uppercase tracking-wider"><Icons.CheckCircle size={12}/> พร้อมส่ง</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-2 text-zinc-500 group-hover:text-red-400 transition-colors">
+                                        <div className="bg-zinc-800 p-3 rounded-full border border-zinc-700 group-hover:border-red-500/30"><Icons.Camera size={24} /></div>
+                                        <span className="text-sm font-medium">กดเพื่อถ่ายรูป / เลือกรูป</span>
+                                        <span className="text-[10px] text-zinc-600">รองรับ JPG, PNG, WebP</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4 pt-4 border-t border-zinc-800">
+                            <button onClick={onClose} disabled={isSubmitting} className="flex-1 bg-transparent border border-zinc-600 text-zinc-400 py-3 rounded-xl font-bold hover:text-white hover:border-white transition-colors uppercase text-sm">Cancel</button>
+                            <button onClick={() => form.patientName && form.hn && onSubmit(form)} disabled={isSubmitting || isCompressing || !form.patientName || !form.hn} className="flex-1 btn-3d-red text-white py-3 rounded-xl font-bold uppercase text-sm flex justify-center items-center gap-2 disabled:opacity-50 disabled:grayscale transition-all">
+                                {isSubmitting ? (
+                                    <><Icons.Loader2 className="animate-spin" size={18}/> กำลังส่งข้อมูล...</>
+                                ) : (
+                                    'Submit Order'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <script>
+        (function runAppSource() {
+            const source = document.getElementById('app-source');
+            const root = document.getElementById('root');
+            const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+            const showError = (error) => {
+                console.error(error);
+                root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Segoe UI,Tahoma,sans-serif;background:#18181b;color:#f8fafc;"><div style="max-width:620px;background:#27272a;border:1px solid #fda4af;border-radius:16px;padding:24px;box-shadow:0 18px 42px rgba(0,0,0,.22);"><div style="font-size:13px;font-weight:800;color:#fb7185;text-transform:uppercase;letter-spacing:.08em;">Script Error</div><h1 style="margin:10px 0 8px;font-size:22px;">เปิดระบบไม่สำเร็จ</h1><p style="margin:0;color:#d4d4d8;line-height:1.7;">' + escapeHtml(error && error.message ? error.message : error) + '</p></div></div>';
+            };
+            try {
+                if (!window.React || !window.ReactDOM || !window.Babel) throw new Error('โหลด React / ReactDOM / Babel ไม่สำเร็จ');
+                (0, eval)(Babel.transform(source.textContent, { presets: ['env'], plugins: [['transform-react-jsx', { runtime: 'classic' }]] }).code);
+            } catch (error) {
+                showError(error);
+            }
+        })();
+    </script>
+</body>
+</html>

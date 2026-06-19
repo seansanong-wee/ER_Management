@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ER Unified Operating System (ER-UOS)</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #eef3f8;
+            --surface: #ffffff;
+            --surface-2: #f8fafc;
+            --ink: #0f172a;
+            --muted: #64748b;
+            --soft: #94a3b8;
+            --line: #dbe4ee;
+            --nav: #111827;
+            --nav-2: #0f172a;
+            --blue: #2563eb;
+            --sky: #0284c7;
+            --orange: #ea580c;
+            --emerald: #059669;
+            --rose: #e11d48;
+            --indigo: #4f46e5;
+            --purple: #7c3aed;
+            --cyan: #0891b2;
+            --lime: #65a30d;
+            --pink: #db2777;
+            --amber: #d97706;
+            --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.07);
+            --shadow-md: 0 14px 32px rgba(15, 23, 42, 0.12);
+            --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.16);
+        }
+
+        * { box-sizing: border-box; }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            font-family: "Segoe UI", "Noto Sans Thai", Tahoma, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+        }
+
+        body { overflow: hidden; }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        button {
+            border: 0;
+            cursor: pointer;
+        }
+
+        .shell {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background:
+                linear-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+                var(--bg);
+            background-size: 28px 28px;
+        }
+
+        .sidebar {
+            position: relative;
+            z-index: 30;
+            width: 296px;
+            min-width: 296px;
+            display: flex;
+            flex-direction: column;
+            color: #e5eef8;
+            background:
+                linear-gradient(180deg, rgba(37, 99, 235, 0.13), transparent 28%),
+                linear-gradient(135deg, var(--nav), var(--nav-2));
+            border-right: 1px solid rgba(148, 163, 184, 0.18);
+            box-shadow: 18px 0 48px rgba(15, 23, 42, 0.18);
+            transition: width 180ms ease, min-width 180ms ease, transform 180ms ease;
+        }
+
+        .sidebar.collapsed {
+            width: 82px;
+            min-width: 82px;
+        }
+
+        .brand {
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 18px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.17);
+            white-space: nowrap;
+        }
+
+        .brand-mark,
+        .app-mark,
+        .group-mark {
+            display: inline-grid;
+            place-items: center;
+            flex: 0 0 auto;
+            color: #ffffff;
+            font-weight: 900;
+            letter-spacing: 0.02em;
+        }
+
+        .brand-mark {
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #38bdf8, #2563eb 62%, #1d4ed8);
+            box-shadow: 0 14px 30px rgba(37, 99, 235, 0.35);
+        }
+
+        .brand-title {
+            display: block;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 900;
+            line-height: 1.1;
+        }
+
+        .brand-subtitle {
+            display: block;
+            margin-top: 4px;
+            color: #9fb3ca;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 12px 18px;
+        }
+
+        .nav::-webkit-scrollbar,
+        .home::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .nav::-webkit-scrollbar-thumb,
+        .home::-webkit-scrollbar-thumb {
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.28);
+            border: 3px solid transparent;
+            background-clip: padding-box;
+        }
+
+        .nav-group { margin-bottom: 18px; }
+
+        .nav-title {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 0 10px 8px;
+            color: #93c5fd;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.16em;
+        }
+
+        .nav-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: currentColor;
+            box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.11);
+        }
+
+        .nav-button {
+            position: relative;
+            width: 100%;
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            margin: 3px 0;
+            border-radius: 8px;
+            background: transparent;
+            color: #cbd5e1;
+            text-align: left;
+            transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+        }
+
+        .nav-button:hover {
+            background: rgba(255, 255, 255, 0.07);
+            color: #ffffff;
+            transform: translateX(2px);
+        }
+
+        .nav-button.active {
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0.24), rgba(255, 255, 255, 0.06));
+            color: #ffffff;
+            box-shadow: inset 3px 0 0 #38bdf8;
+        }
+
+        .nav-main {
+            display: block;
+            max-width: 185px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .nav-sub {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .sidebar.collapsed .brand-text,
+        .sidebar.collapsed .nav-title span:last-child,
+        .sidebar.collapsed .nav-label,
+        .sidebar.collapsed .user-box {
+            display: none;
+        }
+
+        .sidebar.collapsed .brand,
+        .sidebar.collapsed .nav-title,
+        .sidebar.collapsed .nav-button {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        .sidebar.collapsed .nav-button:hover { transform: none; }
+
+        .sidebar-footer {
+            min-height: 82px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 14px 16px;
+            border-top: 1px solid rgba(148, 163, 184, 0.17);
+            color: #94a3b8;
+        }
+
+        .user-box {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border-radius: 999px;
+            color: #ffffff;
+            background: #1e293b;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            font-weight: 900;
+        }
+
+        .small-name {
+            display: block;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .small-role {
+            display: block;
+            margin-top: 3px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .icon-button {
+            width: 40px;
+            height: 40px;
+            display: inline-grid;
+            place-items: center;
+            border-radius: 8px;
+            background: transparent;
+            color: inherit;
+            font-size: 20px;
+            transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+        }
+
+        .icon-button:hover {
+            background: rgba(148, 163, 184, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.46);
+        }
+
+        .topbar {
+            min-height: 72px;
+            display: grid;
+            grid-template-columns: minmax(260px, 1fr) minmax(260px, 420px) auto;
+            align-items: center;
+            gap: 18px;
+            padding: 0 22px;
+            border-bottom: 1px solid rgba(203, 213, 225, 0.78);
+            background: rgba(255, 255, 255, 0.86);
+            backdrop-filter: blur(14px);
+            box-shadow: var(--shadow-sm);
+            z-index: 12;
+        }
+
+        .top-left,
+        .top-actions,
+        .active-title {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .top-left { gap: 12px; }
+        .top-actions { justify-content: flex-end; gap: 8px; color: #475569; }
+        .active-title { gap: 12px; }
+
+        .active-name {
+            display: block;
+            max-width: 430px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--ink);
+            font-size: 15px;
+            font-weight: 900;
+            line-height: 1.15;
+        }
+
+        .active-file {
+            display: block;
+            max-width: 430px;
+            margin-top: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .command-search {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .command-search input {
+            width: 100%;
+            height: 44px;
+            padding: 0 16px 0 42px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            outline: none;
+            color: var(--ink);
+            background: #ffffff;
+            box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.02);
+            transition: border-color 140ms ease, box-shadow 140ms ease;
+        }
+
+        .command-search input:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
+        }
+
+        .search-symbol {
+            position: absolute;
+            left: 14px;
+            color: #64748b;
+            font-size: 17px;
+            pointer-events: none;
+        }
+
+        .clock {
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: #334155;
+            background: #ffffff;
+            font-size: 13px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .viewport {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        .home {
+            height: 100%;
+            overflow-y: auto;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.46), transparent 260px),
+                transparent;
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 34px 36px 22px;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(115deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94) 52%, rgba(12, 74, 110, 0.90)),
+                linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
+                linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
+            background-size: auto, 42px 42px, 42px 42px;
+        }
+
+        .hero-inner {
+            position: relative;
+            max-width: 1220px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 390px;
+            gap: 28px;
+            align-items: stretch;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            min-height: 30px;
+            padding: 0 11px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            color: #bfdbfe;
+            background: rgba(255, 255, 255, 0.09);
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .live-dot,
+        .status-dot {
+            display: inline-block;
+            flex: 0 0 auto;
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+        }
+
+        h1 {
+            margin: 18px 0 12px;
+            max-width: 780px;
+            color: #ffffff;
+            font-size: clamp(34px, 5vw, 56px);
+            line-height: 1.03;
+            letter-spacing: 0;
+        }
+
+        .hero-copy {
+            max-width: 760px;
+            margin: 0;
+            color: #cbd5e1;
+            font-size: 17px;
+            line-height: 1.72;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .primary-action,
+        .secondary-action {
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            padding: 0 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 900;
+            text-decoration: none;
+        }
+
+        .primary-action {
+            color: #082f49;
+            background: #7dd3fc;
+            box-shadow: 0 16px 30px rgba(56, 189, 248, 0.25);
+        }
+
+        .secondary-action {
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .ops-panel {
+            min-height: 276px;
+            padding: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 8px;
+            color: #e2e8f0;
+            background: rgba(15, 23, 42, 0.48);
+            box-shadow: 0 22px 50px rgba(0, 0, 0, 0.22);
+        }
+
+        .ops-head,
+        .ops-line,
+        .metric-card,
+        .group-heading,
+        .card-top,
+        .card-foot,
+        .filter-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .ops-head {
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            font-weight: 900;
+        }
+
+        .ops-code {
+            color: #7dd3fc;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+        }
+
+        .ops-list {
+            margin-top: 16px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .ops-line {
+            min-height: 46px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .ops-line strong {
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .ops-line span {
+            color: #9fb3ca;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .ops-bars {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            align-items: end;
+            gap: 5px;
+            height: 70px;
+            margin-top: 18px;
+        }
+
+        .ops-bars i {
+            display: block;
+            border-radius: 4px 4px 0 0;
+            background: linear-gradient(180deg, #67e8f9, #2563eb);
+            opacity: 0.88;
+        }
+
+        .content {
+            max-width: 1220px;
+            margin: 0 auto;
+            padding: 26px 36px 48px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            min-height: 92px;
+            padding: 16px;
+            border: 1px solid rgba(219, 228, 238, 0.94);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .metric-label {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .metric-value {
+            display: block;
+            margin-top: 5px;
+            color: var(--ink);
+            font-size: 26px;
+            font-weight: 950;
+            line-height: 1;
+        }
+
+        .metric-hint {
+            display: block;
+            margin-top: 5px;
+            color: var(--soft);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .module-count {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 950;
+        }
+
+        .filter-row {
+            margin: 4px 0 24px;
+            align-items: flex-end;
+        }
+
+        .filter-title h2 {
+            margin: 0;
+            font-size: 24px;
+            line-height: 1.2;
+        }
+
+        .filter-title p {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .segmented {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .segment {
+            min-width: 74px;
+            height: 34px;
+            padding: 0 12px;
+            border-radius: 6px;
+            color: #475569;
+            background: transparent;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+        }
+
+        .segment.active {
+            color: #ffffff;
+            background: var(--ink);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+        }
+
+        .group-section { margin-bottom: 34px; }
+
+        .group-heading {
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .group-heading-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 13px;
+        }
+
+        .group-mark,
+        .app-mark {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
+        }
+
+        .group-text h3 {
+            margin: 0;
+            font-size: 22px;
+            line-height: 1.15;
+        }
+
+        .subtitle {
+            margin-top: 4px;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .group-desc {
+            margin: 8px 0 0;
+            max-width: 720px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .badge {
+            min-height: 30px;
+            display: inline-flex;
+            align-items: center;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: #334155;
+            background: #ffffff;
+            font-size: 12px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .app-card {
+            position: relative;
+            min-height: 204px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(219, 228, 238, 0.96);
+            border-radius: 8px;
+            color: var(--ink);
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: var(--shadow-sm);
+            text-align: left;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+        }
+
+        .app-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 3px;
+            background: var(--card-accent, var(--blue));
+        }
+
+        .app-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(56, 189, 248, 0.58);
+            box-shadow: var(--shadow-md);
+        }
+
+        .app-card:focus-visible {
+            outline: 3px solid rgba(56, 189, 248, 0.28);
+            outline-offset: 2px;
+        }
+
+        .card-top { align-items: flex-start; }
+
+        .app-mark {
+            width: 46px;
+            height: 46px;
+            font-size: 13px;
+            box-shadow: none;
+        }
+
+        .open-mini {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: #475569;
+            background: #ffffff;
+            font-size: 18px;
+        }
+
+        .open-mini:hover {
+            color: var(--blue);
+            border-color: rgba(37, 99, 235, 0.25);
+            background: #eff6ff;
+        }
+
+        .group-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 14px;
+            padding: 5px 8px;
+            border-radius: 999px;
+            color: #475569;
+            background: #f1f5f9;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+        }
+
+        .app-card h4 {
+            margin: 10px 0 6px;
+            font-size: 18px;
+            line-height: 1.25;
+        }
+
+        .app-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        .card-foot {
+            margin-top: 18px;
+            padding-top: 12px;
+            border-top: 1px solid #eef2f7;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .card-foot span:first-child {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .empty-state {
+            padding: 28px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.62);
+            font-weight: 800;
+            text-align: center;
+        }
+
+        iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background: #ffffff;
+        }
+
+        .hidden { display: none !important; }
+
+        .bg-red { background: var(--rose); }
+        .bg-blue { background: var(--blue); }
+        .bg-zinc { background: #27272a; }
+        .bg-indigo { background: var(--indigo); }
+        .bg-emerald { background: var(--emerald); }
+        .bg-teal { background: #0d9488; }
+        .bg-purple { background: var(--purple); }
+        .bg-orange { background: var(--orange); }
+        .bg-cyan { background: var(--cyan); }
+        .bg-fuchsia { background: #c026d3; }
+        .bg-pink { background: var(--pink); }
+        .bg-amber { background: var(--amber); }
+        .bg-lime { background: var(--lime); }
+        .bg-sky { background: var(--sky); }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: none;
+            background: rgba(15, 23, 42, 0.58);
+            backdrop-filter: blur(4px);
+        }
+
+        @media (max-width: 1120px) {
+            .topbar {
+                grid-template-columns: minmax(260px, 1fr) auto;
+            }
+
+            .command-search {
+                display: none;
+            }
+
+            .hero-inner {
+                grid-template-columns: 1fr;
+            }
+
+            .metric-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 820px) {
+            .sidebar {
+                position: fixed;
+                inset: 0 auto 0 0;
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open { transform: translateX(0); }
+
+            .sidebar.collapsed {
+                width: 296px;
+                min-width: 296px;
+            }
+
+            .sidebar.collapsed .brand-text,
+            .sidebar.collapsed .nav-title span:last-child,
+            .sidebar.collapsed .nav-label,
+            .sidebar.collapsed .user-box {
+                display: block;
+            }
+
+            .sidebar.collapsed .brand,
+            .sidebar.collapsed .nav-title,
+            .sidebar.collapsed .nav-button {
+                justify-content: flex-start;
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .overlay.show { display: block; }
+
+            .topbar {
+                min-height: 68px;
+                grid-template-columns: minmax(0, 1fr) auto;
+                padding: 0 14px;
+            }
+
+            .clock { display: none; }
+
+            .active-name,
+            .active-file {
+                max-width: 48vw;
+            }
+
+            .hero {
+                padding: 26px 18px 18px;
+            }
+
+            .content {
+                padding: 22px 18px 38px;
+            }
+
+            .hero-actions,
+            .filter-row,
+            .group-heading {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .metric-grid,
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .segmented {
+                width: 100%;
+                overflow-x: auto;
+            }
+
+            .segment {
+                flex: 1 0 auto;
+            }
+
+            h1 {
+                font-size: 34px;
+            }
+
+            .hero-copy {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <aside class="sidebar" id="sidebar" aria-label="รายการระบบ">
+            <div class="brand" id="homeButton" role="button" tabindex="0" title="กลับหน้าหลัก">
+                <span class="brand-mark">ER</span>
+                <span class="brand-text">
+                    <span class="brand-title">ER-UOS</span>
+                    <span class="brand-subtitle">Unified Command</span>
+                </span>
+            </div>
+
+            <nav class="nav" id="sideNav"></nav>
+
+            <div class="sidebar-footer">
+                <div class="user-box">
+                    <span class="avatar">S</span>
+                    <span>
+                        <span class="small-name">ER Staff</span>
+                        <span class="small-role">Operational Portal</span>
+                    </span>
+                </div>
+                <button class="icon-button" id="closeMobile" title="ปิดเมนู" aria-label="ปิดเมนู">×</button>
+            </div>
+        </aside>
+
+        <div class="overlay" id="overlay"></div>
+
+        <main class="main">
+            <header class="topbar">
+                <div class="top-left">
+                    <button class="icon-button" id="toggleSidebar" title="เปิด/ปิดเมนู" aria-label="เปิด/ปิดเมนู">☰</button>
+                    <div class="active-title">
+                        <span class="app-mark bg-blue" id="activeMark">ER</span>
+                        <span>
+                            <span class="active-name" id="activeName">ER Unified Operating System</span>
+                            <span class="active-file" id="activeFile">ศูนย์รวมระบบปฏิบัติการ ER</span>
+                        </span>
+                    </div>
+                </div>
+
+                <label class="command-search" for="searchInput">
+                    <span class="search-symbol">⌕</span>
+                    <input id="searchInput" type="search" autocomplete="off" placeholder="ค้นหาระบบ เช่น triage, refer, x-ray">
+                </label>
+
+                <div class="top-actions">
+                    <span class="clock" id="clock"></span>
+                    <button class="icon-button hidden" id="openTab" title="เปิดระบบนี้ในแท็บใหม่" aria-label="เปิดระบบนี้ในแท็บใหม่">↗</button>
+                    <button class="icon-button" id="fullscreen" title="เต็มจอ" aria-label="เต็มจอ">⛶</button>
+                </div>
+            </header>
+
+            <section class="viewport">
+                <div class="home" id="home">
+                    <section class="content">
+                        <div class="filter-title" style="margin:26px 0 18px;">
+                            <h2>ER Unified Operating System</h2>
+                            <p>หากเมนูหลักยังไม่โหลด สามารถเปิดระบบจากลิงก์สำรองด้านล่างได้ทันที</p>
+                        </div>
+                        <div class="grid">
+                            <a class="app-card" href="triageใหม่.html" target="_blank"><strong>Thai Triage Pro</strong><span class="card-foot"><span>triageใหม่.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="Ucep screening.html" target="_blank"><strong>UCEP Screening</strong><span class="card-foot"><span>Ucep screening.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="bed_er.html" target="_blank"><strong>ER Management</strong><span class="card-foot"><span>bed_er.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="x-ray.html" target="_blank"><strong>X-ray Sync</strong><span class="card-foot"><span>x-ray.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="KPI_ER.html" target="_blank"><strong>ER KPI Dashboard</strong><span class="card-foot"><span>KPI_ER.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="dasborad ความพึงพอใจ.html" target="_blank"><strong>ความพึงพอใจ</strong><span class="card-foot"><span>dasborad ความพึงพอใจ.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="sup_nurse2.html" target="_blank"><strong>Smart Nurse Audit</strong><span class="card-foot"><span>sup_nurse2.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="บันทึกข้อความ (2).html" target="_blank"><strong>ระบบบันทึกข้อความ</strong><span class="card-foot"><span>บันทึกข้อความ (2).html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="Referral_Hub.html" target="_blank"><strong>Referral Hub</strong><span class="card-foot"><span>Referral_Hub.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="ระบบERcomman.html" target="_blank"><strong>ER Command Center</strong><span class="card-foot"><span>ระบบERcomman.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="EOC.html" target="_blank"><strong>ระบบ EOC</strong><span class="card-foot"><span>EOC.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="high_alert.html" target="_blank"><strong>High Alert Drugs</strong><span class="card-foot"><span>high_alert.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="selaphum_ems.html" target="_blank"><strong>Selaphum EMS</strong><span class="card-foot"><span>selaphum_ems.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="er_dashboard_csv.html" target="_blank"><strong>ER Dashboard (CSV)</strong><span class="card-foot"><span>er_dashboard_csv.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="stroke_fast.html" target="_blank"><strong>Stroke Fast Track</strong><span class="card-foot"><span>stroke_fast.html</span><strong>เปิด ›</strong></span></a>
+                        </div>
+                    </section>
+                </div>
+                <iframe class="hidden" id="appFrame" name="appFrame" title="ER app viewport"></iframe>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const apps = [
+            { id: "triage", title: "Thai Triage Pro", desc: "ระบบคัดกรอง 3D Red System", file: "triageใหม่.html", short: "TR", color: "bg-red", accent: "#e11d48" },
+            { id: "ucep", title: "UCEP Screening", desc: "คัดกรองผู้ป่วยวิกฤต", file: "Ucep screening.html", short: "UC", color: "bg-red", accent: "#e11d48" },
+            { id: "er_bed", title: "ER Management", desc: "บริหารเตียงและภาระงาน", file: "bed_er.html", short: "BD", color: "bg-blue", accent: "#2563eb" },
+            { id: "xray", title: "X-ray Sync", desc: "ติดตามสถานะ X-ray", file: "x-ray.html", short: "XR", color: "bg-zinc", accent: "#27272a" },
+            { id: "kpi", title: "ER KPI Dashboard", desc: "ตัวชี้วัดและ MOU", file: "KPI_ER.html", short: "KP", color: "bg-indigo", accent: "#4f46e5" },
+            { id: "satisfaction", title: "ความพึงพอใจ", desc: "สรุปผลตอบรับบริการ", file: "dasborad ความพึงพอใจ.html", short: "SF", color: "bg-emerald", accent: "#059669" },
+            { id: "nurse_audit", title: "Smart Nurse Audit", desc: "ระบบบริหารอัตรากำลังพยาบาล", file: "sup_nurse2.html", short: "NA", color: "bg-teal", accent: "#0d9488" },
+            { id: "memo_report", title: "ระบบบันทึกข้อความ", desc: "สร้างและพิมพ์หนังสือราชการ", file: "บันทึกข้อความ (2).html", short: "MM", color: "bg-purple", accent: "#7c3aed" },
+            { id: "referral", title: "Referral Hub", desc: "ระบบบันทึกการส่งต่อ (Refer)", file: "Referral_Hub.html", short: "RF", color: "bg-orange", accent: "#ea580c" },
+            { id: "er_command", title: "ER Command Center", desc: "ศูนย์สั่งการ ER", file: "ระบบERcomman.html", short: "CC", color: "bg-cyan", accent: "#0891b2" },
+            { id: "eoc", title: "ระบบ EOC", desc: "โครงสร้างบัญชาการเหตุการณ์", file: "EOC.html", short: "EO", color: "bg-fuchsia", accent: "#c026d3" },
+            { id: "high_alert", title: "High Alert Drugs", desc: "ติดตามการใช้ยาความเสี่ยงสูง", file: "high_alert.html", short: "HA", color: "bg-pink", accent: "#db2777" },
+            { id: "ems", title: "Selaphum EMS", desc: "ระบบจัดการเครือข่ายกู้ชีพ", file: "selaphum_ems.html", short: "EM", color: "bg-amber", accent: "#d97706" },
+            { id: "er_dashboard_csv", title: "ER Dashboard (CSV)", desc: "นำเข้าไฟล์ CSV สรุปเวร", file: "er_dashboard_csv.html", short: "CS", color: "bg-lime", accent: "#65a30d" },
+            { id: "stroke_fast", title: "Stroke Fast Track", desc: "Dashboard ติดตามผู้ป่วย Stroke", file: "stroke_fast.html", short: "ST", color: "bg-red", accent: "#e11d48" }
+        ];
+
+        const appGroups = [
+            { id: "EMS", name: "EMS", subtitle: "Pre-hospital & Field Operations", desc: "งานกู้ชีพ ด่านหน้า เหตุฉุกเฉิน และการคัดกรองก่อนเข้าระบบ", short: "EM", color: "bg-amber", accent: "#d97706", appIds: ["ems", "triage", "ucep", "eoc"] },
+            { id: "INHOS", name: "INHOS", subtitle: "In-hospital ER Command", desc: "งานในโรงพยาบาล เตียง ER ทรัพยากร เวชระเบียน คุณภาพ และ Dashboard", short: "IN", color: "bg-sky", accent: "#0284c7", appIds: ["er_bed", "xray", "kpi", "er_command", "stroke_fast", "er_dashboard_csv", "nurse_audit", "high_alert", "satisfaction", "memo_report"] },
+            { id: "REFER", name: "REFER", subtitle: "Referral Coordination", desc: "ระบบบันทึก ส่งต่อ ติดตาม และประสานเครือข่ายรับ-ส่งผู้ป่วย", short: "RF", color: "bg-emerald", accent: "#059669", appIds: ["referral"] }
+        ];
+
+        const appById = new Map(apps.map(app => [app.id, app]));
+        const groups = appGroups.map(group => ({
+            ...group,
+            apps: group.appIds.map(id => appById.get(id)).filter(Boolean)
+        }));
+
+        let activeApp = null;
+        let activeFilter = "ALL";
+        let searchQuery = "";
+
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("overlay");
+        const sideNav = document.getElementById("sideNav");
+        const home = document.getElementById("home");
+        const frame = document.getElementById("appFrame");
+        const activeName = document.getElementById("activeName");
+        const activeFile = document.getElementById("activeFile");
+        const activeMark = document.getElementById("activeMark");
+        const openTab = document.getElementById("openTab");
+        const clock = document.getElementById("clock");
+        const searchInput = document.getElementById("searchInput");
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function appUrl(file) {
+            return "./" + encodeURI(file);
+        }
+
+        function getGroupForApp(appId) {
+            return groups.find(group => group.apps.some(app => app.id === appId));
+        }
+
+        function closeMobileMenu() {
+            sidebar.classList.remove("open");
+            overlay.classList.remove("show");
+        }
+
+        function setMark(element, item) {
+            element.className = "app-mark " + item.color;
+            element.textContent = item.short;
+        }
+
+        function openApp(app) {
+            activeApp = app;
+            home.classList.add("hidden");
+            frame.src = appUrl(app.file);
+            frame.title = app.title + " - " + app.file;
+            frame.classList.remove("hidden");
+            activeName.textContent = app.title;
+            activeFile.textContent = app.file;
+            setMark(activeMark, app);
+            openTab.classList.remove("hidden");
+            renderNav();
+            closeMobileMenu();
+            frame.focus();
+        }
+
+        function showHome() {
+            activeApp = null;
+            frame.src = "about:blank";
+            frame.classList.add("hidden");
+            home.classList.remove("hidden");
+            activeName.textContent = "ER Unified Operating System";
+            activeFile.textContent = "ศูนย์รวมระบบปฏิบัติการ ER";
+            activeMark.className = "app-mark bg-blue";
+            activeMark.textContent = "ER";
+            openTab.classList.add("hidden");
+            renderNav();
+            renderHome();
+            closeMobileMenu();
+        }
+
+        function openInNewTab(app) {
+            const opened = window.open(appUrl(app.file), "_blank", "noopener");
+            if (!opened) window.location.href = appUrl(app.file);
+        }
+
+        function renderNav() {
+            sideNav.innerHTML = "";
+            groups.forEach(group => {
+                const groupBox = document.createElement("div");
+                groupBox.className = "nav-group";
+
+                const title = document.createElement("div");
+                title.className = "nav-title";
+                title.innerHTML = '<span class="nav-dot"></span><span>' + escapeHtml(group.name) + '</span>';
+                groupBox.appendChild(title);
+
+                group.apps.forEach(app => {
+                    const button = document.createElement("button");
+                    button.className = "nav-button" + (activeApp && activeApp.id === app.id ? " active" : "");
+                    button.title = app.title;
+                    button.innerHTML = [
+                        '<span class="app-mark ' + app.color + '" style="width:32px;height:32px;font-size:11px;border-radius:8px;box-shadow:none;">' + escapeHtml(app.short) + '</span>',
+                        '<span class="nav-label"><span class="nav-main">' + escapeHtml(app.title) + '</span><span class="nav-sub"><span class="status-dot"></span>' + escapeHtml(group.name) + '</span></span>'
+                    ].join("");
+                    button.addEventListener("click", () => openApp(app));
+                    groupBox.appendChild(button);
+                });
+
+                sideNav.appendChild(groupBox);
+            });
+        }
+
+        function appMatches(app, group) {
+            const filterMatch = activeFilter === "ALL" || group.id === activeFilter;
+            const haystack = [app.title, app.desc, app.file, group.name, group.subtitle].join(" ").toLowerCase();
+            const searchMatch = !searchQuery || haystack.includes(searchQuery.toLowerCase());
+            return filterMatch && searchMatch;
+        }
+
+        function renderFilters() {
+            const options = [{ id: "ALL", name: "ทั้งหมด" }, ...groups.map(group => ({ id: group.id, name: group.name }))];
+            return options.map(option => (
+                '<button class="segment ' + (activeFilter === option.id ? "active" : "") + '" data-filter="' + escapeHtml(option.id) + '">' + escapeHtml(option.name) + '</button>'
+            )).join("");
+        }
+
+        function renderHome() {
+            const visibleGroups = groups.map(group => ({
+                ...group,
+                apps: group.apps.filter(app => appMatches(app, group))
+            })).filter(group => group.apps.length > 0);
+
+            home.innerHTML = [
+                '<section class="hero">',
+                    '<div class="hero-inner">',
+                        '<div>',
+                            '<span class="eyebrow"><span class="live-dot"></span>ER-UOS Command Portal</span>',
+                            '<h1>ER Unified Operating System</h1>',
+                            '<p class="hero-copy">ศูนย์รวมระบบปฏิบัติการ ER สำหรับเปิดใช้ระบบ EMS, INHOS และ REFER ได้จากหน้าเดียว พร้อมมุมมองที่เร็ว ชัด และเหมาะกับงานประจำเวร</p>',
+                            '<div class="hero-actions">',
+                                '<button class="primary-action" id="focusSearch">⌕ ค้นหาระบบ</button>',
+                                '<button class="secondary-action" id="openFirstApp">เปิดระบบแรก</button>',
+                            '</div>',
+                        '</div>',
+                        '<div class="ops-panel" aria-label="ภาพรวมระบบ">',
+                            '<div class="ops-head"><span>Operational Overview</span><span class="ops-code">LIVE</span></div>',
+                            '<div class="ops-list">',
+                                groups.map(group => (
+                                    '<div class="ops-line">' +
+                                        '<span><strong>' + escapeHtml(group.name) + '</strong><br>' + escapeHtml(group.subtitle) + '</span>' +
+                                        '<span>' + group.apps.length + ' systems</span>' +
+                                    '</div>'
+                                )).join(""),
+                            '</div>',
+                            '<div class="ops-bars">' +
+                                [40, 72, 58, 86, 46, 64, 92, 74, 52, 68, 84, 60].map(value => '<i style="height:' + value + '%"></i>').join("") +
+                            '</div>',
+                        '</div>',
+                    '</div>',
+                '</section>',
+                '<section class="content">',
+                    '<div class="metric-grid">',
+                        '<div class="metric-card"><span><span class="metric-label">Total Systems</span><span class="metric-value">' + apps.length + '</span><span class="metric-hint">ระบบพร้อมใช้งาน</span></span><span class="module-count bg-blue">' + apps.length + '</span></div>',
+                        '<div class="metric-card"><span><span class="metric-label">Workstreams</span><span class="metric-value">' + groups.length + '</span><span class="metric-hint">EMS / INHOS / REFER</span></span><span class="module-count bg-emerald">' + groups.length + '</span></div>',
+                        '<div class="metric-card"><span><span class="metric-label">Local Mode</span><span class="metric-value">ON</span><span class="metric-hint">เปิดจากไฟล์ได้โดยตรง</span></span><span class="module-count bg-amber">OK</span></div>',
+                        '<div class="metric-card"><span><span class="metric-label">View</span><span class="metric-value">' + visibleGroups.reduce((sum, group) => sum + group.apps.length, 0) + '</span><span class="metric-hint">ผลลัพธ์ที่แสดง</span></span><span class="module-count bg-cyan">VR</span></div>',
+                    '</div>',
+                    '<div class="filter-row">',
+                        '<div class="filter-title"><h2>ระบบปฏิบัติการ</h2><p>เลือกหมวดหรือค้นหาจากชื่อระบบและชื่อไฟล์</p></div>',
+                        '<div class="segmented">' + renderFilters() + '</div>',
+                    '</div>',
+                    '<div id="appGroups">' + renderGroups(visibleGroups) + '</div>',
+                '</section>'
+            ].join("");
+
+            document.querySelectorAll(".segment").forEach(button => {
+                button.addEventListener("click", () => {
+                    activeFilter = button.dataset.filter;
+                    renderHome();
+                });
+            });
+
+            const focusSearch = document.getElementById("focusSearch");
+            if (focusSearch) focusSearch.addEventListener("click", () => searchInput.focus());
+
+            const openFirstApp = document.getElementById("openFirstApp");
+            if (openFirstApp) openFirstApp.addEventListener("click", () => openApp(apps[0]));
+
+            bindCardEvents();
+        }
+
+        function renderGroups(sourceGroups) {
+            if (sourceGroups.length === 0) {
+                return '<div class="empty-state">ไม่พบระบบที่ตรงกับคำค้นหา</div>';
+            }
+
+            return sourceGroups.map(group => (
+                '<section class="group-section">' +
+                    '<div class="group-heading">' +
+                        '<div class="group-heading-main">' +
+                            '<span class="group-mark ' + group.color + '">' + escapeHtml(group.short) + '</span>' +
+                            '<div class="group-text">' +
+                                '<h3>' + escapeHtml(group.name) + '</h3>' +
+                                '<div class="subtitle">' + escapeHtml(group.subtitle) + '</div>' +
+                                '<p class="group-desc">' + escapeHtml(group.desc) + '</p>' +
+                            '</div>' +
+                        '</div>' +
+                        '<span class="badge">' + group.apps.length + ' ระบบ</span>' +
+                    '</div>' +
+                    '<div class="grid">' +
+                        group.apps.map(app => renderAppCard(app, group)).join("") +
+                    '</div>' +
+                '</section>'
+            )).join("");
+        }
+
+        function renderAppCard(app, group) {
+            const card = [
+                '<article class="app-card" role="button" tabindex="0" data-app-id="' + escapeHtml(app.id) + '" style="--card-accent:' + escapeHtml(app.accent) + '">',
+                    '<div>',
+                        '<span class="card-top">',
+                            '<span class="app-mark ' + app.color + '">' + escapeHtml(app.short) + '</span>',
+                            '<span class="open-mini" data-open-tab="' + escapeHtml(app.id) + '" title="เปิดในแท็บใหม่">↗</span>',
+                        '</span>',
+                        '<span class="group-pill"><span class="status-dot"></span>' + escapeHtml(group.name) + '</span>',
+                        '<h4>' + escapeHtml(app.title) + '</h4>',
+                        '<p>' + escapeHtml(app.desc) + '</p>',
+                    '</div>',
+                    '<span class="card-foot"><span>' + escapeHtml(app.file) + '</span><strong>เปิด ›</strong></span>',
+                '</article>'
+            ].join("");
+            return card;
+        }
+
+        function bindCardEvents() {
+            document.querySelectorAll("[data-app-id]").forEach(card => {
+                if (card.dataset.bound === "1") return;
+                card.dataset.bound = "1";
+                card.addEventListener("click", event => {
+                    const tabTarget = event.target.closest("[data-open-tab]");
+                    if (tabTarget) {
+                        const app = appById.get(tabTarget.dataset.openTab);
+                        if (app) openInNewTab(app);
+                        return;
+                    }
+                    const app = appById.get(card.dataset.appId);
+                    if (app) openApp(app);
+                });
+                card.addEventListener("keydown", event => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    const app = appById.get(card.dataset.appId);
+                    if (app) openApp(app);
+                });
+            });
+        }
+
+        function updateClock() {
+            clock.textContent = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        }
+
+        document.getElementById("toggleSidebar").addEventListener("click", () => {
+            if (window.innerWidth <= 820) {
+                sidebar.classList.add("open");
+                overlay.classList.add("show");
+            } else {
+                sidebar.classList.toggle("collapsed");
+            }
+        });
+
+        document.getElementById("closeMobile").addEventListener("click", closeMobileMenu);
+        overlay.addEventListener("click", closeMobileMenu);
+        document.getElementById("homeButton").addEventListener("click", showHome);
+        document.getElementById("homeButton").addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") showHome();
+        });
+
+        searchInput.addEventListener("input", event => {
+            searchQuery = event.target.value.trim();
+            if (activeApp) showHome();
+            renderHome();
+        });
+
+        openTab.addEventListener("click", () => {
+            if (activeApp) openInNewTab(activeApp);
+        });
+
+        document.getElementById("fullscreen").addEventListener("click", () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        });
+
+        window.addEventListener("resize", () => {
+            if (window.innerWidth > 820) closeMobileMenu();
+        });
+
+        renderNav();
+        showHome();
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stroke Fast Track Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Prompt', sans-serif;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(239, 68, 68, 0.14), transparent 34rem),
+                radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 32rem),
+                linear-gradient(135deg, #f8fafc 0%, #eef6f8 48%, #fff7ed 100%);
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 22px 70px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(16px);
+        }
+
+        .card-lift {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.82));
+            border: 1px solid rgba(226, 232, 240, 0.84);
+            box-shadow: 0 16px 44px rgba(15, 23, 42, 0.08);
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+
+        .card-lift::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 4px;
+            background: var(--accent, linear-gradient(90deg, #ef4444, #06b6d4));
+        }
+
+        .card-lift:hover {
+            transform: translateY(-2px);
+            border-color: rgba(148, 163, 184, 0.75);
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.11);
+        }
+
+        .icon-tile {
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 14px 28px rgba(15, 23, 42, 0.10);
+        }
+
+        .period-btn {
+            color: #64748b;
+            background: transparent;
+        }
+
+        .period-btn.active {
+            color: #fff;
+            background: linear-gradient(135deg, #0f766e, #0284c7);
+            box-shadow: 0 10px 24px rgba(2, 132, 199, 0.22);
+        }
+
+        .chart-shell {
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.80)),
+                linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(20, 184, 166, 0.08));
+            border: 1px solid rgba(226, 232, 240, 0.88);
+            box-shadow: 0 18px 46px rgba(15, 23, 42, 0.08);
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <nav class="sticky top-0 z-40 border-b border-white/70 bg-white/78 backdrop-blur-xl">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex min-h-16 flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-0">
+                <div class="flex items-center">
+                    <div class="mr-3 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-lg shadow-red-500/20">
+                        <i class="fa-solid fa-truck-medical text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold leading-tight text-slate-900 sm:text-xl">Stroke Fast Track Dashboard</h1>
+                        <p class="text-xs font-medium text-slate-500">ติดตามผู้ป่วย Fast Track แบบรายเดือนและรายปี</p>
+                    </div>
+                </div>
+                <button onclick="openInstructions()" class="inline-flex w-full items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2.5 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100 sm:w-auto">
+                    <i class="fa-solid fa-plug mr-2"></i>
+                    เชื่อมต่อ Google Sheet
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+
+        <section class="glass-panel mb-6 overflow-hidden rounded-3xl">
+            <div class="grid gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-end lg:p-7">
+                <div>
+                    <div class="mb-3 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        <span class="mr-2 h-2 w-2 rounded-full bg-emerald-500"></span>
+                        Live clinical dashboard
+                    </div>
+                    <h2 class="text-2xl font-bold tracking-normal text-slate-950 sm:text-3xl">ภาพรวม Stroke Fast Track</h2>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                        เลือกดูข้อมูลแบบรายเดือนหรือรายปี ระบบจะสรุปจำนวนผู้ป่วย Outcome การให้ rt-PA และประวัติผู้ป่วยตามช่วงเวลาที่เลือก
+                    </p>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 bg-white/78 p-3 shadow-sm">
+                    <div class="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
+                        <button id="btn-month" class="period-btn active rounded-lg px-4 py-2 text-sm font-semibold transition" onclick="setPeriodMode('month')">
+                            <i class="fa-regular fa-calendar-days mr-2"></i>รายเดือน
+                        </button>
+                        <button id="btn-year" class="period-btn rounded-lg px-4 py-2 text-sm font-semibold transition" onclick="setPeriodMode('year')">
+                            <i class="fa-solid fa-chart-line mr-2"></i>รายปี
+                        </button>
+                    </div>
+                    <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
+                        <label id="month-control" class="block">
+                            <span class="mb-1 block text-xs font-semibold text-slate-500">เลือกเดือน</span>
+                            <input id="monthPicker" type="month" class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" onchange="handlePeriodChange()">
+                        </label>
+                        <label id="year-control" class="hidden">
+                            <span class="mb-1 block text-xs font-semibold text-slate-500">เลือกปี</span>
+                            <select id="yearPicker" class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" onchange="handlePeriodChange()"></select>
+                        </label>
+                        <div class="flex items-end">
+                            <button onclick="resetToLatestPeriod()" class="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto" title="กลับไปช่วงเวลาล่าสุด">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p id="periodLabel" class="mt-3 text-xs font-medium text-slate-500">ช่วงข้อมูล: -</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-8 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <div class="card-lift rounded-2xl p-5" style="--accent: linear-gradient(90deg, #0284c7, #22d3ee);">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-500">ผู้ป่วยทั้งหมด</p>
+                        <h3 class="mt-2 text-4xl font-bold text-slate-950" id="stat-total">0</h3>
+                    </div>
+                    <div class="icon-tile flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+                        <i class="fa-solid fa-users text-2xl"></i>
+                    </div>
+                </div>
+                <p class="mt-4 text-xs font-medium text-slate-400">รวมเฉพาะช่วงเวลาที่เลือก</p>
+            </div>
+
+            <div class="card-lift rounded-2xl p-5" style="--accent: linear-gradient(90deg, #16a34a, #5eead4);">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-500">Admit</p>
+                        <h3 class="mt-2 text-4xl font-bold text-slate-950" id="stat-admit">0</h3>
+                    </div>
+                    <div class="icon-tile flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                        <i class="fa-solid fa-bed-pulse text-2xl"></i>
+                    </div>
+                </div>
+                <p class="mt-4 text-xs font-medium text-slate-400">รับไว้รักษาในโรงพยาบาล</p>
+            </div>
+
+            <div class="card-lift rounded-2xl p-5" style="--accent: linear-gradient(90deg, #f97316, #facc15);">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-500">Refer</p>
+                        <h3 class="mt-2 text-4xl font-bold text-slate-950" id="stat-refer">0</h3>
+                    </div>
+                    <div class="icon-tile flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                        <i class="fa-solid fa-ambulance text-2xl"></i>
+                    </div>
+                </div>
+                <p class="mt-4 text-xs font-medium text-slate-400">ส่งต่อเพื่อดูแลต่อเนื่อง</p>
+            </div>
+
+            <div class="card-lift rounded-2xl p-5" style="--accent: linear-gradient(90deg, #dc2626, #fb7185);">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-500">ได้รับ rt-PA</p>
+                        <h3 class="mt-2 text-4xl font-bold text-slate-950" id="stat-rtpa">0</h3>
+                    </div>
+                    <div class="icon-tile flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                        <i class="fa-solid fa-syringe text-2xl"></i>
+                    </div>
+                </div>
+                <p class="mt-4 text-xs font-medium text-slate-400">ผู้ป่วยที่ได้รับยาละลายลิ่มเลือด</p>
+            </div>
+        </section>
+
+        <section class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div class="chart-shell rounded-2xl p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">สัดส่วน Outcome</h3>
+                        <p class="text-xs font-medium text-slate-500">Admit / Refer / อื่น ๆ</p>
+                    </div>
+                    <div class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        <i class="fa-solid fa-circle-nodes mr-1"></i>Summary
+                    </div>
+                </div>
+                <div class="relative flex h-72 w-full justify-center">
+                    <canvas id="outcomeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-shell rounded-2xl p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">สถานะการให้ยา rt-PA</h3>
+                        <p class="text-xs font-medium text-slate-500">เปรียบเทียบจำนวนได้รับยาและไม่ได้รับยา</p>
+                    </div>
+                    <div class="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                        <i class="fa-solid fa-prescription-bottle-medical mr-1"></i>rt-PA
+                    </div>
+                </div>
+                <div class="relative h-72 w-full">
+                    <canvas id="rtpaChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white/88 shadow-xl shadow-slate-200/60">
+            <div class="border-b border-slate-100 p-5 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">ประวัติผู้ป่วย (รายการทั้งหมด)</h3>
+                    <p id="tableSummary" class="mt-1 text-xs font-medium text-slate-500">แสดง 0 รายการ</p>
+                </div>
+                <div class="mt-3 inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 sm:mt-0">
+                    <i class="fa-solid fa-filter mr-2"></i>
+                    กรองตามช่วงเวลาที่เลือก
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[920px] border-collapse text-left">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/90 text-sm text-slate-500">
+                            <th class="p-4 font-semibold">วันที่</th>
+                            <th class="p-4 font-semibold">HN</th>
+                            <th class="p-4 font-semibold">rt-PA</th>
+                            <th class="p-4 font-semibold">Outcome</th>
+                            <th class="p-4 font-semibold">การส่งต่อ/มาโรงพยาบาล</th>
+                            <th class="p-4 font-semibold">Incharge</th>
+                            <th class="p-4 font-semibold">Oxygen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="divide-y divide-slate-100 text-sm text-slate-700"></tbody>
+                </table>
+            </div>
+            <div id="paginationControls" class="hidden border-t border-slate-100 bg-slate-50/80 px-5 py-4"></div>
+        </section>
+    </main>
+
+    <div id="instructionModal" class="fixed inset-0 z-50 flex hidden items-center justify-center bg-slate-950/55 p-4 opacity-0 transition-opacity duration-300">
+        <div class="relative flex max-h-[90vh] w-full max-w-2xl scale-95 flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-transform duration-300">
+            <div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white p-5">
+                <h2 class="text-lg font-bold text-slate-900">
+                    <i class="fa-brands fa-google mr-2 text-blue-500"></i>วิธีเชื่อมต่อข้อมูลจาก Google Sheet
+                </h2>
+                <button onclick="closeInstructions()" class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="hide-scrollbar flex-1 space-y-4 overflow-y-auto p-5 text-sm leading-6 text-slate-600">
+                <p>ระบบจะพยายามดึงข้อมูลจาก Google Apps Script ตาม URL ที่ตั้งไว้ หากดึงไม่ได้ ระบบจะแสดงข้อมูลตัวอย่างเพื่อให้หน้าจอยังใช้งานได้</p>
+
+                <div class="rounded-xl border-l-4 border-cyan-500 bg-cyan-50 p-4">
+                    <h4 class="mb-2 font-bold text-cyan-800">ขั้นตอนที่ 1: สร้าง API ด้วย Google Apps Script</h4>
+                    <ol class="ml-5 list-decimal space-y-1 text-slate-700">
+                        <li>เปิด Google Sheet แล้วไปที่เมนู <strong>ส่วนขยาย</strong> > <strong>Apps Script</strong></li>
+                        <li>วางโค้ดฟังก์ชัน <code>doGet(e)</code> เพื่อส่งข้อมูลเป็น JSON</li>
+                        <li>กด <strong>Deploy</strong> > <strong>New deployment</strong> > เลือก <strong>Web app</strong></li>
+                        <li>ตั้งค่า <strong>Who has access</strong> เป็น <strong>Anyone</strong></li>
+                        <li>คัดลอก Web app URL มาใส่ในตัวแปร <code>GAS_API_URL</code></li>
+                    </ol>
+                </div>
+
+                <div class="rounded-xl border-l-4 border-slate-400 bg-slate-50 p-4">
+                    <h4 class="mb-2 font-bold text-slate-800">ขั้นตอนที่ 2: ตั้งค่าในไฟล์นี้</h4>
+                    <p>ค้นหาส่วน JavaScript ด้านล่าง แล้วกำหนดค่าให้ตรงกับ URL ของคุณ</p>
+                    <pre class="mt-2 overflow-x-auto rounded-xl bg-slate-900 p-3 text-xs text-emerald-300"><code>const USE_GAS_API = true;
+const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</code></pre>
+                </div>
+            </div>
+
+            <div class="flex justify-end border-t border-slate-100 bg-slate-50 p-4">
+                <button onclick="closeInstructions()" class="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">เข้าใจแล้ว</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const USE_GAS_API = true;
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzGEMoG9XIySDmT-T0vE2xgFzJkTIXuK-S2x46zWKrTzYpYQJms21pdAfX50BBnvDa0/exec';
+
+    const rawData = [
+        { date: "7/8/2024", hn: "50502", rtpa: "ให้ rt-PA", outcome: "Admit", shift_transport: "มาเอง", incharge: "-", oxygen: "-" },
+        { date: "21/8/2024", hn: "26948", rtpa: "ให้ rt-PA", outcome: "Admit", shift_transport: "มาเอง", incharge: "-", oxygen: "-" },
+        { date: "13/10/2024", hn: "75165", rtpa: "ให้ rt-PA", outcome: "Refer", shift_transport: "เช้ามาเอง", incharge: "-", oxygen: "-" },
+        { date: "24/4/2026", hn: "121396", rtpa: "ไม่ให้ rt-PA เพราะปัจจัยอื่นๆ", outcome: "Admit", shift_transport: "บ่าย refer ทุ่งเขาหลวง", incharge: "พิณทอง", oxygen: "On RA" },
+        { date: "26/4/2026", hn: "9488", rtpa: "ไม่ให้ rt-PA เพราะปัจจัยอื่นๆ", outcome: "Admit", shift_transport: "เช้า refer", incharge: "นิภาพร", oxygen: "On RA" },
+        { date: "30/4/2026", hn: "91075", rtpa: "ไม่ให้ rt-PA เพราะปัจจัยอื่นๆ", outcome: "Admit", shift_transport: "บ่ายมาเอง", incharge: "สราลี", oxygen: "On RA" }
+    ];
+
+    let charts = {};
+    let allData = [];
+    let currentTableData = [];
+    let currentTablePage = 1;
+    let periodMode = 'month';
+    let latestMonth = '';
+    let latestYear = '';
+    const TABLE_PAGE_SIZE = 20;
+
+    const thaiMonths = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+
+    function openInstructions() {
+        const modal = document.getElementById('instructionModal');
+        const modalContent = modal.querySelector('div');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modalContent.classList.remove('scale-95');
+        }, 10);
+    }
+
+    function closeInstructions() {
+        const modal = document.getElementById('instructionModal');
+        const modalContent = modal.querySelector('div');
+        modal.classList.add('opacity-0');
+        modalContent.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    function parseDateValue(value) {
+        if (!value) return null;
+
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+            return value;
+        }
+
+        const text = String(value).trim();
+        if (!text) return null;
+
+        if (text.includes('T')) {
+            const isoDate = new Date(text);
+            if (!Number.isNaN(isoDate.getTime())) return isoDate;
+        }
+
+        const slashMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (slashMatch) {
+            const day = Number(slashMatch[1]);
+            const month = Number(slashMatch[2]) - 1;
+            let year = Number(slashMatch[3]);
+            if (year > 2400) year -= 543;
+            const parsed = new Date(year, month, day);
+            if (!Number.isNaN(parsed.getTime())) return parsed;
+        }
+
+        const parsed = new Date(text);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function pad2(value) {
+        return String(value).padStart(2, '0');
+    }
+
+    function formatDisplayDate(dateValue, fallback) {
+        const parsed = parseDateValue(dateValue);
+        if (!parsed) return fallback || '-';
+        return `${parsed.getDate()}/${parsed.getMonth() + 1}/${parsed.getFullYear()}`;
+    }
+
+    function getMonthKey(date) {
+        return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
+    }
+
+    function normalizeText(value) {
+        return String(value || '').trim();
+    }
+
+    function parseMockRow(data) {
+        const parsedDate = parseDateValue(data.date);
+        return {
+            date: formatDisplayDate(data.date, data.date || '-'),
+            parsedDate,
+            monthKey: parsedDate ? getMonthKey(parsedDate) : '',
+            yearKey: parsedDate ? String(parsedDate.getFullYear()) : '',
+            hn: normalizeText(data.hn),
+            rtpa: normalizeText(data.rtpa),
+            outcome: normalizeText(data.outcome),
+            shift_transport: normalizeText(data.shift_transport),
+            incharge: normalizeText(data.incharge) || '-',
+            oxygen: normalizeText(data.oxygen) || '-'
+        };
+    }
+
+    function isRtpaGiven(row) {
+        const text = row.rtpa.toLowerCase();
+        return (text.includes('ให้') || text.includes('rt')) && !text.includes('ไม่ให้') && !text.includes('ไม่ได้');
+    }
+
+    function initDashboard() {
+        Chart.defaults.font.family = "'Prompt', sans-serif";
+        Chart.defaults.color = '#475569';
+
+        if (USE_GAS_API && GAS_API_URL && GAS_API_URL !== 'YOUR_WEB_APP_URL_HERE') {
+            fetchDataFromGAS(GAS_API_URL);
+        } else {
+            loadDashboardData(rawData.map(parseMockRow));
+        }
+    }
+
+    function loadDashboardData(data) {
+        allData = data
+            .filter(row => row && (row.hn || row.date || row.outcome || row.rtpa))
+            .sort((a, b) => {
+                const left = a.parsedDate ? a.parsedDate.getTime() : 0;
+                const right = b.parsedDate ? b.parsedDate.getTime() : 0;
+                return right - left;
+            });
+
+        setupPeriodControls();
+        applyPeriodFilter();
+    }
+
+    function setupPeriodControls() {
+        const datedRows = allData.filter(row => row.parsedDate);
+        const latestDate = datedRows.length ? datedRows[0].parsedDate : new Date();
+        latestMonth = getMonthKey(latestDate);
+        latestYear = String(latestDate.getFullYear());
+
+        const monthPicker = document.getElementById('monthPicker');
+        const yearPicker = document.getElementById('yearPicker');
+        const years = [...new Set(datedRows.map(row => row.yearKey).filter(Boolean))].sort((a, b) => Number(b) - Number(a));
+
+        monthPicker.value = latestMonth;
+        yearPicker.innerHTML = '';
+
+        const availableYears = years.length ? years : [latestYear];
+        availableYears.forEach(year => {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = Number(year) + 543;
+            yearPicker.appendChild(option);
+        });
+
+        yearPicker.value = latestYear;
+    }
+
+    function setPeriodMode(mode) {
+        periodMode = mode;
+        document.getElementById('btn-month').classList.toggle('active', mode === 'month');
+        document.getElementById('btn-year').classList.toggle('active', mode === 'year');
+        document.getElementById('month-control').classList.toggle('hidden', mode !== 'month');
+        document.getElementById('year-control').classList.toggle('hidden', mode !== 'year');
+        applyPeriodFilter();
+    }
+
+    function handlePeriodChange() {
+        applyPeriodFilter();
+    }
+
+    function resetToLatestPeriod() {
+        document.getElementById('monthPicker').value = latestMonth;
+        document.getElementById('yearPicker').value = latestYear;
+        applyPeriodFilter();
+    }
+
+    function getFilteredData() {
+        if (periodMode === 'year') {
+            const selectedYear = document.getElementById('yearPicker').value;
+            return allData.filter(row => row.yearKey === selectedYear);
+        }
+
+        const selectedMonth = document.getElementById('monthPicker').value;
+        return allData.filter(row => row.monthKey === selectedMonth);
+    }
+
+    function applyPeriodFilter() {
+        const filteredData = getFilteredData();
+        currentTablePage = 1;
+        updatePeriodLabel();
+        updateUI(filteredData);
+    }
+
+    function updatePeriodLabel() {
+        const label = document.getElementById('periodLabel');
+        if (periodMode === 'year') {
+            const selectedYear = document.getElementById('yearPicker').value;
+            label.textContent = `ช่วงข้อมูล: ปี ${Number(selectedYear) + 543}`;
+            return;
+        }
+
+        const selectedMonth = document.getElementById('monthPicker').value;
+        if (!selectedMonth) {
+            label.textContent = 'ช่วงข้อมูล: -';
+            return;
+        }
+
+        const [year, month] = selectedMonth.split('-').map(Number);
+        label.textContent = `ช่วงข้อมูล: ${thaiMonths[month - 1]} ${year + 543}`;
+    }
+
+    function animateValue(id, end, duration) {
+        const obj = document.getElementById(id);
+        const start = Number(obj.textContent) || 0;
+        if (start === end) {
+            obj.textContent = end;
+            return;
+        }
+
+        const range = end - start;
+        const startTime = performance.now();
+
+        function tick(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            obj.textContent = Math.round(start + range * eased);
+            if (progress < 1) requestAnimationFrame(tick);
+        }
+
+        requestAnimationFrame(tick);
+    }
+
+    function updateUI(data) {
+        const total = data.length;
+        const totalAdmit = data.filter(d => d.outcome.toLowerCase().includes('admit')).length;
+        const totalRefer = data.filter(d => d.outcome.toLowerCase().includes('refer')).length;
+        const totalRtpa = data.filter(isRtpaGiven).length;
+
+        animateValue('stat-total', total, 650);
+        animateValue('stat-admit', totalAdmit, 650);
+        animateValue('stat-refer', totalRefer, 650);
+        animateValue('stat-rtpa', totalRtpa, 650);
+
+        populateTable(data);
+        updateCharts(data, totalAdmit, totalRefer, totalRtpa, total - totalRtpa);
+    }
+
+    function populateTable(data) {
+        currentTableData = data;
+        renderTablePage();
+    }
+
+    function renderTablePage() {
+        const tbody = document.getElementById('dataTableBody');
+        const tableSummary = document.getElementById('tableSummary');
+        const totalItems = currentTableData.length;
+        const totalPages = Math.max(Math.ceil(totalItems / TABLE_PAGE_SIZE), 1);
+        currentTablePage = Math.min(Math.max(currentTablePage, 1), totalPages);
+
+        tbody.innerHTML = '';
+
+        if (totalItems === 0) {
+            tableSummary.textContent = 'แสดง 0 รายการ';
+            tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-slate-500">ไม่พบข้อมูลในช่วงเวลาที่เลือก</td></tr>`;
+            renderPaginationControls(totalItems, totalPages);
+            return;
+        }
+
+        const startIndex = (currentTablePage - 1) * TABLE_PAGE_SIZE;
+        const endIndex = Math.min(startIndex + TABLE_PAGE_SIZE, totalItems);
+        const pageData = currentTableData.slice(startIndex, endIndex);
+        tableSummary.textContent = `แสดง ${startIndex + 1}-${endIndex} จาก ${totalItems} รายการ`;
+
+        pageData.forEach(row => {
+            const rtpaGiven = isRtpaGiven(row);
+            const rtpaBadgeClass = rtpaGiven
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-rose-200 bg-rose-50 text-rose-700';
+            const outcomeBadgeClass = row.outcome.toLowerCase().includes('admit')
+                ? 'border-sky-200 bg-sky-50 text-sky-700'
+                : row.outcome.toLowerCase().includes('refer')
+                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                    : 'border-slate-200 bg-slate-50 text-slate-600';
+
+            const tr = document.createElement('tr');
+            tr.className = 'transition hover:bg-cyan-50/45';
+            tr.innerHTML = `
+                <td class="p-4 whitespace-nowrap font-medium text-slate-800">${row.date}</td>
+                <td class="p-4 font-bold text-slate-950">${row.hn || '-'}</td>
+                <td class="p-4">
+                    <span class="inline-flex max-w-xs items-center rounded-full border px-3 py-1 text-xs font-semibold ${rtpaBadgeClass}">
+                        ${row.rtpa || '-'}
+                    </span>
+                </td>
+                <td class="p-4">
+                    <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${outcomeBadgeClass}">
+                        ${row.outcome || '-'}
+                    </span>
+                </td>
+                <td class="p-4 text-slate-600">${row.shift_transport || '-'}</td>
+                <td class="p-4 text-slate-600">${row.incharge || '-'}</td>
+                <td class="p-4 text-slate-600">${row.oxygen || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        renderPaginationControls(totalItems, totalPages);
+    }
+
+    function gotoTablePage(page) {
+        currentTablePage = page;
+        renderTablePage();
+    }
+
+    function getVisiblePageNumbers(currentPage, totalPages) {
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, index) => index + 1);
+        }
+
+        const pages = new Set([1, totalPages, currentPage, currentPage - 1, currentPage + 1]);
+        return [...pages]
+            .filter(page => page >= 1 && page <= totalPages)
+            .sort((a, b) => a - b);
+    }
+
+    function renderPaginationControls(totalItems, totalPages) {
+        const controls = document.getElementById('paginationControls');
+        if (!controls) return;
+
+        if (totalItems <= TABLE_PAGE_SIZE) {
+            controls.classList.add('hidden');
+            controls.innerHTML = '';
+            return;
+        }
+
+        controls.classList.remove('hidden');
+        const visiblePages = getVisiblePageNumbers(currentTablePage, totalPages);
+        let lastPage = 0;
+        const pageButtons = visiblePages.map(page => {
+            const gap = page - lastPage > 1
+                ? `<span class="flex h-10 min-w-10 items-center justify-center px-2 text-sm font-semibold text-slate-400">...</span>`
+                : '';
+            lastPage = page;
+            const activeClass = page === currentTablePage
+                ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-600/20'
+                : 'border border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:text-cyan-700';
+
+            return `${gap}<button type="button" onclick="gotoTablePage(${page})" class="h-10 min-w-10 rounded-xl px-3 text-sm font-bold transition ${activeClass}">${page}</button>`;
+        }).join('');
+
+        controls.innerHTML = `
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-xs font-semibold text-slate-500">หน้าละ ${TABLE_PAGE_SIZE} รายการ · หน้า ${currentTablePage} จาก ${totalPages}</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="gotoTablePage(${currentTablePage - 1})" ${currentTablePage === 1 ? 'disabled' : ''} class="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:border-cyan-300 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-40">
+                        <i class="fa-solid fa-chevron-left mr-1"></i>ก่อนหน้า
+                    </button>
+                    ${pageButtons}
+                    <button type="button" onclick="gotoTablePage(${currentTablePage + 1})" ${currentTablePage === totalPages ? 'disabled' : ''} class="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:border-cyan-300 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-40">
+                        ถัดไป<i class="fa-solid fa-chevron-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function updateCharts(data, admit, refer, rtpaGiven, rtpaNotGiven) {
+        if (charts.outcome) charts.outcome.destroy();
+        if (charts.rtpa) charts.rtpa.destroy();
+
+        const other = Math.max(data.length - (admit + refer), 0);
+        const outcomeCtx = document.getElementById('outcomeChart').getContext('2d');
+        charts.outcome = new Chart(outcomeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Admit', 'Refer', 'อื่น ๆ'],
+                datasets: [{
+                    data: [admit, refer, other],
+                    backgroundColor: ['#10b981', '#f59e0b', '#94a3b8'],
+                    borderColor: '#ffffff',
+                    borderWidth: 4,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 18,
+                            font: { size: 12, weight: '600' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        padding: 12,
+                        cornerRadius: 10
+                    }
+                },
+                cutout: '68%'
+            }
+        });
+
+        const rtpaCtx = document.getElementById('rtpaChart').getContext('2d');
+        const gradientGiven = rtpaCtx.createLinearGradient(0, 0, 0, 260);
+        gradientGiven.addColorStop(0, '#ef4444');
+        gradientGiven.addColorStop(1, '#fb7185');
+        const gradientNotGiven = rtpaCtx.createLinearGradient(0, 0, 0, 260);
+        gradientNotGiven.addColorStop(0, '#0ea5e9');
+        gradientNotGiven.addColorStop(1, '#67e8f9');
+
+        charts.rtpa = new Chart(rtpaCtx, {
+            type: 'bar',
+            data: {
+                labels: ['ได้รับ rt-PA', 'ไม่ได้รับ rt-PA'],
+                datasets: [{
+                    label: 'จำนวนผู้ป่วย',
+                    data: [rtpaGiven, rtpaNotGiven],
+                    backgroundColor: [gradientGiven, gradientNotGiven],
+                    borderRadius: 14,
+                    borderSkipped: false,
+                    maxBarThickness: 90
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        padding: 12,
+                        cornerRadius: 10
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 },
+                        grid: { color: '#e2e8f0', drawBorder: false }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { weight: '600' } }
+                    }
+                }
+            }
+        });
+    }
+
+    async function fetchDataFromGAS(url) {
+        const tbody = document.getElementById('dataTableBody');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        try {
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2 text-cyan-600"></i>กำลังโหลดข้อมูลจาก Google Sheet...</td></tr>`;
+            }
+
+            const response = await fetch(url, {
+                method: 'GET',
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const jsonData = await response.json();
+            const processedData = jsonData.map(item => {
+                const rawDate = item['ประทับเวลา'] || item['Timestamp'] || item['Date'] || item['date'] || '';
+                const hn = item['HN'] || item['hn'] || '';
+                const rtpa = item['rt-PA(ยา)'] || item['rt-PA'] || item['rtpa'] || item['rt_pa'] || '';
+                const outcome = item['Fast track'] || item['Outcome'] || item['outcome'] || '';
+                const shiftTransport = [
+                    item['Non Fast'] || '',
+                    item['เวรมาโรงพยาบาลโดย'] || item['Transport'] || item['transport'] || ''
+                ].filter(Boolean).join(' ');
+                const incharge = item['ชื่อ Incharge'] || item['Incharge'] || item['incharge'] || '-';
+                const oxygen = item['Oxygen support'] || item['Oxygen'] || item['oxygen'] || '-';
+
+                return parseMockRow({
+                    date: rawDate,
+                    hn,
+                    rtpa,
+                    outcome,
+                    shift_transport: shiftTransport,
+                    incharge,
+                    oxygen
+                });
+            });
+
+            const existingError = document.getElementById('gas-error-banner');
+            if (existingError) existingError.remove();
+
+            loadDashboardData(processedData.length ? processedData : rawData.map(parseMockRow));
+        } catch (error) {
+            clearTimeout(timeoutId);
+            console.warn('ไม่สามารถดึงข้อมูลจาก Google Sheet ได้:', error.message);
+            showGasError(error);
+            loadDashboardData(rawData.map(parseMockRow));
+        }
+    }
+
+    function showGasError(error) {
+        if (document.getElementById('gas-error-banner')) return;
+
+        const message = error.name === 'AbortError'
+            ? 'หมดเวลาการเชื่อมต่อ'
+            : 'อาจติดปัญหา CORS หรือสิทธิ์การเข้าถึง';
+
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'gas-error-banner';
+        errorDiv.className = 'fixed left-1/2 top-4 z-50 w-11/12 max-w-3xl -translate-x-1/2 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800 shadow-xl';
+        errorDiv.innerHTML = `
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex items-start gap-3">
+                    <i class="fa-solid fa-triangle-exclamation mt-1 text-xl"></i>
+                    <div>
+                        <p class="font-bold">ไม่สามารถดึงข้อมูลจาก Google Sheet ได้</p>
+                        <p class="mt-1 text-sm">สาเหตุที่พบ: <code>${message}</code></p>
+                        <p class="mt-1 text-sm font-semibold">ระบบกำลังแสดงข้อมูลตัวอย่างแทนชั่วคราว</p>
+                    </div>
+                </div>
+                <button onclick="this.closest('#gas-error-banner').remove()" class="rounded-lg bg-rose-100 p-2 text-rose-600 transition hover:bg-rose-200">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        `;
+        document.body.appendChild(errorDiv);
+    }
+
+    window.onload = initDashboard;
+</script>
+</body>
+</html>
