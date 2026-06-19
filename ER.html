@@ -1104,6 +1104,7 @@
                             <a class="app-card" href="high_alert.html" target="_blank"><strong>High Alert Drugs</strong><span class="card-foot"><span>high_alert.html</span><strong>เปิด ›</strong></span></a>
                             <a class="app-card" href="selaphum_ems.html" target="_blank"><strong>Selaphum EMS</strong><span class="card-foot"><span>selaphum_ems.html</span><strong>เปิด ›</strong></span></a>
                             <a class="app-card" href="er_dashboard_csv.html" target="_blank"><strong>ER Dashboard (CSV)</strong><span class="card-foot"><span>er_dashboard_csv.html</span><strong>เปิด ›</strong></span></a>
+                            <a class="app-card" href="stroke_fast.html" target="_blank"><strong>Stroke Fast Track</strong><span class="card-foot"><span>stroke_fast.html</span><strong>เปิด ›</strong></span></a>
                         </div>
                     </section>
                 </div>
@@ -1127,12 +1128,13 @@
             { id: "eoc", title: "ระบบ EOC", desc: "โครงสร้างบัญชาการเหตุการณ์", file: "EOC.html", short: "EO", color: "bg-fuchsia", accent: "#c026d3" },
             { id: "high_alert", title: "High Alert Drugs", desc: "ติดตามการใช้ยาความเสี่ยงสูง", file: "high_alert.html", short: "HA", color: "bg-pink", accent: "#db2777" },
             { id: "ems", title: "Selaphum EMS", desc: "ระบบจัดการเครือข่ายกู้ชีพ", file: "selaphum_ems.html", short: "EM", color: "bg-amber", accent: "#d97706" },
-            { id: "er_dashboard_csv", title: "ER Dashboard (CSV)", desc: "นำเข้าไฟล์ CSV สรุปเวร", file: "er_dashboard_csv.html", short: "CS", color: "bg-lime", accent: "#65a30d" }
+            { id: "er_dashboard_csv", title: "ER Dashboard (CSV)", desc: "นำเข้าไฟล์ CSV สรุปเวร", file: "er_dashboard_csv.html", short: "CS", color: "bg-lime", accent: "#65a30d" },
+            { id: "stroke_fast", title: "Stroke Fast Track", desc: "Dashboard ติดตามผู้ป่วย Stroke", file: "stroke_fast.html", short: "ST", color: "bg-red", accent: "#e11d48" }
         ];
 
         const appGroups = [
             { id: "EMS", name: "EMS", subtitle: "Pre-hospital & Field Operations", desc: "งานกู้ชีพ ด่านหน้า เหตุฉุกเฉิน และการคัดกรองก่อนเข้าระบบ", short: "EM", color: "bg-amber", accent: "#d97706", appIds: ["ems", "triage", "ucep", "eoc"] },
-            { id: "INHOS", name: "INHOS", subtitle: "In-hospital ER Command", desc: "งานในโรงพยาบาล เตียง ER ทรัพยากร เวชระเบียน คุณภาพ และ Dashboard", short: "IN", color: "bg-sky", accent: "#0284c7", appIds: ["er_bed", "xray", "kpi", "er_command", "er_dashboard_csv", "nurse_audit", "high_alert", "satisfaction", "memo_report"] },
+            { id: "INHOS", name: "INHOS", subtitle: "In-hospital ER Command", desc: "งานในโรงพยาบาล เตียง ER ทรัพยากร เวชระเบียน คุณภาพ และ Dashboard", short: "IN", color: "bg-sky", accent: "#0284c7", appIds: ["er_bed", "xray", "kpi", "er_command", "stroke_fast", "er_dashboard_csv", "nurse_audit", "high_alert", "satisfaction", "memo_report"] },
             { id: "REFER", name: "REFER", subtitle: "Referral Coordination", desc: "ระบบบันทึก ส่งต่อ ติดตาม และประสานเครือข่ายรับ-ส่งผู้ป่วย", short: "RF", color: "bg-emerald", accent: "#059669", appIds: ["referral"] }
         ];
 
