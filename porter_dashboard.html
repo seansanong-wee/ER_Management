@@ -307,6 +307,19 @@
                     </div>
                 </section>
 
+                <section class="surface mb-7 flex min-h-[380px] flex-col rounded-lg p-5">
+                    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-semibold text-ink">ช่วงเวลาที่ขอใช้งานหนาแน่นในแต่ละเวร</h3>
+                            <p class="mt-1 text-sm text-slate-500">จำนวนเคสที่เรียกใช้งาน แสดงเป็นรายชั่วโมงตามเวรที่เลือก</p>
+                        </div>
+                        <span class="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">Hourly Demand</span>
+                    </div>
+                    <div class="relative min-h-[300px] flex-1">
+                        <canvas id="hourlyShiftChart"></canvas>
+                    </div>
+                </section>
+
                 <section class="surface overflow-hidden rounded-lg">
                     <div class="flex flex-col gap-3 border-b border-slate-200 bg-white/70 p-5 sm:flex-row sm:items-center sm:justify-between">
                         <h3 class="text-lg font-semibold text-ink">
@@ -353,6 +366,7 @@
         let chartUrgencyInstance = null;
         let chartCartTypeInstance = null;
         let chartDeptInstance = null;
+        let chartHourlyShiftInstance = null;
 
         const shiftMeta = {
             all: { label: 'ทุกเวร', short: 'ทั้งหมด', icon: 'fa-layer-group', color: 'slate' },
@@ -394,7 +408,8 @@
                 const receiveTime = normalizeCell(row[10]) || '-';
                 const reqTime = normalizeCell(row[0]) || '-';
                 const dateValue = parseDateValue(receiveDate) || parseDateFromTimestamp(reqTime);
-                const timeValue = parseTimeValue(receiveTime) ?? parseTimeValue(reqTime);
+                const requestTimeValue = parseTimeValue(reqTime);
+                const timeValue = parseTimeValue(receiveTime) ?? requestTimeValue;
                 const shift = getShiftFromMinutes(timeValue);
 
                 return {
@@ -409,6 +424,8 @@
                     equipment: normalizeCell(row[7]) || '-',
                     receiveDate,
                     receiveTime,
+                    requestMinutes: requestTimeValue,
+                    timeMinutes: timeValue,
                     monthKey: dateValue ? `${dateValue.getFullYear()}-${String(dateValue.getMonth() + 1).padStart(2, '0')}` : 'unknown',
                     monthLabel: dateValue ? dateValue.toLocaleDateString('th-TH', { year: 'numeric', month: 'long' }) : 'ไม่ทราบเดือน',
                     shift
@@ -673,6 +690,94 @@
                     }
                 }
             });
+
+            updateHourlyShiftChart(data);
+        }
+
+        function updateHourlyShiftChart(data) {
+            const ctxHourlyShift = document.getElementById('hourlyShiftChart').getContext('2d');
+            if (chartHourlyShiftInstance) chartHourlyShiftInstance.destroy();
+
+            const labels = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, '0')}:00`);
+            const series = buildHourlyShiftSeries(data);
+            const datasetMeta = [
+                { key: 'morning', color: '#0284c7', fill: 'rgba(14, 165, 233, 0.12)' },
+                { key: 'afternoon', color: '#d97706', fill: 'rgba(217, 119, 6, 0.12)' },
+                { key: 'night', color: '#4f46e5', fill: 'rgba(79, 70, 229, 0.12)' },
+            ];
+            const selectedShift = document.getElementById('shiftFilter').value;
+            const visibleDatasetMeta = selectedShift === 'all'
+                ? datasetMeta
+                : datasetMeta.filter(item => item.key === selectedShift);
+
+            chartHourlyShiftInstance = new Chart(ctxHourlyShift, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: visibleDatasetMeta.map(item => ({
+                        label: shiftMeta[item.key].label,
+                        data: series[item.key],
+                        borderColor: item.color,
+                        backgroundColor: item.fill,
+                        borderWidth: 3,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: item.color,
+                        pointBorderWidth: 2,
+                        tension: 0.35,
+                        fill: true
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#e2e8f0' },
+                            ticks: { precision: 0, stepSize: 1, color: '#64748b', font: { family: 'Kanit' } },
+                            title: { display: true, text: 'จำนวนเคส', color: '#475569', font: { family: 'Kanit', weight: '600' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#334155', font: { family: 'Kanit' }, maxRotation: 0, minRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+                            title: { display: true, text: 'ช่วงเวลา', color: '#475569', font: { family: 'Kanit', weight: '600' } }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 10, color: '#334155', font: { family: 'Kanit' }, padding: 18, usePointStyle: true }
+                        },
+                        tooltip: {
+                            titleFont: { family: 'Kanit' },
+                            bodyFont: { family: 'Kanit' },
+                            callbacks: {
+                                label: context => `${context.dataset.label}: ${context.parsed.y.toLocaleString('th-TH')} เคส`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function buildHourlyShiftSeries(data) {
+            const series = {
+                morning: Array(24).fill(0),
+                afternoon: Array(24).fill(0),
+                night: Array(24).fill(0),
+            };
+
+            data.forEach(item => {
+                const requestMinutes = item.requestMinutes ?? item.timeMinutes;
+                if (!series[item.shift] || requestMinutes === null || requestMinutes === undefined) return;
+                const hour = Math.floor(requestMinutes / 60);
+                if (hour >= 0 && hour < 24) series[item.shift][hour] += 1;
+            });
+
+            return series;
         }
 
         function renderTable(data) {
