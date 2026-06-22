@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Smart Porter Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Kanit', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#0369a1',
+                        ink: '#0f172a',
+                        danger: '#e11d48',
+                        success: '#059669',
+                        warning: '#d97706',
+                    },
+                    boxShadow: {
+                        soft: '0 12px 30px rgba(15, 23, 42, 0.08)',
+                        lift: '0 18px 45px rgba(15, 23, 42, 0.14)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        body {
+            background:
+                linear-gradient(180deg, rgba(240, 249, 255, 0.84), rgba(248, 250, 252, 0.96) 42%, #f8fafc 100%),
+                repeating-linear-gradient(90deg, rgba(14, 165, 233, 0.06) 0 1px, transparent 1px 96px),
+                repeating-linear-gradient(0deg, rgba(15, 23, 42, 0.04) 0 1px, transparent 1px 96px);
+        }
+
+        .surface {
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid rgba(203, 213, 225, 0.78);
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(14px);
+        }
+
+        .metric-card {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92)),
+                linear-gradient(135deg, var(--accent-soft), transparent 52%);
+            border: 1px solid rgba(203, 213, 225, 0.8);
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .metric-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 4px;
+            background: var(--accent);
+        }
+
+        .control {
+            appearance: none;
+            background-color: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            color: #0f172a;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            min-height: 42px;
+            padding: 0.55rem 2.5rem 0.55rem 0.9rem;
+            transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+        }
+
+        .control:focus {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.16);
+            outline: none;
+        }
+
+        .select-wrap {
+            position: relative;
+        }
+
+        .select-wrap::after {
+            color: #64748b;
+            content: "\f078";
+            font-family: "Font Awesome 6 Free";
+            font-size: 0.75rem;
+            font-weight: 900;
+            pointer-events: none;
+            position: absolute;
+            right: 0.95rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .table-shell {
+            scrollbar-width: thin;
+            scrollbar-color: #94a3b8 #e2e8f0;
+        }
+
+        .table-shell::-webkit-scrollbar {
+            height: 10px;
+            width: 10px;
+        }
+
+        .table-shell::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 999px;
+            border: 2px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-800 antialiased">
+    <div class="flex h-screen overflow-hidden">
+        <aside class="hidden w-72 shrink-0 flex-col bg-ink text-white shadow-2xl md:flex">
+            <div class="border-b border-white/10 p-6">
+                <div class="flex items-center gap-3">
+                    <div class="grid h-12 w-12 place-items-center rounded-lg bg-sky-500 text-white shadow-lg shadow-sky-950/30">
+                        <i class="fa-solid fa-truck-medical text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold leading-tight">Smart Porter</h1>
+                        <p class="text-xs text-slate-400">Executive Dashboard</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 space-y-2 px-4 py-6">
+                <a href="#" class="flex items-center gap-3 rounded-lg border border-sky-400/25 bg-sky-500/10 px-4 py-3 text-sm font-medium text-sky-100">
+                    <i class="fa-solid fa-chart-pie w-5 text-sky-300"></i>
+                    รายงานภาพรวม
+                </a>
+                <a href="#" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">
+                    <i class="fa-solid fa-building-user w-5 text-slate-400"></i>
+                    ประสิทธิภาพรายแผนก
+                </a>
+                <a href="#" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">
+                    <i class="fa-solid fa-file-export w-5 text-slate-400"></i>
+                    ส่งออกรายงาน
+                </a>
+            </nav>
+
+            <div class="border-t border-white/10 p-5">
+                <div class="rounded-lg border border-white/10 bg-white/5 p-4">
+                    <p class="text-xs text-slate-400">มุมมองผู้บริหาร</p>
+                    <p class="mt-1 text-sm font-semibold text-white">ศูนย์เปล</p>
+                    <p class="mt-3 text-xs leading-5 text-slate-400">ติดตามปริมาณงาน ความเร่งด่วน และพื้นที่เรียกใช้งานสูงสุดแบบรวมศูนย์</p>
+                </div>
+            </div>
+        </aside>
+
+        <div class="flex min-w-0 flex-1 flex-col">
+            <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 px-4 py-4 shadow-sm backdrop-blur lg:px-8">
+                <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div class="flex min-w-0 items-center gap-3">
+                        <button class="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 text-slate-600 md:hidden" type="button" aria-label="เปิดเมนู">
+                            <i class="fa-solid fa-bars"></i>
+                        </button>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Porter Operations</p>
+                            <h2 class="truncate text-xl font-bold text-ink lg:text-2xl">แดชบอร์ดรายงานการปฏิบัติงานศูนย์เปล</h2>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <div class="grid gap-1">
+                            <span class="text-xs font-medium text-slate-500">เดือน</span>
+                            <div class="select-wrap">
+                                <select id="monthFilter" class="control w-full min-w-[180px]" onchange="handleFilterChange()" disabled>
+                                    <option value="all">ทุกเดือน</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid gap-1">
+                            <span class="text-xs font-medium text-slate-500">เวร</span>
+                            <div class="select-wrap">
+                                <select id="shiftFilter" class="control w-full min-w-[160px]" onchange="handleFilterChange()" disabled>
+                                    <option value="all">ทุกเวร</option>
+                                    <option value="morning">เวรเช้า</option>
+                                    <option value="afternoon">เวรบ่าย</option>
+                                    <option value="night">เวรดึก</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="pt-5 sm:pt-4">
+                            <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleFileUpload(event)">
+                            <label for="csvFileInput" class="inline-flex min-h-[42px] cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-900/20 transition hover:bg-sky-700">
+                                <i class="fa-solid fa-file-csv text-base"></i>
+                                นำเข้าข้อมูล CSV
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto px-4 py-5 lg:px-8 lg:py-7">
+                <section class="mb-6 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+                    <div>
+                        <h3 class="text-lg font-bold text-ink">สรุปผลการดำเนินงาน</h3>
+                        <p class="mt-1 text-sm text-slate-500">ข้อมูลจะเปลี่ยนตามเดือนและเวรที่เลือกหลังนำเข้าไฟล์ CSV</p>
+                    </div>
+                    <div class="surface flex flex-wrap items-center gap-3 rounded-lg px-4 py-3">
+                        <span class="inline-flex items-center gap-2 rounded-lg bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700">
+                            <i class="fa-regular fa-calendar"></i>
+                            <span id="currentDate">วันนี้</span>
+                        </span>
+                        <span class="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700" id="filterSummary">
+                            <i class="fa-solid fa-filter"></i>
+                            ทุกเดือน / ทุกเวร
+                        </span>
+                    </div>
+                </section>
+
+                <section class="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <div class="metric-card relative overflow-hidden rounded-lg p-5" style="--accent:#0369a1; --accent-soft:rgba(14,165,233,0.12);">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">ยอดรวมให้บริการทั้งหมด</p>
+                                <h3 class="mt-3 text-4xl font-bold text-ink" id="kpiTotal">0</h3>
+                                <p class="mt-2 text-xs text-slate-500">จำนวนครั้ง/เคส</p>
+                            </div>
+                            <div class="grid h-11 w-11 place-items-center rounded-lg bg-sky-100 text-sky-700">
+                                <i class="fa-solid fa-users text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card relative overflow-hidden rounded-lg p-5" style="--accent:#e11d48; --accent-soft:rgba(225,29,72,0.11);">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">เคสเร่งด่วน</p>
+                                <h3 class="mt-3 text-4xl font-bold text-danger" id="kpiEmergency">0</h3>
+                                <p class="mt-2 text-xs text-rose-600" id="kpiEmergencyPct">คิดเป็น 0% ของงานทั้งหมด</p>
+                            </div>
+                            <div class="grid h-11 w-11 place-items-center rounded-lg bg-rose-100 text-rose-700">
+                                <i class="fa-solid fa-bolt text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card relative overflow-hidden rounded-lg p-5" style="--accent:#d97706; --accent-soft:rgba(217,119,6,0.12);">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">เคสนัดหมายปกติ</p>
+                                <h3 class="mt-3 text-4xl font-bold text-warning" id="kpiElective">0</h3>
+                                <p class="mt-2 text-xs text-amber-700" id="kpiElectivePct">คิดเป็น 0% ของงานทั้งหมด</p>
+                            </div>
+                            <div class="grid h-11 w-11 place-items-center rounded-lg bg-amber-100 text-amber-700">
+                                <i class="fa-solid fa-calendar-check text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card relative overflow-hidden rounded-lg p-5" style="--accent:#059669; --accent-soft:rgba(5,150,105,0.11);">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">เคสที่ต้องการออกซิเจน</p>
+                                <h3 class="mt-3 text-4xl font-bold text-success" id="kpiOxygen">0</h3>
+                                <p class="mt-2 text-xs text-slate-500">อัตราการใช้อุปกรณ์เสริม</p>
+                            </div>
+                            <div class="grid h-11 w-11 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
+                                <i class="fa-solid fa-lungs text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-7 grid grid-cols-1 gap-5 lg:grid-cols-4">
+                    <div class="surface flex min-h-[330px] flex-col rounded-lg p-5">
+                        <div class="mb-4 flex items-center justify-between gap-3">
+                            <h3 class="text-base font-semibold text-ink">สัดส่วนความเร่งด่วน</h3>
+                            <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">Urgency</span>
+                        </div>
+                        <div class="relative min-h-[250px] flex-1">
+                            <canvas id="urgencyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="surface flex min-h-[330px] flex-col rounded-lg p-5">
+                        <div class="mb-4 flex items-center justify-between gap-3">
+                            <h3 class="text-base font-semibold text-ink">สัดส่วนประเภทรถ</h3>
+                            <span class="rounded-lg bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700">Transport</span>
+                        </div>
+                        <div class="relative min-h-[250px] flex-1">
+                            <canvas id="cartTypeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="surface flex min-h-[330px] flex-col rounded-lg p-5 lg:col-span-2">
+                        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                            <h3 class="text-base font-semibold text-ink">5 อันดับแผนกที่เรียกใช้งานสูงสุด</h3>
+                            <span class="rounded-lg bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">Hotspots</span>
+                        </div>
+                        <div class="relative min-h-[250px] flex-1">
+                            <canvas id="departmentChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="surface mb-7 flex min-h-[380px] flex-col rounded-lg p-5">
+                    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-semibold text-ink">ช่วงเวลาที่ขอใช้งานหนาแน่นในแต่ละเวร</h3>
+                            <p class="mt-1 text-sm text-slate-500">จำนวนเคสที่เรียกใช้งาน แสดงเป็นรายชั่วโมงตามเวรที่เลือก</p>
+                        </div>
+                        <span class="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">Hourly Demand</span>
+                    </div>
+                    <div class="relative min-h-[300px] flex-1">
+                        <canvas id="hourlyShiftChart"></canvas>
+                    </div>
+                </section>
+
+                <section class="surface overflow-hidden rounded-lg">
+                    <div class="flex flex-col gap-3 border-b border-slate-200 bg-white/70 p-5 sm:flex-row sm:items-center sm:justify-between">
+                        <h3 class="text-lg font-semibold text-ink">
+                            <i class="fa-solid fa-list-ul mr-2 text-primary"></i>
+                            ข้อมูลรายละเอียดเชิงลึก
+                        </h3>
+                        <span class="inline-flex w-fit items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary" id="recordCountBadge">
+                            <i class="fa-solid fa-database"></i>
+                            รอการนำเข้าข้อมูล...
+                        </span>
+                    </div>
+
+                    <div class="table-shell max-h-[430px] overflow-auto">
+                        <table class="w-full min-w-[980px] whitespace-nowrap text-left text-sm text-slate-600">
+                            <thead class="sticky top-0 z-10 bg-slate-100 text-slate-700 shadow-sm">
+                                <tr>
+                                    <th class="px-6 py-4 font-semibold">เวลาเรียก / เวลารับตัว</th>
+                                    <th class="px-6 py-4 font-semibold">เวร</th>
+                                    <th class="px-6 py-4 font-semibold">ความเร่งด่วน</th>
+                                    <th class="px-6 py-4 font-semibold">ผู้ป่วย (HN/ชื่อ)</th>
+                                    <th class="px-6 py-4 font-semibold">ประเภทรถ</th>
+                                    <th class="px-6 py-4 font-semibold">เส้นทาง</th>
+                                    <th class="px-6 py-4 text-center font-semibold">อุปกรณ์</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 bg-white" id="patientTableBody">
+                                <tr>
+                                    <td colspan="7" class="px-6 py-14 text-center text-slate-400">
+                                        <i class="fa-solid fa-file-csv mb-3 text-4xl text-slate-300"></i>
+                                        <p>กรุณากดปุ่ม "นำเข้าข้อมูล CSV" ด้านบนเพื่อแสดงผลรายงาน</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let rawData = [];
+        let filteredData = [];
+        let chartUrgencyInstance = null;
+        let chartCartTypeInstance = null;
+        let chartDeptInstance = null;
+        let chartHourlyShiftInstance = null;
+
+        const shiftMeta = {
+            all: { label: 'ทุกเวร', short: 'ทั้งหมด', icon: 'fa-layer-group', color: 'slate' },
+            morning: { label: 'เวรเช้า', short: 'เช้า', icon: 'fa-sun', color: 'sky' },
+            afternoon: { label: 'เวรบ่าย', short: 'บ่าย', icon: 'fa-cloud-sun', color: 'amber' },
+            night: { label: 'เวรดึก', short: 'ดึก', icon: 'fa-moon', color: 'indigo' },
+        };
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('currentDate').textContent = file.lastModifiedDate
+                ? file.lastModifiedDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+                : new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('recordCountBadge').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังประมวลผล...';
+
+            Papa.parse(file, {
+                header: false,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processCSVData(results.data);
+                },
+                error: function(err) {
+                    alert('เกิดข้อผิดพลาดในการอ่านไฟล์ CSV: ' + err.message);
+                }
+            });
+        }
+
+        function processCSVData(matrix) {
+            if (matrix.length === 0) return;
+
+            if (matrix[0][0] && (matrix[0][0].includes('ประทับเวลา') || matrix[0][0].includes('Time'))) {
+                matrix.shift();
+            }
+
+            rawData = matrix.map((row, index) => {
+                const receiveDate = normalizeCell(row[9]);
+                const receiveTime = normalizeCell(row[10]) || '-';
+                const reqTime = normalizeCell(row[0]) || '-';
+                const dateValue = parseDateValue(receiveDate) || parseDateFromTimestamp(reqTime);
+                const requestTimeValue = parseTimeValue(reqTime);
+                const timeValue = parseTimeValue(receiveTime) ?? requestTimeValue;
+                const shift = getShiftFromMinutes(timeValue);
+
+                return {
+                    id: index + 1,
+                    reqTime,
+                    urgency: normalizeCell(row[1]) || 'Elective',
+                    hn: normalizeCell(row[2]) || '-',
+                    name: normalizeCell(row[3]) || 'ไม่ระบุ',
+                    cartType: normalizeCell(row[4]) || '-',
+                    from: normalizeCell(row[5]) || '-',
+                    to: normalizeCell(row[6]) || '-',
+                    equipment: normalizeCell(row[7]) || '-',
+                    receiveDate,
+                    receiveTime,
+                    requestMinutes: requestTimeValue,
+                    timeMinutes: timeValue,
+                    monthKey: dateValue ? `${dateValue.getFullYear()}-${String(dateValue.getMonth() + 1).padStart(2, '0')}` : 'unknown',
+                    monthLabel: dateValue ? dateValue.toLocaleDateString('th-TH', { year: 'numeric', month: 'long' }) : 'ไม่ทราบเดือน',
+                    shift
+                };
+            });
+
+            populateMonthFilter();
+            enableFilters();
+            applyFilters();
+        }
+
+        function normalizeCell(value) {
+            return value === undefined || value === null ? '' : String(value).trim();
+        }
+
+        function parseDateValue(value) {
+            if (!value) return null;
+            const text = String(value).trim();
+            const datePart = text.split(/\s+/)[0];
+            const yearFirstParts = datePart.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+            if (yearFirstParts) {
+                let year = Number(yearFirstParts[1]);
+                const month = Number(yearFirstParts[2]) - 1;
+                const day = Number(yearFirstParts[3]);
+                if (year > 2400) year -= 543;
+                const parsed = new Date(year, month, day);
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+
+            const parts = datePart.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+            if (!parts) {
+                const parsed = new Date(text);
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+
+            let day = Number(parts[1]);
+            let month = Number(parts[2]) - 1;
+            let year = Number(parts[3]);
+            if (year < 100) year += 2000;
+            if (year > 2400) year -= 543;
+            const parsed = new Date(year, month, day);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function parseDateFromTimestamp(value) {
+            if (!value) return null;
+            const text = String(value);
+            const yearFirstDate = text.match(/\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/);
+            if (yearFirstDate) return parseDateValue(yearFirstDate[0]);
+            const thaiDate = text.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/);
+            return thaiDate ? parseDateValue(thaiDate[0]) : null;
+        }
+
+        function parseTimeValue(value) {
+            if (!value) return null;
+            const match = String(value).match(/(\d{1,2})[:.](\d{2})/);
+            if (!match) return null;
+            const hour = Number(match[1]);
+            const minute = Number(match[2]);
+            if (Number.isNaN(hour) || Number.isNaN(minute) || hour > 23 || minute > 59) return null;
+            return hour * 60 + minute;
+        }
+
+        function getShiftFromMinutes(minutes) {
+            if (minutes === null || minutes === undefined) return 'unknown';
+            if (minutes >= 8 * 60 && minutes < 16 * 60) return 'morning';
+            if (minutes >= 16 * 60) return 'afternoon';
+            return 'night';
+        }
+
+        function populateMonthFilter() {
+            const monthFilter = document.getElementById('monthFilter');
+            const selected = monthFilter.value || 'all';
+            const months = [...new Map(rawData.map(item => [item.monthKey, item.monthLabel])).entries()]
+                .filter(([key]) => key !== 'unknown')
+                .sort(([a], [b]) => b.localeCompare(a));
+
+            monthFilter.innerHTML = '<option value="all">ทุกเดือน</option>';
+            months.forEach(([key, label]) => {
+                monthFilter.insertAdjacentHTML('beforeend', `<option value="${key}">${label}</option>`);
+            });
+
+            if (rawData.some(item => item.monthKey === 'unknown')) {
+                monthFilter.insertAdjacentHTML('beforeend', '<option value="unknown">ไม่ทราบเดือน</option>');
+            }
+
+            monthFilter.value = [...monthFilter.options].some(option => option.value === selected) ? selected : 'all';
+        }
+
+        function enableFilters() {
+            document.getElementById('monthFilter').disabled = rawData.length === 0;
+            document.getElementById('shiftFilter').disabled = rawData.length === 0;
+        }
+
+        function handleFilterChange() {
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const monthValue = document.getElementById('monthFilter').value;
+            const shiftValue = document.getElementById('shiftFilter').value;
+
+            filteredData = rawData.filter(item => {
+                const matchMonth = monthValue === 'all' || item.monthKey === monthValue;
+                const matchShift = shiftValue === 'all' || item.shift === shiftValue;
+                return matchMonth && matchShift;
+            });
+
+            updateFilterSummary(monthValue, shiftValue);
+            updateDashboard();
+        }
+
+        function updateFilterSummary(monthValue, shiftValue) {
+            const monthFilter = document.getElementById('monthFilter');
+            const monthLabel = monthValue === 'all'
+                ? 'ทุกเดือน'
+                : monthFilter.options[monthFilter.selectedIndex]?.text || 'ทุกเดือน';
+            const shiftLabel = shiftMeta[shiftValue]?.label || 'ทุกเวร';
+            document.getElementById('filterSummary').innerHTML = `<i class="fa-solid fa-filter"></i> ${monthLabel} / ${shiftLabel}`;
+        }
+
+        function isEmergencyCase(item) {
+            const urgency = item.urgency.toLowerCase();
+            return urgency.includes('emergency') || item.urgency.includes('ด่วน');
+        }
+
+        function hasOxygen(item) {
+            return item.equipment.includes('ออกซิเจน') || item.equipment.toLowerCase().includes('oxygen');
+        }
+
+        function isBedCart(item) {
+            const cartType = item.cartType.toLowerCase();
+            return item.cartType.includes('นอน') || cartType.includes('bed') || cartType.includes('stretcher');
+        }
+
+        function updateDashboard() {
+            const data = filteredData;
+            const total = data.length;
+            const emergencyCount = data.filter(isEmergencyCase).length;
+            const electiveCount = total - emergencyCount;
+            const oxygenCount = data.filter(hasOxygen).length;
+
+            document.getElementById('kpiTotal').innerText = total.toLocaleString('th-TH');
+            document.getElementById('kpiEmergency').innerText = emergencyCount.toLocaleString('th-TH');
+            document.getElementById('kpiElective').innerText = electiveCount.toLocaleString('th-TH');
+            document.getElementById('kpiOxygen').innerText = oxygenCount.toLocaleString('th-TH');
+
+            const pctEm = total > 0 ? ((emergencyCount / total) * 100).toFixed(1) : '0.0';
+            const pctEl = total > 0 ? ((electiveCount / total) * 100).toFixed(1) : '0.0';
+            document.getElementById('kpiEmergencyPct').innerText = `คิดเป็น ${pctEm}% ของงานทั้งหมด`;
+            document.getElementById('kpiElectivePct').innerText = `คิดเป็น ${pctEl}% ของงานทั้งหมด`;
+            document.getElementById('recordCountBadge').innerHTML = `<i class="fa-solid fa-database"></i> แสดง ${total.toLocaleString('th-TH')} จาก ${rawData.length.toLocaleString('th-TH')} รายการ`;
+
+            updateCharts(emergencyCount, electiveCount, data);
+            renderTable(data);
+        }
+
+        function updateCharts(emCount, elCount, data) {
+            const ctxUrgency = document.getElementById('urgencyChart').getContext('2d');
+            if (chartUrgencyInstance) chartUrgencyInstance.destroy();
+
+            chartUrgencyInstance = new Chart(ctxUrgency, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Emergency', 'Elective'],
+                    datasets: [{
+                        data: [emCount, elCount],
+                        backgroundColor: ['#e11d48', '#d97706'],
+                        borderColor: '#ffffff',
+                        borderWidth: 5,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 10, color: '#334155', font: { family: 'Kanit' }, padding: 18, usePointStyle: true }
+                        },
+                        tooltip: { titleFont: { family: 'Kanit' }, bodyFont: { family: 'Kanit', size: 14 } }
+                    },
+                    cutout: '68%'
+                }
+            });
+
+            const bedCartCount = data.filter(isBedCart).length;
+            const seatedCartCount = Math.max(data.length - bedCartCount, 0);
+            const ctxCartType = document.getElementById('cartTypeChart').getContext('2d');
+            if (chartCartTypeInstance) chartCartTypeInstance.destroy();
+
+            chartCartTypeInstance = new Chart(ctxCartType, {
+                type: 'doughnut',
+                data: {
+                    labels: ['รถนั่ง', 'เปลนอน'],
+                    datasets: [{
+                        data: [seatedCartCount, bedCartCount],
+                        backgroundColor: ['#7c3aed', '#0284c7'],
+                        borderColor: '#ffffff',
+                        borderWidth: 5,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 10, color: '#334155', font: { family: 'Kanit' }, padding: 18, usePointStyle: true }
+                        },
+                        tooltip: { titleFont: { family: 'Kanit' }, bodyFont: { family: 'Kanit', size: 14 } }
+                    },
+                    cutout: '68%'
+                }
+            });
+
+            const deptCounts = {};
+            data.forEach(item => {
+                if (item.from && item.from !== '-') {
+                    deptCounts[item.from] = (deptCounts[item.from] || 0) + 1;
+                }
+            });
+
+            const sortedDepts = Object.entries(deptCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const deptLabels = sortedDepts.map(item => item[0]);
+            const deptData = sortedDepts.map(item => item[1]);
+
+            const ctxDept = document.getElementById('departmentChart').getContext('2d');
+            if (chartDeptInstance) chartDeptInstance.destroy();
+
+            chartDeptInstance = new Chart(ctxDept, {
+                type: 'bar',
+                data: {
+                    labels: deptLabels.length ? deptLabels : ['ไม่มีข้อมูล'],
+                    datasets: [{
+                        label: 'จำนวนครั้งที่เรียกใช้ (เคส)',
+                        data: deptData.length ? deptData : [0],
+                        backgroundColor: ['#0284c7', '#059669', '#d97706', '#7c3aed', '#e11d48'],
+                        borderRadius: 8,
+                        maxBarThickness: 46
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#e2e8f0' },
+                            ticks: { precision: 0, stepSize: 1, color: '#64748b', font: { family: 'Kanit' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#334155', font: { family: 'Kanit' }, maxRotation: 0, minRotation: 0 }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { titleFont: { family: 'Kanit' }, bodyFont: { family: 'Kanit' } }
+                    }
+                }
+            });
+
+            updateHourlyShiftChart(data);
+        }
+
+        function updateHourlyShiftChart(data) {
+            const ctxHourlyShift = document.getElementById('hourlyShiftChart').getContext('2d');
+            if (chartHourlyShiftInstance) chartHourlyShiftInstance.destroy();
+
+            const labels = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, '0')}:00`);
+            const series = buildHourlyShiftSeries(data);
+            const datasetMeta = [
+                { key: 'morning', color: '#0284c7', fill: 'rgba(14, 165, 233, 0.12)' },
+                { key: 'afternoon', color: '#d97706', fill: 'rgba(217, 119, 6, 0.12)' },
+                { key: 'night', color: '#4f46e5', fill: 'rgba(79, 70, 229, 0.12)' },
+            ];
+            const selectedShift = document.getElementById('shiftFilter').value;
+            const visibleDatasetMeta = selectedShift === 'all'
+                ? datasetMeta
+                : datasetMeta.filter(item => item.key === selectedShift);
+
+            chartHourlyShiftInstance = new Chart(ctxHourlyShift, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: visibleDatasetMeta.map(item => ({
+                        label: shiftMeta[item.key].label,
+                        data: series[item.key],
+                        borderColor: item.color,
+                        backgroundColor: item.fill,
+                        borderWidth: 3,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: item.color,
+                        pointBorderWidth: 2,
+                        tension: 0.35,
+                        fill: true
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#e2e8f0' },
+                            ticks: { precision: 0, stepSize: 1, color: '#64748b', font: { family: 'Kanit' } },
+                            title: { display: true, text: 'จำนวนเคส', color: '#475569', font: { family: 'Kanit', weight: '600' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#334155', font: { family: 'Kanit' }, maxRotation: 0, minRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+                            title: { display: true, text: 'ช่วงเวลา', color: '#475569', font: { family: 'Kanit', weight: '600' } }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 10, color: '#334155', font: { family: 'Kanit' }, padding: 18, usePointStyle: true }
+                        },
+                        tooltip: {
+                            titleFont: { family: 'Kanit' },
+                            bodyFont: { family: 'Kanit' },
+                            callbacks: {
+                                label: context => `${context.dataset.label}: ${context.parsed.y.toLocaleString('th-TH')} เคส`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function buildHourlyShiftSeries(data) {
+            const series = {
+                morning: Array(24).fill(0),
+                afternoon: Array(24).fill(0),
+                night: Array(24).fill(0),
+            };
+
+            data.forEach(item => {
+                const requestMinutes = item.requestMinutes ?? item.timeMinutes;
+                if (!series[item.shift] || requestMinutes === null || requestMinutes === undefined) return;
+                const hour = Math.floor(requestMinutes / 60);
+                if (hour >= 0 && hour < 24) series[item.shift][hour] += 1;
+            });
+
+            return series;
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('patientTableBody');
+
+            if (rawData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-6 py-14 text-center text-slate-400">
+                            <i class="fa-solid fa-file-csv mb-3 text-4xl text-slate-300"></i>
+                            <p>กรุณากดปุ่ม "นำเข้าข้อมูล CSV" ด้านบนเพื่อแสดงผลรายงาน</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-6 py-14 text-center text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass-chart mb-3 text-4xl text-slate-300"></i>
+                            <p>ไม่พบข้อมูลตามเดือนและเวรที่เลือก</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = data.map(row => {
+                const isEmergency = isEmergencyCase(row);
+                const shift = shiftMeta[row.shift] || { label: 'ไม่ทราบเวร', short: 'ไม่ทราบ', icon: 'fa-circle-question', color: 'slate' };
+                const shiftBadgeClass = getShiftBadgeClass(row.shift);
+                const urgencyBadge = isEmergency
+                    ? '<span class="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2.5 py-1 text-[11px] font-bold uppercase text-rose-700 ring-1 ring-rose-200"><i class="fa-solid fa-bolt"></i> Emergency</span>'
+                    : '<span class="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] font-bold uppercase text-amber-700 ring-1 ring-amber-200"><i class="fa-regular fa-clock"></i> Elective</span>';
+                const equipmentBadge = hasOxygen(row)
+                    ? `<span class="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs text-emerald-700 ring-1 ring-emerald-200"><i class="fa-solid fa-wind"></i> ${escapeHtml(row.equipment)}</span>`
+                    : '<span class="text-xs text-slate-400">-</span>';
+                const cartIcon = row.cartType.includes('นอน')
+                    ? '<i class="fa-solid fa-bed text-sky-600"></i>'
+                    : '<i class="fa-solid fa-wheelchair text-violet-600"></i>';
+                const rcvDisplay = row.receiveDate && row.receiveTime !== '-'
+                    ? `${row.receiveDate} ${row.receiveTime}`
+                    : row.receiveTime;
+
+                return `
+                    <tr class="transition hover:bg-sky-50/45">
+                        <td class="px-6 py-4">
+                            <div class="text-xs text-slate-400"><i class="fa-regular fa-paper-plane mr-1"></i> ${escapeHtml(row.reqTime)}</div>
+                            <div class="mt-1 text-xs font-semibold text-slate-800"><i class="fa-solid fa-check-double mr-1 text-success"></i> ${escapeHtml(rcvDisplay)}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="${shiftBadgeClass}"><i class="fa-solid ${shift.icon}"></i> ${shift.short}</span>
+                        </td>
+                        <td class="px-6 py-4">${urgencyBadge}</td>
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-primary">${escapeHtml(row.hn)}</div>
+                            <div class="max-w-[180px] truncate text-sm text-slate-600">${escapeHtml(row.name)}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="inline-flex items-center gap-2 text-slate-700">${cartIcon}<span>${escapeHtml(row.cartType)}</span></div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <span class="max-w-[150px] truncate rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700 ring-1 ring-slate-200">${escapeHtml(row.from)}</span>
+                                <i class="fa-solid fa-arrow-right text-slate-400"></i>
+                                <span class="max-w-[150px] truncate rounded-lg bg-sky-50 px-2.5 py-1 text-xs text-sky-700 ring-1 ring-sky-100">${escapeHtml(row.to)}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">${equipmentBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getShiftBadgeClass(shift) {
+            const base = 'inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold ring-1';
+            const classes = {
+                morning: 'bg-sky-50 text-sky-700 ring-sky-200',
+                afternoon: 'bg-amber-50 text-amber-700 ring-amber-200',
+                night: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
+                unknown: 'bg-slate-100 text-slate-600 ring-slate-200'
+            };
+            return `${base} ${classes[shift] || classes.unknown}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        window.onload = function() {
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        };
+    </script>
+</body>
+</html>
