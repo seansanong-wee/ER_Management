@@ -4,32 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ER Unified Operating System (ER-UOS)</title>
-    <style>
+        <style>
         :root {
             color-scheme: light;
-            --bg: #eef3f8;
+            --bg: #f4f7fb;
             --surface: #ffffff;
-            --surface-2: #f8fafc;
-            --ink: #0f172a;
+            --surface-soft: #f8fafc;
+            --ink: #102033;
             --muted: #64748b;
             --soft: #94a3b8;
-            --line: #dbe4ee;
-            --nav: #111827;
-            --nav-2: #0f172a;
-            --blue: #2563eb;
-            --sky: #0284c7;
-            --orange: #ea580c;
-            --emerald: #059669;
-            --rose: #e11d48;
-            --indigo: #4f46e5;
-            --purple: #7c3aed;
-            --cyan: #0891b2;
-            --lime: #65a30d;
-            --pink: #db2777;
-            --amber: #d97706;
-            --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.07);
-            --shadow-md: 0 14px 32px rgba(15, 23, 42, 0.12);
-            --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.16);
+            --line: #dbe4ef;
+            --line-soft: #edf2f7;
+            --danger: #c81e3a;
+            --danger-dark: #9f1239;
+            --danger-soft: #fff1f3;
+            --success: #057a67;
+            --success-soft: #eafaf4;
+            --info: #2563eb;
+            --info-soft: #eff6ff;
+            --warning: #b7791f;
+            --navy: #152235;
+            --navy-2: #1e2f48;
+            --shadow-sm: 0 8px 22px rgba(16, 32, 51, .07);
+            --shadow-md: 0 18px 38px rgba(16, 32, 51, .12);
+            --shadow-lg: 0 24px 64px rgba(16, 32, 51, .16);
+            --radius: 8px;
         }
 
         * { box-sizing: border-box; }
@@ -38,21 +37,29 @@
         body {
             margin: 0;
             min-height: 100%;
-            font-family: "Segoe UI", "Noto Sans Thai", Tahoma, Arial, sans-serif;
-            background: var(--bg);
             color: var(--ink);
+            background:
+                linear-gradient(135deg, rgba(200, 30, 58, .07), transparent 32%),
+                linear-gradient(225deg, rgba(5, 122, 103, .07), transparent 34%),
+                linear-gradient(180deg, #ffffff 0%, var(--bg) 46%, #eaf0f7 100%);
+            font-family: "Sarabun", "Noto Sans Thai", "Segoe UI", Tahoma, Arial, sans-serif;
         }
 
         body { overflow: hidden; }
 
         button,
-        input {
-            font: inherit;
-        }
+        input { font: inherit; }
 
         button {
             border: 0;
             cursor: pointer;
+        }
+
+        button:focus-visible,
+        input:focus-visible,
+        [role="button"]:focus-visible {
+            outline: 3px solid rgba(37, 99, 235, .2);
+            outline-offset: 2px;
         }
 
         .shell {
@@ -60,11 +67,7 @@
             width: 100vw;
             height: 100vh;
             overflow: hidden;
-            background:
-                linear-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
-                var(--bg);
-            background-size: 28px 28px;
+            background: transparent;
         }
 
         .sidebar {
@@ -76,11 +79,18 @@
             flex-direction: column;
             color: #e5eef8;
             background:
-                linear-gradient(180deg, rgba(37, 99, 235, 0.13), transparent 28%),
-                linear-gradient(135deg, var(--nav), var(--nav-2));
-            border-right: 1px solid rgba(148, 163, 184, 0.18);
-            box-shadow: 18px 0 48px rgba(15, 23, 42, 0.18);
+                linear-gradient(180deg, rgba(200, 30, 58, .2), transparent 28%),
+                linear-gradient(180deg, rgba(37, 99, 235, .12), transparent 52%),
+                linear-gradient(135deg, var(--navy), #0f172a);
+            border-right: 1px solid rgba(148, 163, 184, .2);
+            box-shadow: 18px 0 48px rgba(16, 32, 51, .18);
             transition: width 180ms ease, min-width 180ms ease, transform 180ms ease;
+        }
+
+        .sidebar::before {
+            content: "";
+            height: 5px;
+            background: linear-gradient(90deg, var(--danger), var(--info), var(--success));
         }
 
         .sidebar.collapsed {
@@ -94,7 +104,7 @@
             align-items: center;
             gap: 12px;
             padding: 0 18px;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.17);
+            border-bottom: 1px solid rgba(148, 163, 184, .17);
             white-space: nowrap;
         }
 
@@ -104,17 +114,17 @@
             display: inline-grid;
             place-items: center;
             flex: 0 0 auto;
+            border-radius: var(--radius);
             color: #ffffff;
             font-weight: 900;
-            letter-spacing: 0.02em;
+            letter-spacing: 0;
         }
 
         .brand-mark {
             width: 42px;
             height: 42px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #38bdf8, #2563eb 62%, #1d4ed8);
-            box-shadow: 0 14px 30px rgba(37, 99, 235, 0.35);
+            background: linear-gradient(135deg, var(--danger), var(--info));
+            box-shadow: 0 14px 30px rgba(200, 30, 58, .25);
         }
 
         .brand-title {
@@ -128,10 +138,10 @@
         .brand-subtitle {
             display: block;
             margin-top: 4px;
-            color: #9fb3ca;
+            color: #b9c8d9;
             font-size: 11px;
             font-weight: 700;
-            letter-spacing: 0.08em;
+            letter-spacing: .08em;
             text-transform: uppercase;
         }
 
@@ -142,14 +152,12 @@
         }
 
         .nav::-webkit-scrollbar,
-        .home::-webkit-scrollbar {
-            width: 10px;
-        }
+        .home::-webkit-scrollbar { width: 10px; }
 
         .nav::-webkit-scrollbar-thumb,
         .home::-webkit-scrollbar-thumb {
             border-radius: 999px;
-            background: rgba(148, 163, 184, 0.28);
+            background: rgba(148, 163, 184, .28);
             border: 3px solid transparent;
             background-clip: padding-box;
         }
@@ -161,18 +169,22 @@
             align-items: center;
             gap: 9px;
             padding: 0 10px 8px;
-            color: #93c5fd;
+            color: #b9d5ff;
             font-size: 11px;
             font-weight: 900;
-            letter-spacing: 0.16em;
+            letter-spacing: .14em;
         }
 
-        .nav-dot {
-            width: 7px;
-            height: 7px;
+        .nav-dot,
+        .live-dot,
+        .status-dot {
+            display: inline-block;
+            flex: 0 0 auto;
+            width: 8px;
+            height: 8px;
             border-radius: 999px;
             background: currentColor;
-            box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.11);
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, .14);
         }
 
         .nav-button {
@@ -184,7 +196,7 @@
             gap: 12px;
             padding: 10px 12px;
             margin: 3px 0;
-            border-radius: 8px;
+            border-radius: var(--radius);
             background: transparent;
             color: #cbd5e1;
             text-align: left;
@@ -192,15 +204,15 @@
         }
 
         .nav-button:hover {
-            background: rgba(255, 255, 255, 0.07);
+            background: rgba(255, 255, 255, .08);
             color: #ffffff;
             transform: translateX(2px);
         }
 
         .nav-button.active {
-            background: linear-gradient(90deg, rgba(37, 99, 235, 0.24), rgba(255, 255, 255, 0.06));
+            background: linear-gradient(90deg, rgba(200, 30, 58, .28), rgba(255, 255, 255, .07));
             color: #ffffff;
-            box-shadow: inset 3px 0 0 #38bdf8;
+            box-shadow: inset 3px 0 0 #f43f5e;
         }
 
         .nav-main {
@@ -227,9 +239,7 @@
         .sidebar.collapsed .brand-text,
         .sidebar.collapsed .nav-title span:last-child,
         .sidebar.collapsed .nav-label,
-        .sidebar.collapsed .user-box {
-            display: none;
-        }
+        .sidebar.collapsed .user-box { display: none; }
 
         .sidebar.collapsed .brand,
         .sidebar.collapsed .nav-title,
@@ -248,7 +258,7 @@
             justify-content: space-between;
             gap: 10px;
             padding: 14px 16px;
-            border-top: 1px solid rgba(148, 163, 184, 0.17);
+            border-top: 1px solid rgba(148, 163, 184, .17);
             color: #94a3b8;
         }
 
@@ -266,8 +276,8 @@
             place-items: center;
             border-radius: 999px;
             color: #ffffff;
-            background: #1e293b;
-            border: 1px solid rgba(148, 163, 184, 0.24);
+            background: rgba(255, 255, 255, .08);
+            border: 1px solid rgba(148, 163, 184, .24);
             font-weight: 900;
         }
 
@@ -291,7 +301,7 @@
             height: 40px;
             display: inline-grid;
             place-items: center;
-            border-radius: 8px;
+            border-radius: var(--radius);
             background: transparent;
             color: inherit;
             font-size: 20px;
@@ -299,7 +309,7 @@
         }
 
         .icon-button:hover {
-            background: rgba(148, 163, 184, 0.15);
+            background: rgba(148, 163, 184, .15);
             transform: translateY(-1px);
         }
 
@@ -308,18 +318,18 @@
             min-width: 0;
             display: flex;
             flex-direction: column;
-            background: rgba(255, 255, 255, 0.46);
+            background: rgba(255, 255, 255, .46);
         }
 
         .topbar {
             min-height: 72px;
             display: grid;
-            grid-template-columns: minmax(260px, 1fr) minmax(260px, 420px) auto;
+            grid-template-columns: minmax(260px, 1fr) minmax(260px, 430px) auto;
             align-items: center;
             gap: 18px;
             padding: 0 22px;
-            border-bottom: 1px solid rgba(203, 213, 225, 0.78);
-            background: rgba(255, 255, 255, 0.86);
+            border-bottom: 1px solid rgba(203, 213, 225, .78);
+            background: rgba(255, 255, 255, .9);
             backdrop-filter: blur(14px);
             box-shadow: var(--shadow-sm);
             z-index: 12;
@@ -372,17 +382,17 @@
             height: 44px;
             padding: 0 16px 0 42px;
             border: 1px solid var(--line);
-            border-radius: 8px;
+            border-radius: var(--radius);
             outline: none;
             color: var(--ink);
             background: #ffffff;
-            box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.02);
+            box-shadow: inset 0 1px 0 rgba(15, 23, 42, .02);
             transition: border-color 140ms ease, box-shadow 140ms ease;
         }
 
         .command-search input:focus {
-            border-color: #38bdf8;
-            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
+            border-color: var(--info);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, .12);
         }
 
         .search-symbol {
@@ -418,123 +428,134 @@
         .home {
             height: 100%;
             overflow-y: auto;
-            background:
-                linear-gradient(180deg, rgba(255, 255, 255, 0.46), transparent 260px),
-                transparent;
+            background: transparent;
         }
 
         .hero {
             position: relative;
             overflow: hidden;
-            padding: 34px 36px 22px;
+            margin: 22px auto 18px;
+            width: min(1220px, calc(100% - 44px));
+            min-height: 238px;
+            border: 1px solid rgba(219, 228, 239, .86);
+            border-radius: var(--radius);
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .93)),
+                radial-gradient(circle at 90% 15%, rgba(37, 99, 235, .16), transparent 34%);
+            box-shadow: var(--shadow-lg);
         }
 
         .hero::before {
             content: "";
             position: absolute;
-            inset: 0;
-            background:
-                linear-gradient(115deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94) 52%, rgba(12, 74, 110, 0.90)),
-                linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
-                linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
-            background-size: auto, 42px 42px, 42px 42px;
+            inset: 0 0 auto;
+            height: 5px;
+            background: linear-gradient(90deg, var(--danger), var(--info), var(--success));
         }
 
         .hero-inner {
             position: relative;
-            max-width: 1220px;
-            margin: 0 auto;
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 390px;
-            gap: 28px;
+            grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
+            gap: 24px;
             align-items: stretch;
+        }
+
+        .hero-main {
+            padding: 30px 30px 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .eyebrow {
             display: inline-flex;
             align-items: center;
             gap: 9px;
+            width: fit-content;
             min-height: 30px;
-            padding: 0 11px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 5px 10px;
+            border: 1px solid rgba(200, 30, 58, .18);
             border-radius: 999px;
-            color: #bfdbfe;
-            background: rgba(255, 255, 255, 0.09);
+            color: var(--danger);
+            background: rgba(255, 241, 243, .78);
             font-size: 12px;
             font-weight: 900;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
+            letter-spacing: 0;
         }
 
-        .live-dot,
-        .status-dot {
-            display: inline-block;
-            flex: 0 0 auto;
-            width: 8px;
-            height: 8px;
-            border-radius: 999px;
-            background: #22c55e;
-            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+        .live-dot {
+            color: #22c55e;
+            background: currentColor;
         }
 
         h1 {
-            margin: 18px 0 12px;
-            max-width: 780px;
-            color: #ffffff;
-            font-size: clamp(34px, 5vw, 56px);
-            line-height: 1.03;
+            margin: 12px 0 12px;
+            max-width: 760px;
+            color: #0f172a;
+            font-size: clamp(30px, 4vw, 50px);
+            line-height: 1.12;
             letter-spacing: 0;
         }
 
         .hero-copy {
-            max-width: 760px;
+            max-width: 780px;
             margin: 0;
-            color: #cbd5e1;
-            font-size: 17px;
-            line-height: 1.72;
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.75;
         }
 
         .hero-actions {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            margin-top: 24px;
+            margin-top: 22px;
         }
 
         .primary-action,
         .secondary-action {
-            height: 42px;
+            min-height: 44px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 9px;
-            padding: 0 14px;
-            border-radius: 8px;
+            padding: 10px 15px;
+            border-radius: var(--radius);
             font-size: 14px;
             font-weight: 900;
             text-decoration: none;
+            transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
         }
 
         .primary-action {
-            color: #082f49;
-            background: #7dd3fc;
-            box-shadow: 0 16px 30px rgba(56, 189, 248, 0.25);
+            color: #ffffff;
+            background: linear-gradient(135deg, var(--danger), var(--danger-dark));
+            box-shadow: 0 12px 28px rgba(200, 30, 58, .22);
         }
 
         .secondary-action {
-            color: #e2e8f0;
-            background: rgba(255, 255, 255, 0.09);
-            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: var(--navy);
+            background: #ffffff;
+            border: 1px solid var(--line);
+        }
+
+        .primary-action:hover,
+        .secondary-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, .14);
         }
 
         .ops-panel {
-            min-height: 276px;
-            padding: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            border-radius: 8px;
-            color: #e2e8f0;
-            background: rgba(15, 23, 42, 0.48);
-            box-shadow: 0 22px 50px rgba(0, 0, 0, 0.22);
+            min-height: 238px;
+            padding: 24px;
+            display: grid;
+            align-content: center;
+            border-left: 1px solid rgba(219, 228, 239, .8);
+            color: #ffffff;
+            background:
+                linear-gradient(180deg, rgba(21, 34, 53, .96), rgba(30, 47, 72, .95)),
+                linear-gradient(135deg, rgba(200, 30, 58, .18), transparent);
         }
 
         .ops-head,
@@ -552,61 +573,58 @@
 
         .ops-head {
             padding-bottom: 14px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            border-bottom: 1px solid rgba(255, 255, 255, .12);
+            color: #dbe7f5;
+            font-size: 12px;
             font-weight: 900;
         }
 
         .ops-code {
-            color: #7dd3fc;
+            color: #ffffff;
             font-size: 12px;
             font-weight: 900;
-            letter-spacing: 0.12em;
+            letter-spacing: .12em;
+        }
+
+        .pulse-line {
+            width: 100%;
+            height: 54px;
+            margin: 18px 0 14px;
+            color: #f43f5e;
         }
 
         .ops-list {
-            margin-top: 16px;
             display: grid;
-            gap: 12px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
         }
 
         .ops-line {
-            min-height: 46px;
-            padding: 10px 12px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.07);
+            min-height: 56px;
+            padding: 9px;
+            border: 1px solid rgba(255, 255, 255, .14);
+            border-radius: var(--radius);
+            background: rgba(255, 255, 255, .08);
+            align-items: flex-start;
+            flex-direction: column;
         }
 
         .ops-line strong {
             color: #ffffff;
-            font-size: 14px;
+            font-size: 15px;
         }
 
         .ops-line span {
-            color: #9fb3ca;
-            font-size: 12px;
+            color: #b9c8d9;
+            font-size: 11px;
             font-weight: 800;
-        }
-
-        .ops-bars {
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            align-items: end;
-            gap: 5px;
-            height: 70px;
-            margin-top: 18px;
-        }
-
-        .ops-bars i {
-            display: block;
-            border-radius: 4px 4px 0 0;
-            background: linear-gradient(180deg, #67e8f9, #2563eb);
-            opacity: 0.88;
+            line-height: 1.3;
         }
 
         .content {
             max-width: 1220px;
             margin: 0 auto;
-            padding: 26px 36px 48px;
+            padding: 0 22px 48px;
         }
 
         .metric-grid {
@@ -617,12 +635,22 @@
         }
 
         .metric-card {
-            min-height: 92px;
-            padding: 16px;
-            border: 1px solid rgba(219, 228, 238, 0.94);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.9);
+            position: relative;
+            min-height: 104px;
+            padding: 18px 18px 20px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--surface);
             box-shadow: var(--shadow-sm);
+        }
+
+        .metric-card::after {
+            content: "";
+            position: absolute;
+            inset: auto 0 0;
+            height: 4px;
+            background: var(--metric-accent, var(--info));
         }
 
         .metric-label {
@@ -630,33 +658,34 @@
             color: var(--muted);
             font-size: 12px;
             font-weight: 900;
-            letter-spacing: 0.08em;
+            letter-spacing: 0;
             text-transform: uppercase;
         }
 
         .metric-value {
             display: block;
-            margin-top: 5px;
+            margin-top: 8px;
             color: var(--ink);
-            font-size: 26px;
+            font-size: 34px;
             font-weight: 950;
             line-height: 1;
         }
 
         .metric-hint {
             display: block;
-            margin-top: 5px;
+            margin-top: 6px;
             color: var(--soft);
             font-size: 12px;
             font-weight: 700;
+            line-height: 1.35;
         }
 
         .module-count {
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             display: grid;
             place-items: center;
-            border-radius: 8px;
+            border-radius: var(--radius);
             color: #ffffff;
             font-size: 15px;
             font-weight: 950;
@@ -677,34 +706,42 @@
             margin: 6px 0 0;
             color: var(--muted);
             font-size: 14px;
+            line-height: 1.6;
         }
 
         .segmented {
             display: flex;
-            gap: 4px;
+            gap: 6px;
             padding: 4px;
             border: 1px solid var(--line);
-            border-radius: 8px;
+            border-radius: var(--radius);
             background: #ffffff;
             box-shadow: var(--shadow-sm);
         }
 
         .segment {
             min-width: 74px;
-            height: 34px;
-            padding: 0 12px;
+            min-height: 36px;
+            padding: 8px 13px;
             border-radius: 6px;
             color: #475569;
             background: transparent;
             font-size: 12px;
             font-weight: 900;
-            letter-spacing: 0.03em;
+            letter-spacing: 0;
+            white-space: nowrap;
+            transition: color 140ms ease, background 140ms ease;
+        }
+
+        .segment:hover {
+            color: var(--navy);
+            background: #f1f5f9;
         }
 
         .segment.active {
             color: #ffffff;
-            background: var(--ink);
-            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+            background: var(--navy);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, .16);
         }
 
         .group-section { margin-bottom: 34px; }
@@ -724,8 +761,7 @@
         .app-mark {
             width: 50px;
             height: 50px;
-            border-radius: 8px;
-            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, .14);
         }
 
         .group-text h3 {
@@ -739,7 +775,7 @@
             color: #475569;
             font-size: 12px;
             font-weight: 900;
-            letter-spacing: 0.1em;
+            letter-spacing: .08em;
             text-transform: uppercase;
         }
 
@@ -772,16 +808,16 @@
 
         .app-card {
             position: relative;
-            min-height: 204px;
+            min-height: 210px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             padding: 16px;
             overflow: hidden;
-            border: 1px solid rgba(219, 228, 238, 0.96);
-            border-radius: 8px;
+            border: 1px solid rgba(219, 228, 239, .96);
+            border-radius: var(--radius);
             color: var(--ink);
-            background: rgba(255, 255, 255, 0.92);
+            background: rgba(255, 255, 255, .94);
             box-shadow: var(--shadow-sm);
             text-align: left;
             cursor: pointer;
@@ -795,18 +831,18 @@
             top: 0;
             right: 0;
             left: 0;
-            height: 3px;
-            background: var(--card-accent, var(--blue));
+            height: 4px;
+            background: linear-gradient(90deg, var(--card-accent, var(--info)), rgba(255, 255, 255, 0));
         }
 
         .app-card:hover {
             transform: translateY(-3px);
-            border-color: rgba(56, 189, 248, 0.58);
+            border-color: rgba(37, 99, 235, .32);
             box-shadow: var(--shadow-md);
         }
 
         .app-card:focus-visible {
-            outline: 3px solid rgba(56, 189, 248, 0.28);
+            outline: 3px solid rgba(37, 99, 235, .2);
             outline-offset: 2px;
         }
 
@@ -825,16 +861,16 @@
             display: grid;
             place-items: center;
             border: 1px solid var(--line);
-            border-radius: 8px;
+            border-radius: var(--radius);
             color: #475569;
             background: #ffffff;
             font-size: 18px;
         }
 
         .open-mini:hover {
-            color: var(--blue);
-            border-color: rgba(37, 99, 235, 0.25);
-            background: #eff6ff;
+            color: var(--info);
+            border-color: rgba(37, 99, 235, .25);
+            background: var(--info-soft);
         }
 
         .group-pill {
@@ -848,7 +884,7 @@
             background: #f1f5f9;
             font-size: 11px;
             font-weight: 900;
-            letter-spacing: 0.08em;
+            letter-spacing: .05em;
         }
 
         .app-card h4 {
@@ -880,12 +916,21 @@
             white-space: nowrap;
         }
 
+        .card-foot strong {
+            color: var(--danger);
+            white-space: nowrap;
+        }
+
         .empty-state {
-            padding: 28px;
-            border: 1px dashed #cbd5e1;
-            border-radius: 8px;
+            min-height: 180px;
+            padding: 42px 24px;
+            border: 1px dashed #b8c6d7;
+            border-radius: var(--radius);
             color: var(--muted);
-            background: rgba(255, 255, 255, 0.62);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(248, 250, 252, .9)),
+                repeating-linear-gradient(135deg, rgba(37, 99, 235, .04) 0 12px, transparent 12px 24px);
+            box-shadow: var(--shadow-sm);
             font-weight: 800;
             text-align: center;
         }
@@ -901,50 +946,45 @@
 
         .hidden { display: none !important; }
 
-        .bg-red { background: var(--rose); }
-        .bg-blue { background: var(--blue); }
+        .bg-red { background: var(--danger); }
+        .bg-blue { background: var(--info); }
         .bg-zinc { background: #27272a; }
-        .bg-indigo { background: var(--indigo); }
-        .bg-emerald { background: var(--emerald); }
+        .bg-indigo { background: #4f46e5; }
+        .bg-emerald { background: var(--success); }
         .bg-teal { background: #0d9488; }
-        .bg-purple { background: var(--purple); }
-        .bg-orange { background: var(--orange); }
-        .bg-cyan { background: var(--cyan); }
+        .bg-purple { background: #7c3aed; }
+        .bg-orange { background: #ea580c; }
+        .bg-cyan { background: #0891b2; }
         .bg-fuchsia { background: #c026d3; }
-        .bg-pink { background: var(--pink); }
-        .bg-amber { background: var(--amber); }
-        .bg-lime { background: var(--lime); }
-        .bg-sky { background: var(--sky); }
+        .bg-pink { background: #db2777; }
+        .bg-amber { background: #d97706; }
+        .bg-lime { background: #65a30d; }
+        .bg-sky { background: #0284c7; }
 
         .overlay {
             position: fixed;
             inset: 0;
             z-index: 20;
             display: none;
-            background: rgba(15, 23, 42, 0.58);
+            background: rgba(15, 23, 42, .58);
             backdrop-filter: blur(4px);
         }
 
         @media (max-width: 1120px) {
             .topbar {
-                grid-template-columns: minmax(260px, 1fr) auto;
+                grid-template-columns: minmax(220px, 1fr) minmax(220px, 360px) auto;
+                gap: 12px;
             }
 
-            .command-search {
-                display: none;
+            .hero-inner { grid-template-columns: 1fr; }
+
+            .ops-panel {
+                border-left: 0;
+                border-top: 1px solid rgba(219, 228, 239, .8);
             }
 
-            .hero-inner {
-                grid-template-columns: 1fr;
-            }
-
-            .metric-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
+            .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         @media (max-width: 820px) {
@@ -964,9 +1004,7 @@
             .sidebar.collapsed .brand-text,
             .sidebar.collapsed .nav-title span:last-child,
             .sidebar.collapsed .nav-label,
-            .sidebar.collapsed .user-box {
-                display: block;
-            }
+            .sidebar.collapsed .user-box { display: block; }
 
             .sidebar.collapsed .brand,
             .sidebar.collapsed .nav-title,
@@ -984,20 +1022,21 @@
                 padding: 0 14px;
             }
 
+            .command-search,
             .clock { display: none; }
 
             .active-name,
-            .active-file {
-                max-width: 48vw;
-            }
+            .active-file { max-width: 48vw; }
 
             .hero {
-                padding: 26px 18px 18px;
+                width: min(100% - 20px, 1220px);
+                margin-top: 10px;
             }
 
-            .content {
-                padding: 22px 18px 38px;
-            }
+            .hero-main,
+            .ops-panel { padding: 22px 18px; }
+
+            .content { padding: 0 10px 38px; }
 
             .hero-actions,
             .filter-row,
@@ -1006,34 +1045,28 @@
                 flex-direction: column;
             }
 
+            .primary-action,
+            .secondary-action { width: 100%; }
+
             .metric-grid,
-            .grid {
-                grid-template-columns: 1fr;
-            }
+            .grid,
+            .ops-list { grid-template-columns: 1fr; }
 
             .segmented {
                 width: 100%;
                 overflow-x: auto;
             }
 
-            .segment {
-                flex: 1 0 auto;
-            }
-
-            h1 {
-                font-size: 34px;
-            }
-
-            .hero-copy {
-                font-size: 15px;
-            }
+            .segment { flex: 1 0 auto; }
+            h1 { font-size: 30px; }
+            .hero-copy { font-size: 15px; }
         }
     </style>
 </head>
 <body>
     <div class="shell">
-        <aside class="sidebar" id="sidebar" aria-label="รายการระบบ">
-            <div class="brand" id="homeButton" role="button" tabindex="0" title="กลับหน้าหลัก">
+        <aside class="sidebar" id="sidebar" aria-label="System list">
+            <div class="brand" id="homeButton" role="button" tabindex="0" title="Home">
                 <span class="brand-mark">ER</span>
                 <span class="brand-text">
                     <span class="brand-title">ER-UOS</span>
@@ -1051,7 +1084,7 @@
                         <span class="small-role">Operational Portal</span>
                     </span>
                 </div>
-                <button class="icon-button" id="closeMobile" title="ปิดเมนู" aria-label="ปิดเมนู">×</button>
+                <button class="icon-button" id="closeMobile" title="Close menu" aria-label="Close menu">x</button>
             </div>
         </aside>
 
@@ -1060,84 +1093,58 @@
         <main class="main">
             <header class="topbar">
                 <div class="top-left">
-                    <button class="icon-button" id="toggleSidebar" title="เปิด/ปิดเมนู" aria-label="เปิด/ปิดเมนู">☰</button>
+                    <button class="icon-button" id="toggleSidebar" title="Toggle menu" aria-label="Toggle menu">☰</button>
                     <div class="active-title">
                         <span class="app-mark bg-blue" id="activeMark">ER</span>
                         <span>
                             <span class="active-name" id="activeName">ER Unified Operating System</span>
-                            <span class="active-file" id="activeFile">ศูนย์รวมระบบปฏิบัติการ ER</span>
+                            <span class="active-file" id="activeFile">ER operational portal</span>
                         </span>
                     </div>
                 </div>
 
                 <label class="command-search" for="searchInput">
                     <span class="search-symbol">⌕</span>
-                    <input id="searchInput" type="search" autocomplete="off" placeholder="ค้นหาระบบ เช่น triage, refer, x-ray">
+                    <input id="searchInput" type="search" autocomplete="off" placeholder="Search systems">
                 </label>
 
                 <div class="top-actions">
                     <span class="clock" id="clock"></span>
-                    <button class="icon-button hidden" id="openTab" title="เปิดระบบนี้ในแท็บใหม่" aria-label="เปิดระบบนี้ในแท็บใหม่">↗</button>
-                    <button class="icon-button" id="fullscreen" title="เต็มจอ" aria-label="เต็มจอ">⛶</button>
+                    <button class="icon-button hidden" id="openTab" title="Open in new tab" aria-label="Open in new tab">↗</button>
+                    <button class="icon-button" id="fullscreen" title="Fullscreen" aria-label="Fullscreen">⛶</button>
                 </div>
             </header>
 
             <section class="viewport">
-                <div class="home" id="home">
-                    <section class="content">
-                        <div class="filter-title" style="margin:26px 0 18px;">
-                            <h2>ER Unified Operating System</h2>
-                            <p>หากเมนูหลักยังไม่โหลด สามารถเปิดระบบจากลิงก์สำรองด้านล่างได้ทันที</p>
-                        </div>
-                        <div class="grid">
-                            <a class="app-card" href="triageใหม่.html" target="_blank"><strong>Thai Triage Pro</strong><span class="card-foot"><span>triageใหม่.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="Ucep screening.html" target="_blank"><strong>UCEP Screening</strong><span class="card-foot"><span>Ucep screening.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="bed_er.html" target="_blank"><strong>ER Management</strong><span class="card-foot"><span>bed_er.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="x-ray.html" target="_blank"><strong>X-ray Sync</strong><span class="card-foot"><span>x-ray.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="KPI_ER.html" target="_blank"><strong>ER KPI Dashboard</strong><span class="card-foot"><span>KPI_ER.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="dasborad ความพึงพอใจ.html" target="_blank"><strong>ความพึงพอใจ</strong><span class="card-foot"><span>dasborad ความพึงพอใจ.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="sup_nurse2.html" target="_blank"><strong>Smart Nurse Audit</strong><span class="card-foot"><span>sup_nurse2.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="บันทึกข้อความ (2).html" target="_blank"><strong>ระบบบันทึกข้อความ</strong><span class="card-foot"><span>บันทึกข้อความ (2).html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="Referral_Hub.html" target="_blank"><strong>Referral Hub</strong><span class="card-foot"><span>Referral_Hub.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="ระบบERcomman.html" target="_blank"><strong>ER Command Center</strong><span class="card-foot"><span>ระบบERcomman.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="EOC.html" target="_blank"><strong>ระบบ EOC</strong><span class="card-foot"><span>EOC.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="high_alert.html" target="_blank"><strong>High Alert Drugs</strong><span class="card-foot"><span>high_alert.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="selaphum_ems.html" target="_blank"><strong>Selaphum EMS</strong><span class="card-foot"><span>selaphum_ems.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="er_dashboard_csv.html" target="_blank"><strong>ER Dashboard (CSV)</strong><span class="card-foot"><span>er_dashboard_csv.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="porter_dashboard.html" target="_blank"><strong>Smart Porter Dashboard</strong><span class="card-foot"><span>porter_dashboard.html</span><strong>เปิด ›</strong></span></a>
-                            <a class="app-card" href="stroke_fast.html" target="_blank"><strong>Stroke Fast Track</strong><span class="card-foot"><span>stroke_fast.html</span><strong>เปิด ›</strong></span></a>
-                        </div>
-                    </section>
-                </div>
+                <div class="home" id="home"></div>
                 <iframe class="hidden" id="appFrame" name="appFrame" title="ER app viewport"></iframe>
             </section>
         </main>
     </div>
-
     <script>
         const apps = [
-            { id: "triage", title: "Thai Triage Pro", desc: "ระบบคัดกรอง 3D Red System", file: "triageใหม่.html", short: "TR", color: "bg-red", accent: "#e11d48" },
-            { id: "ucep", title: "UCEP Screening", desc: "คัดกรองผู้ป่วยวิกฤต", file: "Ucep screening.html", short: "UC", color: "bg-red", accent: "#e11d48" },
-            { id: "er_bed", title: "ER Management", desc: "บริหารเตียงและภาระงาน", file: "bed_er.html", short: "BD", color: "bg-blue", accent: "#2563eb" },
-            { id: "xray", title: "X-ray Sync", desc: "ติดตามสถานะ X-ray", file: "x-ray.html", short: "XR", color: "bg-zinc", accent: "#27272a" },
-            { id: "kpi", title: "ER KPI Dashboard", desc: "ตัวชี้วัดและ MOU", file: "KPI_ER.html", short: "KP", color: "bg-indigo", accent: "#4f46e5" },
-            { id: "satisfaction", title: "ความพึงพอใจ", desc: "สรุปผลตอบรับบริการ", file: "dasborad ความพึงพอใจ.html", short: "SF", color: "bg-emerald", accent: "#059669" },
-            { id: "nurse_audit", title: "Smart Nurse Audit", desc: "ระบบบริหารอัตรากำลังพยาบาล", file: "sup_nurse2.html", short: "NA", color: "bg-teal", accent: "#0d9488" },
-            { id: "memo_report", title: "ระบบบันทึกข้อความ", desc: "สร้างและพิมพ์หนังสือราชการ", file: "บันทึกข้อความ (2).html", short: "MM", color: "bg-purple", accent: "#7c3aed" },
-            { id: "referral", title: "Referral Hub", desc: "ระบบบันทึกการส่งต่อ (Refer)", file: "Referral_Hub.html", short: "RF", color: "bg-orange", accent: "#ea580c" },
-            { id: "er_command", title: "ER Command Center", desc: "ศูนย์สั่งการ ER", file: "ระบบERcomman.html", short: "CC", color: "bg-cyan", accent: "#0891b2" },
-            { id: "eoc", title: "ระบบ EOC", desc: "โครงสร้างบัญชาการเหตุการณ์", file: "EOC.html", short: "EO", color: "bg-fuchsia", accent: "#c026d3" },
-            { id: "high_alert", title: "High Alert Drugs", desc: "ติดตามการใช้ยาความเสี่ยงสูง", file: "high_alert.html", short: "HA", color: "bg-pink", accent: "#db2777" },
-            { id: "ems", title: "Selaphum EMS", desc: "ระบบจัดการเครือข่ายกู้ชีพ", file: "selaphum_ems.html", short: "EM", color: "bg-amber", accent: "#d97706" },
-            { id: "er_dashboard_csv", title: "ER Dashboard (CSV)", desc: "นำเข้าไฟล์ CSV สรุปเวร", file: "er_dashboard_csv.html", short: "CS", color: "bg-lime", accent: "#65a30d" },
-            { id: "porter_dashboard", title: "Smart Porter Dashboard", desc: "แดชบอร์ดศูนย์เปล นำเข้า CSV สรุปงานรับ-ส่งผู้ป่วย", file: "porter_dashboard.html", short: "SP", color: "bg-sky", accent: "#0284c7" },
-            { id: "stroke_fast", title: "Stroke Fast Track", desc: "Dashboard ติดตามผู้ป่วย Stroke", file: "stroke_fast.html", short: "ST", color: "bg-red", accent: "#e11d48" }
+            { id: "triage", title: "Thai Triage Pro", desc: "ระบบคัดกรองผู้ป่วยฉุกเฉินพร้อมแนวทาง 3D Red System", file: "triageใหม่.html", short: "TR", color: "bg-red", accent: "#c81e3a" },
+            { id: "ucep", title: "UCEP Screening", desc: "คัดกรองผู้ป่วยฉุกเฉินวิกฤตจากอาการสำคัญ", file: "Ucep screening.html", short: "UC", color: "bg-red", accent: "#c81e3a" },
+            { id: "er_bed", title: "ER Management", desc: "บริหารเตียง ภาระงาน และสถานะผู้ป่วยใน ER", file: "bed_er.html", short: "BD", color: "bg-blue", accent: "#2563eb" },
+            { id: "xray", title: "X-ray Sync", desc: "ติดตามสถานะ X-ray และประสานงานผลตรวจ", file: "x-ray.html", short: "XR", color: "bg-zinc", accent: "#27272a" },
+            { id: "kpi", title: "ER KPI Dashboard", desc: "ติดตามตัวชี้วัด คุณภาพบริการ และ MOU", file: "KPI_ER.html", short: "KP", color: "bg-indigo", accent: "#4f46e5" },
+            { id: "satisfaction", title: "ความพึงพอใจ", desc: "สรุปผลตอบรับบริการและประสบการณ์ผู้รับบริการ", file: "dasborad ความพึงพอใจ.html", short: "SF", color: "bg-emerald", accent: "#057a67" },
+            { id: "nurse_audit", title: "Smart Nurse Audit", desc: "บริหารอัตรากำลังพยาบาลและตรวจสอบภาระงาน", file: "sup_nurse2.html", short: "NA", color: "bg-teal", accent: "#0d9488" },
+            { id: "memo_report", title: "ระบบบันทึกข้อความ", desc: "สร้าง พิมพ์ และจัดทำหนังสือราชการ", file: "บันทึกข้อความ (2).html", short: "MM", color: "bg-purple", accent: "#7c3aed" },
+            { id: "referral", title: "Referral Hub", desc: "บันทึก ส่งต่อ ติดตาม และประสานเครือข่ายรับส่งผู้ป่วย", file: "Referral_Hub.html", short: "RF", color: "bg-orange", accent: "#ea580c" },
+            { id: "er_command", title: "ER Command Center", desc: "ศูนย์สั่งการและภาพรวมปฏิบัติการ ER", file: "ระบบERcomman.html", short: "CC", color: "bg-cyan", accent: "#0891b2" },
+            { id: "eoc", title: "ระบบ EOC", desc: "โครงสร้างบัญชาการเหตุการณ์และการตอบโต้ภาวะฉุกเฉิน", file: "EOC.html", short: "EO", color: "bg-fuchsia", accent: "#c026d3" },
+            { id: "high_alert", title: "High Alert Drugs", desc: "ติดตามการใช้ยาความเสี่ยงสูงและจุดเฝ้าระวัง", file: "high_alert.html", short: "HA", color: "bg-pink", accent: "#db2777" },
+            { id: "ems", title: "Selaphum EMS", desc: "จัดการเครือข่ายกู้ชีพและงานก่อนถึงโรงพยาบาล", file: "selaphum_ems.html", short: "EM", color: "bg-amber", accent: "#d97706" },
+            { id: "er_dashboard_csv", title: "ER Dashboard (CSV)", desc: "นำเข้า CSV เพื่อสรุปเวรและภาพรวมงาน ER", file: "er_dashboard_csv.html", short: "CS", color: "bg-lime", accent: "#65a30d" },
+            { id: "porter_dashboard", title: "Smart Porter Dashboard", desc: "Dashboard ศูนย์เปล นำเข้า CSV และสรุปงานรับส่งผู้ป่วย", file: "porter_dashboard_hourly.html", short: "SP", color: "bg-sky", accent: "#0284c7" },
+            { id: "stroke_fast", title: "Stroke Fast Track", desc: "ติดตามผู้ป่วย Stroke และขั้นตอน Fast Track", file: "stroke_fast.html", short: "ST", color: "bg-red", accent: "#c81e3a" }
         ];
 
         const appGroups = [
             { id: "EMS", name: "EMS", subtitle: "Pre-hospital & Field Operations", desc: "งานกู้ชีพ ด่านหน้า เหตุฉุกเฉิน และการคัดกรองก่อนเข้าระบบ", short: "EM", color: "bg-amber", accent: "#d97706", appIds: ["ems", "triage", "ucep", "eoc"] },
-            { id: "INHOS", name: "INHOS", subtitle: "In-hospital ER Command", desc: "งานในโรงพยาบาล เตียง ER ทรัพยากร เวชระเบียน คุณภาพ และ Dashboard", short: "IN", color: "bg-sky", accent: "#0284c7", appIds: ["er_bed", "xray", "kpi", "er_command", "stroke_fast", "er_dashboard_csv", "porter_dashboard", "nurse_audit", "high_alert", "satisfaction", "memo_report"] },
-            { id: "REFER", name: "REFER", subtitle: "Referral Coordination", desc: "ระบบบันทึก ส่งต่อ ติดตาม และประสานเครือข่ายรับ-ส่งผู้ป่วย", short: "RF", color: "bg-emerald", accent: "#059669", appIds: ["referral"] }
+            { id: "INHOS", name: "INHOS", subtitle: "In-hospital ER Command", desc: "งานในโรงพยาบาล เตียง ER ทรัพยากร เวชระเบียน คุณภาพ Dashboard และงานสนับสนุนเวร", short: "IN", color: "bg-sky", accent: "#0284c7", appIds: ["er_bed", "xray", "kpi", "er_command", "stroke_fast", "er_dashboard_csv", "porter_dashboard", "nurse_audit", "high_alert", "satisfaction", "memo_report"] },
+            { id: "REFER", name: "REFER", subtitle: "Referral Coordination", desc: "ระบบบันทึก ส่งต่อ ติดตาม และประสานเครือข่ายรับส่งผู้ป่วย", short: "RF", color: "bg-emerald", accent: "#057a67", appIds: ["referral"] }
         ];
 
         const appById = new Map(apps.map(app => [app.id, app]));
@@ -1175,10 +1182,6 @@
             return "./" + encodeURI(file);
         }
 
-        function getGroupForApp(appId) {
-            return groups.find(group => group.apps.some(app => app.id === appId));
-        }
-
         function closeMobileMenu() {
             sidebar.classList.remove("open");
             overlay.classList.remove("show");
@@ -1187,6 +1190,25 @@
         function setMark(element, item) {
             element.className = "app-mark " + item.color;
             element.textContent = item.short;
+        }
+
+        function setShellLabels() {
+            sidebar.setAttribute("aria-label", "รายการระบบ");
+            document.getElementById("homeButton").title = "กลับหน้าหลัก";
+            document.getElementById("toggleSidebar").title = "เปิด/ปิดเมนู";
+            document.getElementById("toggleSidebar").setAttribute("aria-label", "เปิด/ปิดเมนู");
+            document.getElementById("closeMobile").title = "ปิดเมนู";
+            document.getElementById("closeMobile").setAttribute("aria-label", "ปิดเมนู");
+            document.getElementById("closeMobile").textContent = "×";
+            document.getElementById("toggleSidebar").textContent = "☰";
+            document.querySelector(".search-symbol").textContent = "⌕";
+            searchInput.placeholder = "ค้นหาระบบ เช่น triage, refer, x-ray";
+            openTab.title = "เปิดระบบนี้ในแท็บใหม่";
+            openTab.setAttribute("aria-label", "เปิดระบบนี้ในแท็บใหม่");
+            openTab.textContent = "↗";
+            document.getElementById("fullscreen").title = "เต็มจอ";
+            document.getElementById("fullscreen").setAttribute("aria-label", "เต็มจอ");
+            document.getElementById("fullscreen").textContent = "⛶";
         }
 
         function openApp(app) {
@@ -1253,7 +1275,7 @@
 
         function appMatches(app, group) {
             const filterMatch = activeFilter === "ALL" || group.id === activeFilter;
-            const haystack = [app.title, app.desc, app.file, group.name, group.subtitle].join(" ").toLowerCase();
+            const haystack = [app.title, app.desc, app.file, group.name, group.subtitle, group.desc].join(" ").toLowerCase();
             const searchMatch = !searchQuery || haystack.includes(searchQuery.toLowerCase());
             return filterMatch && searchMatch;
         }
@@ -1270,44 +1292,47 @@
                 ...group,
                 apps: group.apps.filter(app => appMatches(app, group))
             })).filter(group => group.apps.length > 0);
+            const visibleCount = visibleGroups.reduce((sum, group) => sum + group.apps.length, 0);
+            const firstVisibleApp = visibleGroups[0] && visibleGroups[0].apps[0];
 
             home.innerHTML = [
                 '<section class="hero">',
                     '<div class="hero-inner">',
-                        '<div>',
+                        '<div class="hero-main">',
                             '<span class="eyebrow"><span class="live-dot"></span>ER-UOS Command Portal</span>',
                             '<h1>ER Unified Operating System</h1>',
-                            '<p class="hero-copy">ศูนย์รวมระบบปฏิบัติการ ER สำหรับเปิดใช้ระบบ EMS, INHOS และ REFER ได้จากหน้าเดียว พร้อมมุมมองที่เร็ว ชัด และเหมาะกับงานประจำเวร</p>',
+                            '<p class="hero-copy">ศูนย์รวมระบบปฏิบัติการ ER สำหรับเปิดใช้งานระบบ EMS, INHOS และ REFER จากหน้าเดียว พร้อมมุมมองที่ชัด ค้นหาเร็ว และเหมาะกับงานประจำเวร</p>',
                             '<div class="hero-actions">',
                                 '<button class="primary-action" id="focusSearch">⌕ ค้นหาระบบ</button>',
-                                '<button class="secondary-action" id="openFirstApp">เปิดระบบแรก</button>',
+                                '<button class="secondary-action" id="openFirstApp">' + (firstVisibleApp ? 'เปิดระบบแรก' : 'ไม่มีระบบที่ตรงเงื่อนไข') + '</button>',
                             '</div>',
                         '</div>',
                         '<div class="ops-panel" aria-label="ภาพรวมระบบ">',
                             '<div class="ops-head"><span>Operational Overview</span><span class="ops-code">LIVE</span></div>',
+                            '<svg class="pulse-line" viewBox="0 0 360 72" fill="none" preserveAspectRatio="none" aria-hidden="true">',
+                                '<path d="M0 39H52L66 39L78 15L95 62L112 29L126 39H175L188 39L201 24L220 50L238 39H360" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></path>',
+                                '<path d="M0 39H52L66 39L78 15L95 62L112 29L126 39H175L188 39L201 24L220 50L238 39H360" stroke="#fff" stroke-opacity=".18" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path>',
+                            '</svg>',
                             '<div class="ops-list">',
                                 groups.map(group => (
                                     '<div class="ops-line">' +
-                                        '<span><strong>' + escapeHtml(group.name) + '</strong><br>' + escapeHtml(group.subtitle) + '</span>' +
+                                        '<span><strong>' + escapeHtml(group.name) + '</strong></span>' +
                                         '<span>' + group.apps.length + ' systems</span>' +
                                     '</div>'
                                 )).join(""),
-                            '</div>',
-                            '<div class="ops-bars">' +
-                                [40, 72, 58, 86, 46, 64, 92, 74, 52, 68, 84, 60].map(value => '<i style="height:' + value + '%"></i>').join("") +
                             '</div>',
                         '</div>',
                     '</div>',
                 '</section>',
                 '<section class="content">',
                     '<div class="metric-grid">',
-                        '<div class="metric-card"><span><span class="metric-label">Total Systems</span><span class="metric-value">' + apps.length + '</span><span class="metric-hint">ระบบพร้อมใช้งาน</span></span><span class="module-count bg-blue">' + apps.length + '</span></div>',
-                        '<div class="metric-card"><span><span class="metric-label">Workstreams</span><span class="metric-value">' + groups.length + '</span><span class="metric-hint">EMS / INHOS / REFER</span></span><span class="module-count bg-emerald">' + groups.length + '</span></div>',
-                        '<div class="metric-card"><span><span class="metric-label">Local Mode</span><span class="metric-value">ON</span><span class="metric-hint">เปิดจากไฟล์ได้โดยตรง</span></span><span class="module-count bg-amber">OK</span></div>',
-                        '<div class="metric-card"><span><span class="metric-label">View</span><span class="metric-value">' + visibleGroups.reduce((sum, group) => sum + group.apps.length, 0) + '</span><span class="metric-hint">ผลลัพธ์ที่แสดง</span></span><span class="module-count bg-cyan">VR</span></div>',
+                        '<div class="metric-card" style="--metric-accent:#2563eb"><span><span class="metric-label">Total Systems</span><span class="metric-value">' + apps.length + '</span><span class="metric-hint">ระบบพร้อมใช้งาน</span></span><span class="module-count bg-blue">' + apps.length + '</span></div>',
+                        '<div class="metric-card" style="--metric-accent:#057a67"><span><span class="metric-label">Workstreams</span><span class="metric-value">' + groups.length + '</span><span class="metric-hint">EMS / INHOS / REFER</span></span><span class="module-count bg-emerald">' + groups.length + '</span></div>',
+                        '<div class="metric-card" style="--metric-accent:#d97706"><span><span class="metric-label">Local Mode</span><span class="metric-value">ON</span><span class="metric-hint">เปิดจากไฟล์ได้โดยตรง</span></span><span class="module-count bg-amber">OK</span></div>',
+                        '<div class="metric-card" style="--metric-accent:#c81e3a"><span><span class="metric-label">View</span><span class="metric-value">' + visibleCount + '</span><span class="metric-hint">ผลลัพธ์ที่แสดง</span></span><span class="module-count bg-red">VR</span></div>',
                     '</div>',
                     '<div class="filter-row">',
-                        '<div class="filter-title"><h2>ระบบปฏิบัติการ</h2><p>เลือกหมวดหรือค้นหาจากชื่อระบบและชื่อไฟล์</p></div>',
+                        '<div class="filter-title"><h2>ระบบปฏิบัติการ</h2><p>เลือกหมวดหรือค้นหาจากชื่อระบบ คำอธิบาย และชื่อไฟล์</p></div>',
                         '<div class="segmented">' + renderFilters() + '</div>',
                     '</div>',
                     '<div id="appGroups">' + renderGroups(visibleGroups) + '</div>',
@@ -1325,7 +1350,9 @@
             if (focusSearch) focusSearch.addEventListener("click", () => searchInput.focus());
 
             const openFirstApp = document.getElementById("openFirstApp");
-            if (openFirstApp) openFirstApp.addEventListener("click", () => openApp(apps[0]));
+            if (openFirstApp) openFirstApp.addEventListener("click", () => {
+                if (firstVisibleApp) openApp(firstVisibleApp);
+            });
 
             bindCardEvents();
         }
@@ -1356,7 +1383,7 @@
         }
 
         function renderAppCard(app, group) {
-            const card = [
+            return [
                 '<article class="app-card" role="button" tabindex="0" data-app-id="' + escapeHtml(app.id) + '" style="--card-accent:' + escapeHtml(app.accent) + '">',
                     '<div>',
                         '<span class="card-top">',
@@ -1370,7 +1397,6 @@
                     '<span class="card-foot"><span>' + escapeHtml(app.file) + '</span><strong>เปิด ›</strong></span>',
                 '</article>'
             ].join("");
-            return card;
         }
 
         function bindCardEvents() {
@@ -1380,6 +1406,7 @@
                 card.addEventListener("click", event => {
                     const tabTarget = event.target.closest("[data-open-tab]");
                     if (tabTarget) {
+                        event.stopPropagation();
                         const app = appById.get(tabTarget.dataset.openTab);
                         if (app) openInNewTab(app);
                         return;
@@ -1400,6 +1427,20 @@
             clock.textContent = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         }
 
+        function goHomeForSearch() {
+            if (!activeApp) return;
+            activeApp = null;
+            frame.src = "about:blank";
+            frame.classList.add("hidden");
+            home.classList.remove("hidden");
+            activeName.textContent = "ER Unified Operating System";
+            activeFile.textContent = "ศูนย์รวมระบบปฏิบัติการ ER";
+            activeMark.className = "app-mark bg-blue";
+            activeMark.textContent = "ER";
+            openTab.classList.add("hidden");
+            renderNav();
+        }
+
         document.getElementById("toggleSidebar").addEventListener("click", () => {
             if (window.innerWidth <= 820) {
                 sidebar.classList.add("open");
@@ -1413,13 +1454,33 @@
         overlay.addEventListener("click", closeMobileMenu);
         document.getElementById("homeButton").addEventListener("click", showHome);
         document.getElementById("homeButton").addEventListener("keydown", event => {
-            if (event.key === "Enter" || event.key === " ") showHome();
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                showHome();
+            }
         });
 
         searchInput.addEventListener("input", event => {
             searchQuery = event.target.value.trim();
-            if (activeApp) showHome();
+            goHomeForSearch();
             renderHome();
+        });
+
+        searchInput.addEventListener("keydown", event => {
+            if (event.key === "Escape") {
+                searchQuery = "";
+                searchInput.value = "";
+                goHomeForSearch();
+                renderHome();
+            }
+        });
+
+        document.addEventListener("keydown", event => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+                event.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+            }
         });
 
         openTab.addEventListener("click", () => {
@@ -1438,6 +1499,7 @@
             if (window.innerWidth > 820) closeMobileMenu();
         });
 
+        setShellLabels();
         renderNav();
         showHome();
         updateClock();
