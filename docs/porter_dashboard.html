@@ -382,6 +382,7 @@
 
         const GOOGLE_SHEET_ID = '1NqVI8vdWm4x4Svf-nvVqkk0s1hYPg-qHvkUwjPalMqs';
         const GOOGLE_SHEET_GID = '800055064';
+        const APPS_SCRIPT_PROXY_URL = '';
         const LIVE_REFRESH_MS = 30000;
 
         const shiftMeta = {
@@ -393,10 +394,19 @@
 
         function buildSheetUrls() {
             const cacheBust = Date.now();
-            return [
+            const urls = [];
+            const proxyUrl = APPS_SCRIPT_PROXY_URL.trim();
+
+            if (proxyUrl) {
+                urls.push(`${proxyUrl}?format=csv&gid=${GOOGLE_SHEET_GID}&cb=${cacheBust}`);
+            }
+
+            urls.push(
                 `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=${GOOGLE_SHEET_GID}&cb=${cacheBust}`,
                 `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GOOGLE_SHEET_GID}&cb=${cacheBust}`
-            ];
+            );
+
+            return urls;
         }
 
         async function fetchSheetCsvText() {
