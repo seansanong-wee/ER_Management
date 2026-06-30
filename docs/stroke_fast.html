@@ -241,6 +241,38 @@
             </div>
         </section>
 
+        <section class="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div class="chart-shell rounded-2xl p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">รับรีเฟอลูกข่ายรายเดือน</h3>
+                        <p id="networkMonthlyLabel" class="text-xs font-medium text-slate-500">ทุ่งเขาหลวง / อาจสามารถ / ธวัชบุรี</p>
+                    </div>
+                    <div class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+                        <i class="fa-solid fa-chart-column mr-1"></i>Monthly
+                    </div>
+                </div>
+                <div class="relative h-80 w-full">
+                    <canvas id="networkMonthlyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-shell rounded-2xl p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">รับรีเฟอลูกข่ายรายปี</h3>
+                        <p class="text-xs font-medium text-slate-500">สรุปแนวโน้มตามปีของแต่ละลูกข่าย</p>
+                    </div>
+                    <div class="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                        <i class="fa-solid fa-calendar-check mr-1"></i>Yearly
+                    </div>
+                </div>
+                <div class="relative h-80 w-full">
+                    <canvas id="networkYearlyChart"></canvas>
+                </div>
+            </div>
+        </section>
+
         <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white/88 shadow-xl shadow-slate-200/60">
             <div class="border-b border-slate-100 p-5 sm:flex sm:items-center sm:justify-between">
                 <div>
@@ -338,6 +370,56 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
         'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
     ];
 
+    const thaiMonthShorts = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+    const networkReferralUnits = [
+        {
+            label: 'ทุ่งเขาหลวง',
+            keywords: ['ทุ่งเขาหลวง', 'ทุ่งเขาหลาง', 'thung khao luang', 'thungkhaoluang']
+        },
+        {
+            label: 'อาจสามารถ',
+            keywords: ['อาจสามารถ', 'atchasamat', 'at samat', 'atsamat']
+        },
+        {
+            label: 'ธวัชบุรี',
+            keywords: ['ธวัชบุรี', 'thawat buri', 'thawatburi']
+        }
+    ];
+
+    const networkReferralColors = ['#0284c7', '#16a34a', '#f97316'];
+
+    const barValueLabelsPlugin = {
+        id: 'barValueLabels',
+        afterDatasetsDraw(chart, args, options) {
+            const { ctx } = chart;
+            const color = options.color || '#0f172a';
+            const fontSize = options.fontSize || 12;
+            const formatter = options.formatter || (value => value);
+            const showZero = options.showZero === true;
+
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.font = `700 ${fontSize}px Prompt, sans-serif`;
+
+            chart.data.datasets.forEach((dataset, datasetIndex) => {
+                const meta = chart.getDatasetMeta(datasetIndex);
+                if (meta.hidden) return;
+
+                meta.data.forEach((bar, index) => {
+                    const value = Number(dataset.data[index]) || 0;
+                    if (!showZero && value === 0) return;
+
+                    ctx.fillText(formatter(value), bar.x, bar.y - 6);
+                });
+            });
+
+            ctx.restore();
+        }
+    };
+
     function openInstructions() {
         const modal = document.getElementById('instructionModal');
         const modalContent = modal.querySelector('div');
@@ -401,6 +483,85 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
 
     function normalizeText(value) {
         return String(value || '').trim();
+    }
+
+    function getNetworkReferralUnit(row) {
+        const sourceText = normalizeText(row.shift_transport).toLowerCase();
+        if (!sourceText) return null;
+
+        return networkReferralUnits.find(unit =>
+            unit.keywords.some(keyword => sourceText.includes(keyword.toLowerCase()))
+        ) || null;
+    }
+
+    function getSelectedChartYear() {
+        if (periodMode === 'year') {
+            return document.getElementById('yearPicker').value || latestYear;
+        }
+
+        const selectedMonth = document.getElementById('monthPicker').value || latestMonth;
+        return selectedMonth ? selectedMonth.split('-')[0] : latestYear;
+    }
+
+    function createEmptyNetworkCounts() {
+        return networkReferralUnits.reduce((counts, unit) => {
+            counts[unit.label] = 0;
+            return counts;
+        }, {});
+    }
+
+    function buildMonthlyNetworkReferralData(year) {
+        const monthlyCounts = Array.from({ length: 12 }, createEmptyNetworkCounts);
+
+        allData.forEach(row => {
+            if (!row.parsedDate || row.yearKey !== year) return;
+            const unit = getNetworkReferralUnit(row);
+            if (!unit) return;
+
+            monthlyCounts[row.parsedDate.getMonth()][unit.label] += 1;
+        });
+
+        return {
+            labels: thaiMonthShorts,
+            datasets: networkReferralUnits.map((unit, index) => ({
+                label: unit.label,
+                data: monthlyCounts.map(month => month[unit.label]),
+                backgroundColor: networkReferralColors[index],
+                borderRadius: 10,
+                borderSkipped: false,
+                maxBarThickness: 32
+            }))
+        };
+    }
+
+    function buildYearlyNetworkReferralData() {
+        const years = [...new Set(allData.map(row => row.yearKey).filter(Boolean))]
+            .sort((a, b) => Number(a) - Number(b));
+        const activeYears = years.length ? years : [latestYear || String(new Date().getFullYear())];
+        const yearlyCounts = activeYears.reduce((countsByYear, year) => {
+            countsByYear[year] = createEmptyNetworkCounts();
+            return countsByYear;
+        }, {});
+
+        allData.forEach(row => {
+            if (!row.yearKey || !yearlyCounts[row.yearKey]) return;
+            const unit = getNetworkReferralUnit(row);
+            if (!unit) return;
+
+            yearlyCounts[row.yearKey][unit.label] += 1;
+        });
+
+        return {
+            labels: activeYears.map(year => String(Number(year) + 543)),
+            datasets: networkReferralUnits.map((unit, index) => ({
+                label: unit.label,
+                data: activeYears.map(year => yearlyCounts[year][unit.label]),
+                backgroundColor: networkReferralColors[index],
+                borderRadius: 10,
+                borderSkipped: false,
+                maxBarThickness: 44
+            }))
+        };
     }
 
     function parseMockRow(data) {
@@ -743,11 +904,20 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
                     maxBarThickness: 90
                 }]
             },
+            plugins: [barValueLabelsPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: { top: 22 }
+                },
                 plugins: {
                     legend: { display: false },
+                    barValueLabels: {
+                        color: '#0f172a',
+                        fontSize: 13,
+                        showZero: true
+                    },
                     tooltip: {
                         backgroundColor: '#0f172a',
                         padding: 12,
@@ -766,6 +936,79 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
                     }
                 }
             }
+        });
+
+        updateNetworkReferralCharts();
+    }
+
+    function updateNetworkReferralCharts() {
+        if (charts.networkMonthly) charts.networkMonthly.destroy();
+        if (charts.networkYearly) charts.networkYearly.destroy();
+
+        const selectedYear = getSelectedChartYear();
+        const monthlyLabel = document.getElementById('networkMonthlyLabel');
+        if (monthlyLabel) {
+            monthlyLabel.textContent = `ทุ่งเขาหลวง / อาจสามารถ / ธวัชบุรี | ปี ${Number(selectedYear) + 543}`;
+        }
+
+        const sharedOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: { top: 22 }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded',
+                        padding: 16,
+                        font: { size: 12, weight: '600' }
+                    }
+                },
+                barValueLabels: {
+                    color: '#0f172a',
+                    fontSize: 11,
+                    showZero: false
+                },
+                tooltip: {
+                    backgroundColor: '#0f172a',
+                    padding: 12,
+                    cornerRadius: 10
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 },
+                    grid: { color: '#e2e8f0', drawBorder: false }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        maxRotation: 0,
+                        autoSkip: false,
+                        font: { weight: '600' }
+                    }
+                }
+            }
+        };
+
+        const monthlyCtx = document.getElementById('networkMonthlyChart').getContext('2d');
+        charts.networkMonthly = new Chart(monthlyCtx, {
+            type: 'bar',
+            data: buildMonthlyNetworkReferralData(selectedYear),
+            plugins: [barValueLabelsPlugin],
+            options: sharedOptions
+        });
+
+        const yearlyCtx = document.getElementById('networkYearlyChart').getContext('2d');
+        charts.networkYearly = new Chart(yearlyCtx, {
+            type: 'bar',
+            data: buildYearlyNetworkReferralData(),
+            plugins: [barValueLabelsPlugin],
+            options: sharedOptions
         });
     }
 
@@ -798,7 +1041,10 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
                 const outcome = item['Fast track'] || item['Outcome'] || item['outcome'] || '';
                 const shiftTransport = [
                     item['Non Fast'] || '',
-                    item['เวรมาโรงพยาบาลโดย'] || item['Transport'] || item['transport'] || ''
+                    item['มาโรงพยาบาลโดย'] || item['เวรมาโรงพยาบาลโดย'] || item['Transport'] || item['transport'] || '',
+                    item['รับรีเฟอลูกข่าย'] || item['รับ refer ลูกข่าย'] || item['ลูกข่าย'] || item['รพ.ลูกข่าย'] || '',
+                    item['Refer จาก'] || item['refer_from'] || item['Refer from'] || '',
+                    item['โรงพยาบาลต้นทาง'] || item['หน่วยส่งต่อ'] || item['สถานพยาบาลต้นทาง'] || ''
                 ].filter(Boolean).join(' ');
                 const incharge = item['ชื่อ Incharge'] || item['Incharge'] || item['incharge'] || '-';
                 const oxygen = item['Oxygen support'] || item['Oxygen'] || item['oxygen'] || '-';
