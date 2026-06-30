@@ -174,6 +174,14 @@
 
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                         <div class="grid gap-1">
+                            <span class="text-xs font-medium text-slate-500">ปี</span>
+                            <div class="select-wrap">
+                                <select id="yearFilter" class="control w-full min-w-[140px]" onchange="handleYearFilterChange()" disabled>
+                                    <option value="all">ทุกปี</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid gap-1">
                             <span class="text-xs font-medium text-slate-500">เดือน</span>
                             <div class="select-wrap">
                                 <select id="monthFilter" class="control w-full min-w-[180px]" onchange="handleFilterChange()" disabled>
@@ -525,6 +533,8 @@
                 const requestTimeValue = parseTimeValue(reqTime);
                 const timeValue = parseTimeValue(receiveTime) ?? requestTimeValue;
                 const shift = getShiftFromMinutes(timeValue);
+                const yearKey = dateValue ? String(dateValue.getFullYear()) : 'unknown';
+                const monthNumber = dateValue ? String(dateValue.getMonth() + 1).padStart(2, '0') : 'unknown';
 
                 return {
                     id: index + 1,
@@ -540,12 +550,16 @@
                     receiveTime,
                     requestMinutes: requestTimeValue,
                     timeMinutes: timeValue,
-                    monthKey: dateValue ? `${dateValue.getFullYear()}-${String(dateValue.getMonth() + 1).padStart(2, '0')}` : 'unknown',
+                    yearKey,
+                    yearLabel: yearKey === 'unknown' ? 'ไม่ทราบปี' : String(Number(yearKey) + 543),
+                    monthNumber,
+                    monthKey: dateValue ? `${yearKey}-${monthNumber}` : 'unknown',
                     monthLabel: dateValue ? dateValue.toLocaleDateString('th-TH', { year: 'numeric', month: 'long' }) : 'ไม่ทราบเดือน',
                     shift
                 };
             });
 
+            populateYearFilter();
             populateMonthFilter();
             enableFilters();
             applyFilters();
@@ -571,7 +585,7 @@
 
             const parts = datePart.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
             if (!parts) {
-                const parsed = new Date(text);
+                const parsed = parseTextDateValue(text);
                 return Number.isNaN(parsed.getTime()) ? null : parsed;
             }
 
@@ -584,13 +598,34 @@
             return Number.isNaN(parsed.getTime()) ? null : parsed;
         }
 
+        function parseTextDateValue(value) {
+            const text = String(value || '').trim();
+            const parsed = new Date(text);
+            const monthNameMatch = text.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})\s+(\d{4})/i);
+
+            if (monthNameMatch) {
+                const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+                const month = monthNames.indexOf(monthNameMatch[1].slice(0, 3).toLowerCase());
+                const day = Number(monthNameMatch[2]);
+                let year = Number(monthNameMatch[3]);
+                if (year > 2400) year -= 543;
+                const normalized = new Date(year, month, day);
+                return Number.isNaN(normalized.getTime()) ? parsed : normalized;
+            }
+
+            return parsed;
+        }
+
         function parseDateFromTimestamp(value) {
             if (!value) return null;
             const text = String(value);
             const yearFirstDate = text.match(/\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/);
             if (yearFirstDate) return parseDateValue(yearFirstDate[0]);
             const thaiDate = text.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/);
-            return thaiDate ? parseDateValue(thaiDate[0]) : null;
+            if (thaiDate) return parseDateValue(thaiDate[0]);
+
+            const parsed = parseTextDateValue(text);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
         }
 
         function parseTimeValue(value) {
@@ -610,19 +645,47 @@
             return 'night';
         }
 
+        function populateYearFilter() {
+            const yearFilter = document.getElementById('yearFilter');
+            const selected = yearFilter.value || 'all';
+            const years = [...new Map(rawData.map(item => [item.yearKey, item.yearLabel])).entries()]
+                .filter(([key]) => key !== 'unknown')
+                .sort(([a], [b]) => b.localeCompare(a));
+
+            yearFilter.innerHTML = '<option value="all">ทุกปี</option>';
+            years.forEach(([key, label]) => {
+                yearFilter.insertAdjacentHTML('beforeend', `<option value="${key}">${label}</option>`);
+            });
+
+            if (rawData.some(item => item.yearKey === 'unknown')) {
+                yearFilter.insertAdjacentHTML('beforeend', '<option value="unknown">ไม่ทราบปี</option>');
+            }
+
+            yearFilter.value = [...yearFilter.options].some(option => option.value === selected) ? selected : 'all';
+        }
+
         function populateMonthFilter() {
             const monthFilter = document.getElementById('monthFilter');
             const selected = monthFilter.value || 'all';
-            const months = [...new Map(rawData.map(item => [item.monthKey, item.monthLabel])).entries()]
+            const yearValue = document.getElementById('yearFilter').value || 'all';
+            const sourceData = yearValue === 'all'
+                ? rawData
+                : rawData.filter(item => item.yearKey === yearValue);
+            const months = [...new Map(sourceData.map(item => [
+                item.monthNumber,
+                item.monthNumber === 'unknown'
+                    ? 'ไม่ทราบเดือน'
+                    : new Date(2000, Number(item.monthNumber) - 1, 1).toLocaleDateString('th-TH', { month: 'long' })
+            ])).entries()]
                 .filter(([key]) => key !== 'unknown')
-                .sort(([a], [b]) => b.localeCompare(a));
+                .sort(([a], [b]) => Number(b) - Number(a));
 
             monthFilter.innerHTML = '<option value="all">ทุกเดือน</option>';
             months.forEach(([key, label]) => {
                 monthFilter.insertAdjacentHTML('beforeend', `<option value="${key}">${label}</option>`);
             });
 
-            if (rawData.some(item => item.monthKey === 'unknown')) {
+            if (sourceData.some(item => item.monthNumber === 'unknown')) {
                 monthFilter.insertAdjacentHTML('beforeend', '<option value="unknown">ไม่ทราบเดือน</option>');
             }
 
@@ -630,8 +693,14 @@
         }
 
         function enableFilters() {
+            document.getElementById('yearFilter').disabled = rawData.length === 0;
             document.getElementById('monthFilter').disabled = rawData.length === 0;
             document.getElementById('shiftFilter').disabled = rawData.length === 0;
+        }
+
+        function handleYearFilterChange() {
+            populateMonthFilter();
+            applyFilters();
         }
 
         function handleFilterChange() {
@@ -639,26 +708,32 @@
         }
 
         function applyFilters() {
+            const yearValue = document.getElementById('yearFilter').value;
             const monthValue = document.getElementById('monthFilter').value;
             const shiftValue = document.getElementById('shiftFilter').value;
 
             filteredData = rawData.filter(item => {
-                const matchMonth = monthValue === 'all' || item.monthKey === monthValue;
+                const matchYear = yearValue === 'all' || item.yearKey === yearValue;
+                const matchMonth = monthValue === 'all' || item.monthNumber === monthValue;
                 const matchShift = shiftValue === 'all' || item.shift === shiftValue;
-                return matchMonth && matchShift;
+                return matchYear && matchMonth && matchShift;
             });
 
-            updateFilterSummary(monthValue, shiftValue);
+            updateFilterSummary(yearValue, monthValue, shiftValue);
             updateDashboard();
         }
 
-        function updateFilterSummary(monthValue, shiftValue) {
+        function updateFilterSummary(yearValue, monthValue, shiftValue) {
+            const yearFilter = document.getElementById('yearFilter');
             const monthFilter = document.getElementById('monthFilter');
+            const yearLabel = yearValue === 'all'
+                ? 'ทุกปี'
+                : yearFilter.options[yearFilter.selectedIndex]?.text || 'ทุกปี';
             const monthLabel = monthValue === 'all'
                 ? 'ทุกเดือน'
                 : monthFilter.options[monthFilter.selectedIndex]?.text || 'ทุกเดือน';
             const shiftLabel = shiftMeta[shiftValue]?.label || 'ทุกเวร';
-            document.getElementById('filterSummary').innerHTML = `<i class="fa-solid fa-filter"></i> ${monthLabel} / ${shiftLabel}`;
+            document.getElementById('filterSummary').innerHTML = `<i class="fa-solid fa-filter"></i> ${yearLabel} / ${monthLabel} / ${shiftLabel}`;
         }
 
         function isEmergencyCase(item) {
