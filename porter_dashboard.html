@@ -529,7 +529,9 @@
                 const receiveDate = normalizeCell(row[9]);
                 const receiveTime = normalizeCell(row[10]) || '-';
                 const reqTime = normalizeCell(row[0]) || '-';
-                const dateValue = parseDateValue(receiveDate) || parseDateFromTimestamp(reqTime);
+                const timestampDate = parseDateFromTimestamp(reqTime) || parseDateValue(reqTime);
+                const receiveDateValue = parseDateValue(receiveDate);
+                const dateValue = timestampDate || receiveDateValue;
                 const requestTimeValue = parseTimeValue(reqTime);
                 const timeValue = parseTimeValue(receiveTime) ?? requestTimeValue;
                 const shift = getShiftFromMinutes(timeValue);
