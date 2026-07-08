@@ -346,6 +346,7 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
 <script>
     const USE_GAS_API = true;
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzGEMoG9XIySDmT-T0vE2xgFzJkTIXuK-S2x46zWKrTzYpYQJms21pdAfX50BBnvDa0/exec';
+    const GAS_FETCH_TIMEOUT_MS = 45000;
 
     const rawData = [
         { date: "7/8/2024", hn: "50502", rtpa: "ให้ rt-PA", outcome: "Admit", shift_transport: "มาเอง", incharge: "-", oxygen: "-" },
@@ -483,6 +484,21 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
 
     function normalizeText(value) {
         return String(value || '').trim();
+    }
+
+    function getFirstFilledValue(record, keys, fallback = '') {
+        if (!record || typeof record !== 'object') return fallback;
+
+        for (const key of keys) {
+            if (!Object.prototype.hasOwnProperty.call(record, key)) continue;
+
+            const value = record[key];
+            if (value !== undefined && value !== null && String(value).trim() !== '') {
+                return value;
+            }
+        }
+
+        return fallback;
     }
 
     function getNetworkReferralUnit(row) {
@@ -1015,7 +1031,7 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
     async function fetchDataFromGAS(url) {
         const tbody = document.getElementById('dataTableBody');
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), GAS_FETCH_TIMEOUT_MS);
 
         try {
             if (tbody) {
@@ -1024,6 +1040,7 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
 
             const response = await fetch(url, {
                 method: 'GET',
+                cache: 'no-store',
                 signal: controller.signal
             });
 
@@ -1034,20 +1051,41 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
             }
 
             const jsonData = await response.json();
-            const processedData = jsonData.map(item => {
-                const rawDate = item['ประทับเวลา'] || item['Timestamp'] || item['Date'] || item['date'] || '';
-                const hn = item['HN'] || item['hn'] || '';
-                const rtpa = item['rt-PA(ยา)'] || item['rt-PA'] || item['rtpa'] || item['rt_pa'] || '';
-                const outcome = item['Fast track'] || item['Outcome'] || item['outcome'] || '';
+            const rows = Array.isArray(jsonData)
+                ? jsonData
+                : jsonData && Array.isArray(jsonData.data)
+                    ? jsonData.data
+                    : jsonData && Array.isArray(jsonData.records)
+                        ? jsonData.records
+                        : [];
+
+            if (!rows.length) {
+                throw new Error('ไม่พบข้อมูลจาก API');
+            }
+
+            const processedData = rows.map(item => {
+                const rawDate = getFirstFilledValue(item, [
+                    'วัน/เดือน/ปี ที่มา รพ',
+                    'วันที่มา รพ',
+                    'วันที่มาโรงพยาบาล',
+                    'วันที่',
+                    'Date',
+                    'date',
+                    'ประทับเวลา',
+                    'Timestamp'
+                ]);
+                const hn = getFirstFilledValue(item, ['HN', 'hn']);
+                const rtpa = getFirstFilledValue(item, ['rt-PA(ยา)', 'rt-PA', 'rtpa', 'rt_pa']);
+                const outcome = getFirstFilledValue(item, ['Fast track', 'Non Fast', 'Outcome', 'outcome']);
                 const shiftTransport = [
-                    item['Non Fast'] || '',
-                    item['มาโรงพยาบาลโดย'] || item['เวรมาโรงพยาบาลโดย'] || item['Transport'] || item['transport'] || '',
-                    item['รับรีเฟอลูกข่าย'] || item['รับ refer ลูกข่าย'] || item['ลูกข่าย'] || item['รพ.ลูกข่าย'] || '',
-                    item['Refer จาก'] || item['refer_from'] || item['Refer from'] || '',
-                    item['โรงพยาบาลต้นทาง'] || item['หน่วยส่งต่อ'] || item['สถานพยาบาลต้นทาง'] || ''
+                    getFirstFilledValue(item, ['เวร']),
+                    getFirstFilledValue(item, ['มาโรงพยาบาลโดย', 'เวรมาโรงพยาบาลโดย', 'Transport', 'transport']),
+                    getFirstFilledValue(item, ['รับรีเฟอลูกข่าย', 'รับ refer ลูกข่าย', 'ลูกข่าย', 'รพ.ลูกข่าย']),
+                    getFirstFilledValue(item, ['Refer จาก', 'refer_from', 'Refer from']),
+                    getFirstFilledValue(item, ['โรงพยาบาลต้นทาง', 'หน่วยส่งต่อ', 'สถานพยาบาลต้นทาง'])
                 ].filter(Boolean).join(' ');
-                const incharge = item['ชื่อ Incharge'] || item['Incharge'] || item['incharge'] || '-';
-                const oxygen = item['Oxygen support'] || item['Oxygen'] || item['oxygen'] || '-';
+                const incharge = getFirstFilledValue(item, ['ชื่อ Incharge', 'Incharge', 'incharge'], '-');
+                const oxygen = getFirstFilledValue(item, ['Oxygen support', 'Oxygen', 'oxygen'], '-');
 
                 return parseMockRow({
                     date: rawDate,
@@ -1076,7 +1114,7 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
         if (document.getElementById('gas-error-banner')) return;
 
         const message = error.name === 'AbortError'
-            ? 'หมดเวลาการเชื่อมต่อ'
+            ? `หมดเวลาการเชื่อมต่อ (${Math.round(GAS_FETCH_TIMEOUT_MS / 1000)} วินาที)`
             : 'อาจติดปัญหา CORS หรือสิทธิ์การเข้าถึง';
 
         const errorDiv = document.createElement('div');
