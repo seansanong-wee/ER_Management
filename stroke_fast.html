@@ -365,6 +365,12 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
     let latestMonth = '';
     let latestYear = '';
     const TABLE_PAGE_SIZE = 20;
+    const REPORT_YEAR_START = 2024;
+    const REPORT_YEAR_END = 2032;
+    const REPORT_YEARS = Array.from(
+        { length: REPORT_YEAR_END - REPORT_YEAR_START + 1 },
+        (_, index) => String(REPORT_YEAR_START + index)
+    );
 
     const thaiMonths = [
         'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -551,10 +557,7 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
     }
 
     function buildYearlyNetworkReferralData() {
-        const years = [...new Set(allData.map(row => row.yearKey).filter(Boolean))]
-            .sort((a, b) => Number(a) - Number(b));
-        const activeYears = years.length ? years : [latestYear || String(new Date().getFullYear())];
-        const yearlyCounts = activeYears.reduce((countsByYear, year) => {
+        const yearlyCounts = REPORT_YEARS.reduce((countsByYear, year) => {
             countsByYear[year] = createEmptyNetworkCounts();
             return countsByYear;
         }, {});
@@ -568,10 +571,10 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
         });
 
         return {
-            labels: activeYears.map(year => String(Number(year) + 543)),
+            labels: REPORT_YEARS.map(year => String(Number(year) + 543)),
             datasets: networkReferralUnits.map((unit, index) => ({
                 label: unit.label,
-                data: activeYears.map(year => yearlyCounts[year][unit.label]),
+                data: REPORT_YEARS.map(year => yearlyCounts[year][unit.label]),
                 backgroundColor: networkReferralColors[index],
                 borderRadius: 10,
                 borderSkipped: false,
@@ -626,20 +629,18 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
     }
 
     function setupPeriodControls() {
-        const datedRows = allData.filter(row => row.parsedDate);
-        const latestDate = datedRows.length ? datedRows[0].parsedDate : new Date();
-        latestMonth = getMonthKey(latestDate);
-        latestYear = String(latestDate.getFullYear());
+        const currentDate = new Date();
+        const currentYear = String(currentDate.getFullYear());
+        latestMonth = getMonthKey(currentDate);
+        latestYear = REPORT_YEARS.includes(currentYear) ? currentYear : REPORT_YEARS[REPORT_YEARS.length - 1];
 
         const monthPicker = document.getElementById('monthPicker');
         const yearPicker = document.getElementById('yearPicker');
-        const years = [...new Set(datedRows.map(row => row.yearKey).filter(Boolean))].sort((a, b) => Number(b) - Number(a));
 
         monthPicker.value = latestMonth;
         yearPicker.innerHTML = '';
 
-        const availableYears = years.length ? years : [latestYear];
-        availableYears.forEach(year => {
+        REPORT_YEARS.forEach(year => {
             const option = document.createElement('option');
             option.value = year;
             option.textContent = Number(year) + 543;
