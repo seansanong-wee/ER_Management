@@ -12,9 +12,9 @@
 const SPREADSHEET_ID = '';
 
 const SHEET_NAME_MAP = {
-  personnel: 'personnel',
-  units: 'units',
-  vehicles: 'vehicles'
+  personnel: 'ข้อมูลบุคลากร',
+  units: 'ข้อมูลหน่วยกู้ชีพ',
+  vehicles: 'ยานพาหนะ'
 };
 
 const SHEET_HEADER_SIGNATURES = {

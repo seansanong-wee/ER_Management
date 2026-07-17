@@ -414,10 +414,15 @@
                     units: 'หน่วยกู้ชีพ',
                     vehicles: 'ยานพาหนะ'
                 };
+                const sheetApiNames = {
+                    personnel: 'ข้อมูลบุคลากร',
+                    units: 'ข้อมูลหน่วยกู้ชีพ',
+                    vehicles: 'ยานพาหนะ'
+                };
                 const defaultFieldsBySheet = {
                     personnel: ['คำนำหน้า', 'ชื่อ', 'สกุล', 'เลขประจำตัวประชาชน', 'เบอร์โทรศัพท์', 'คุณวุฒิ', 'สังกัดหน่วยงาน', 'การศึกษาขั้นสูงสุด'],
-                    units: ['ลำดับ', 'ชื่อหน่วยกู้ชีพ', 'ระดับ', 'เบอร์โทร', 'ผู้ดูแล/ผู้บริหารหน่วย', 'จำนวนคน'],
-                    vehicles: ['รถคันที่', 'ทะเบียนรถ', 'จังหวัดทะเบียนรถ', 'สังกัดหน่วย', 'ประเภทพาหนะ', 'พ.ร.บ.', 'สติ๊กเกอร์']
+                    units: ['ลำดับ', 'ชื่อหน่วยกู้ชีพ', 'ระดับการปฏิบัติการ', 'เบอร์โทรศัพท์', 'ผู้ดูแล/ผู้บริหารหน่วย', 'จำนวนคน', 'สถานะ'],
+                    vehicles: ['รถคันที่', 'ทะเบียนรถ', 'จังหวัดทะเบียนรถ', 'ประเภทพาหนะ', 'ระบุประเภทพาหนะ อื่นๆ', 'วันที่รับรอง', 'วันที่หมดอายุการรับรอง', 'วันที่จดทะเบียนรถ', 'ประกันภัยภาคสมัครใจ', 'การต่อ พรบ.', 'การต่อทะเบียน', 'สติ๊กเกอร์', 'สังกัด']
                 };
                 const internalFields = ['__rowNumber'];
                 const storagePrefix = 'selaphum_ems_local_';
@@ -437,6 +442,7 @@
                 };
 
                 const getSheetLabel = (sheetName) => sheetLabels[sheetName] || sheetName || '';
+                const getApiSheetName = (sheetName) => sheetApiNames[sheetName] || sheetName || '';
                 const getStorageKey = (sheetName) => `${storagePrefix}${sheetName}`;
                 const isInternalField = (field) => internalFields.includes(field) || String(field).startsWith('__');
 
@@ -486,7 +492,7 @@
                 // Fetch ข้อมูลรายชีท
                 const fetchData = async (sheetName, silent = false) => {
                     try {
-                        const response = await fetch(`${apiUrl.value}?sheet=${sheetName}`);
+                        const response = await fetch(`${apiUrl.value}?sheet=${encodeURIComponent(getApiSheetName(sheetName))}`);
                         const result = await response.json();
 
                         if (result.error) throw new Error(result.error);
@@ -673,7 +679,7 @@
                         method: 'POST',
                         body: JSON.stringify({
                             action,
-                            sheet: sheetName,
+                            sheet: getApiSheetName(sheetName),
                             ...payload
                         })
                     });
