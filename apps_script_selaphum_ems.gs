@@ -17,6 +17,12 @@ const SHEET_NAME_MAP = {
   vehicles: 'vehicles'
 };
 
+const SHEET_HEADER_SIGNATURES = {
+  personnel: ['เลขประจำตัวประชาชน', 'ชื่อ', 'สกุล', 'เบอร์โทรศัพท์', 'คุณวุฒิ', 'สังกัด'],
+  units: ['ชื่อหน่วยกู้ชีพ', 'ชื่อหน่วย', 'ระดับ', 'เบอร์โทร', 'จำนวนคน', 'ผู้ดูแล', 'ผู้บริหาร'],
+  vehicles: ['ทะเบียนรถ', 'รถคันที่', 'จังหวัดทะเบียนรถ', 'สังกัดหน่วย', 'ประเภทพาหนะ', 'สติ๊กเกอร์', 'พรบ']
+};
+
 function doGet(e) {
   try {
     const params = (e && e.parameter) || {};
@@ -86,12 +92,52 @@ function getSheet_(sheetKey) {
     throw new Error('Missing sheet name');
   }
 
-  const sheet = getSpreadsheet_().getSheetByName(sheetName);
-  if (!sheet) {
-    throw new Error('Sheet not found: ' + sheetName);
+  const spreadsheet = getSpreadsheet_();
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  if (sheet) {
+    return sheet;
   }
 
-  return sheet;
+  const detectedSheet = findSheetByHeaders_(spreadsheet, normalizedKey);
+  if (detectedSheet) {
+    return detectedSheet;
+  }
+
+  const availableSheets = spreadsheet.getSheets().map(function(item) {
+    return item.getName();
+  }).join(', ');
+  throw new Error('Sheet not found: ' + sheetName + '. Available sheets: ' + availableSheets);
+}
+
+function findSheetByHeaders_(spreadsheet, sheetKey) {
+  const signatures = SHEET_HEADER_SIGNATURES[sheetKey];
+  if (!signatures) return null;
+
+  let bestSheet = null;
+  let bestScore = 0;
+
+  spreadsheet.getSheets().forEach(function(sheet) {
+    const lastColumn = sheet.getLastColumn();
+    if (lastColumn < 1 || sheet.getLastRow() < 1) return;
+
+    const headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0]
+      .map(function(header) {
+        return String(header || '').trim();
+      });
+    const score = signatures.reduce(function(total, signature) {
+      const hasSignature = headers.some(function(header) {
+        return header.indexOf(signature) !== -1;
+      });
+      return total + (hasSignature ? 1 : 0);
+    }, 0);
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestSheet = sheet;
+    }
+  });
+
+  return bestScore >= 2 ? bestSheet : null;
 }
 
 function readRows_(sheet) {
