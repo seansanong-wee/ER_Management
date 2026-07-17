@@ -128,6 +128,10 @@
                                     class="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-md transition-all font-semibold text-sm disabled:opacity-70 disabled:cursor-not-allowed">
                                     <i data-lucide="refresh-cw" :class="['mr-2 w-4 h-4', { 'animate-spin': isSyncing }]"></i> อัปเดตหน้านี้
                                 </button>
+                                <button @click="openCreateModal(activeTab)" :disabled="isSaving"
+                                    class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-all font-semibold text-sm disabled:opacity-70 disabled:cursor-not-allowed">
+                                    <i data-lucide="plus" class="mr-2 w-4 h-4"></i> เพิ่มข้อมูล
+                                </button>
                                 <button @click="exportToCSV" class="flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition font-semibold text-sm shadow-sm">
                                     <i data-lucide="download" class="mr-2 text-gray-500 w-4 h-4"></i> ดาวน์โหลด
                                 </button>
@@ -188,12 +192,12 @@
                                                     </td>
                                                     <td class="px-5 py-4">
                                                         <div class="flex justify-center gap-2">
-                                                            <button @click="openEditModal('personnel', p)" title="แก้ไข"
-                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
+                                                            <button @click="openEditModal('personnel', p)" :disabled="isSaving" title="แก้ไข"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                                 <i data-lucide="pencil" class="w-4 h-4"></i>
                                                             </button>
-                                                            <button @click="deleteRow('personnel', p)" title="ลบ"
-                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
+                                                            <button @click="deleteRow('personnel', p)" :disabled="isSaving" title="ลบ"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                                             </button>
                                                         </div>
@@ -243,12 +247,12 @@
                                                     <td class="px-6 py-4 text-center font-bold text-gray-800">{{ item.members || item['จำนวนคน'] || '-' }} คน</td>
                                                     <td class="px-6 py-4">
                                                         <div class="flex justify-center gap-2">
-                                                            <button @click="openEditModal('units', item)" title="แก้ไข"
-                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
+                                                            <button @click="openEditModal('units', item)" :disabled="isSaving" title="แก้ไข"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                                 <i data-lucide="pencil" class="w-4 h-4"></i>
                                                             </button>
-                                                            <button @click="deleteRow('units', item)" title="ลบ"
-                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
+                                                            <button @click="deleteRow('units', item)" :disabled="isSaving" title="ลบ"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                                             </button>
                                                         </div>
@@ -307,12 +311,12 @@
                                                     </td>
                                                     <td class="px-6 py-4">
                                                         <div class="flex justify-center gap-2">
-                                                            <button @click="openEditModal('vehicles', item)" title="แก้ไข"
-                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
+                                                            <button @click="openEditModal('vehicles', item)" :disabled="isSaving" title="แก้ไข"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                                 <i data-lucide="pencil" class="w-4 h-4"></i>
                                                             </button>
-                                                            <button @click="deleteRow('vehicles', item)" title="ลบ"
-                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
+                                                            <button @click="deleteRow('vehicles', item)" :disabled="isSaving" title="ลบ"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                                             </button>
                                                         </div>
@@ -332,13 +336,13 @@
 
         <!-- Edit Modal -->
         <div v-if="editModal.show" class="fixed inset-0 z-40 flex items-center justify-center p-4">
-            <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="closeEditModal"></div>
+            <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="!isSaving && closeEditModal()"></div>
             <div class="relative w-full max-w-3xl max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                     <div>
-                        <h3 class="text-lg font-bold text-gray-800">แก้ไขข้อมูล{{ getSheetLabel(editModal.sheetName) }}</h3>
+                        <h3 class="text-lg font-bold text-gray-800">{{ editModal.mode === 'create' ? 'เพิ่มข้อมูล' : 'แก้ไขข้อมูล' }}{{ getSheetLabel(editModal.sheetName) }}</h3>
                     </div>
-                    <button @click="closeEditModal" class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors" title="ปิด">
+                    <button @click="closeEditModal" :disabled="isSaving" class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="ปิด">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -353,13 +357,13 @@
                         </label>
                     </div>
                     <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-                        <button type="button" @click="closeEditModal"
-                            class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 transition-colors font-semibold text-sm">
+                        <button type="button" @click="closeEditModal" :disabled="isSaving"
+                            class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 transition-colors font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                             ยกเลิก
                         </button>
-                        <button type="submit"
-                            class="inline-flex items-center px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors font-semibold text-sm shadow-sm">
-                            <i data-lucide="save" class="mr-2 w-4 h-4"></i> บันทึก
+                        <button type="submit" :disabled="isSaving"
+                            class="inline-flex items-center px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors font-semibold text-sm shadow-sm disabled:opacity-70 disabled:cursor-not-allowed">
+                            <i :data-lucide="isSaving ? 'loader-2' : 'save'" :class="['mr-2 w-4 h-4', { 'animate-spin': isSaving }]"></i> {{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}
                         </button>
                     </div>
                 </form>
@@ -385,6 +389,7 @@
                 // URL API
                 const apiUrl = ref('https://script.google.com/macros/s/AKfycbzuK5IwLp-XdoSFHSIdpiW_dblPPll_2ozwHlawGvR3ThsNroRurl_FRD74Z-kmumhj/exec');
                 const isSyncing = ref(false);
+                const isSaving = ref(false);
                 
                 const toast = ref({ show: false, message: '', isError: false });
 
@@ -409,10 +414,16 @@
                     units: 'หน่วยกู้ชีพ',
                     vehicles: 'ยานพาหนะ'
                 };
+                const defaultFieldsBySheet = {
+                    personnel: ['คำนำหน้า', 'ชื่อ', 'สกุล', 'เลขประจำตัวประชาชน', 'เบอร์โทรศัพท์', 'คุณวุฒิ', 'สังกัดหน่วยงาน', 'การศึกษาขั้นสูงสุด'],
+                    units: ['ลำดับ', 'ชื่อหน่วยกู้ชีพ', 'ระดับ', 'เบอร์โทร', 'ผู้ดูแล/ผู้บริหารหน่วย', 'จำนวนคน'],
+                    vehicles: ['รถคันที่', 'ทะเบียนรถ', 'จังหวัดทะเบียนรถ', 'สังกัดหน่วย', 'ประเภทพาหนะ', 'พ.ร.บ.', 'สติ๊กเกอร์']
+                };
+                const internalFields = ['__rowNumber'];
                 const storagePrefix = 'selaphum_ems_local_';
-                const editModal = ref({ show: false, sheetName: '', rowIndex: -1 });
+                const editModal = ref({ show: false, sheetName: '', rowIndex: -1, rowNumber: null, mode: 'edit' });
                 const editForm = ref({});
-                const editFields = computed(() => Object.keys(editForm.value));
+                const editFields = computed(() => Object.keys(editForm.value).filter(field => !isInternalField(field)));
 
                 watch(activeTab, async () => {
                     searchQuery.value = '';
@@ -427,6 +438,25 @@
 
                 const getSheetLabel = (sheetName) => sheetLabels[sheetName] || sheetName || '';
                 const getStorageKey = (sheetName) => `${storagePrefix}${sheetName}`;
+                const isInternalField = (field) => internalFields.includes(field) || String(field).startsWith('__');
+
+                const cleanRowForSheet = (row) => {
+                    return Object.fromEntries(
+                        Object.entries(row || {}).filter(([key]) => !isInternalField(key))
+                    );
+                };
+
+                const getEditableFields = (sheetName) => {
+                    const rows = dataStore.value[sheetName] || [];
+                    const fields = Array.from(new Set(rows.flatMap(row => Object.keys(row || {}))))
+                        .filter(field => !isInternalField(field));
+                    return fields.length ? fields : (defaultFieldsBySheet[sheetName] || []);
+                };
+
+                const getRowNumber = (row, rowIndex) => {
+                    const explicitRowNumber = Number(row?.__rowNumber || row?.rowNumber || row?.แถว);
+                    return Number.isFinite(explicitRowNumber) && explicitRowNumber >= 2 ? explicitRowNumber : rowIndex + 2;
+                };
 
                 const loadLocalData = (sheetName) => {
                     try {
@@ -460,11 +490,12 @@
                         const result = await response.json();
 
                         if (result.error) throw new Error(result.error);
-                        if (Array.isArray(result)) {
-                            const hasLocalData = loadLocalData(sheetName);
-                            if (!hasLocalData) dataStore.value[sheetName] = result;
+                        const rows = Array.isArray(result) ? result : (Array.isArray(result.data) ? result.data : null);
+                        if (rows) {
+                            dataStore.value[sheetName] = rows;
+                            persistLocalData(sheetName);
                             if(!silent) {
-                                showToast(hasLocalData ? `แสดงข้อมูล${getSheetLabel(sheetName)}ที่แก้ไขไว้ในเครื่อง` : `อัปเดตข้อมูล ${getSheetLabel(sheetName)} สำเร็จ`);
+                                showToast(`อัปเดตข้อมูล ${getSheetLabel(sheetName)} สำเร็จ`);
                             }
                         }
                     } catch (error) {
@@ -637,11 +668,36 @@
                     ];
                 });
 
+                const writeSheetData = async (action, sheetName, payload = {}) => {
+                    const response = await fetch(apiUrl.value, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action,
+                            sheet: sheetName,
+                            ...payload
+                        })
+                    });
+                    const responseText = await response.text();
+                    let result;
+
+                    try {
+                        result = responseText ? JSON.parse(responseText) : {};
+                    } catch (error) {
+                        throw new Error('Apps Script ตอบกลับไม่ถูกต้อง กรุณาตรวจสอบ doPost');
+                    }
+
+                    if (!response.ok || result.ok !== true || result.error) {
+                        throw new Error(result.error || 'Apps Script ยังไม่ใช่เวอร์ชันที่รองรับเพิ่ม/แก้ไข/ลบ');
+                    }
+
+                    return result;
+                };
+
                 const exportToCSV = () => {
                     const list = filteredData.value;
                     if (!list.length) return showToast('ไม่มีข้อมูลสำหรับส่งออก', true);
-                    
-                    const headers = Array.from(new Set(list.flatMap(Object.keys)));
+
+                    const headers = Array.from(new Set(list.flatMap(Object.keys))).filter(field => !isInternalField(field));
                     const csvContent = [
                         headers.join(','),
                         ...list.map(row => headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(','))
@@ -688,32 +744,71 @@
                         return;
                     }
 
-                    editModal.value = { show: true, sheetName, rowIndex };
-                    editForm.value = { ...dataStore.value[sheetName][rowIndex] };
+                    const currentRow = dataStore.value[sheetName][rowIndex];
+                    editModal.value = { show: true, sheetName, rowIndex, rowNumber: getRowNumber(currentRow, rowIndex), mode: 'edit' };
+                    editForm.value = cleanRowForSheet(currentRow);
+                    await nextTick();
+                    lucide.createIcons();
+                };
+
+                const openCreateModal = async (sheetName) => {
+                    const fields = getEditableFields(sheetName);
+                    editModal.value = { show: true, sheetName, rowIndex: -1, rowNumber: null, mode: 'create' };
+                    editForm.value = fields.reduce((form, field) => {
+                        form[field] = '';
+                        return form;
+                    }, {});
                     await nextTick();
                     lucide.createIcons();
                 };
 
                 const closeEditModal = () => {
-                    editModal.value = { show: false, sheetName: '', rowIndex: -1 };
+                    if (isSaving.value) return;
+                    editModal.value = { show: false, sheetName: '', rowIndex: -1, rowNumber: null, mode: 'edit' };
                     editForm.value = {};
                 };
 
                 const saveEdit = async () => {
-                    const { sheetName, rowIndex } = editModal.value;
+                    const { sheetName, rowIndex, rowNumber, mode } = editModal.value;
                     const list = dataStore.value[sheetName] || [];
-                    if (!sheetName || rowIndex < 0 || rowIndex >= list.length) {
+                    if (!sheetName) {
                         showToast('ไม่พบรายการที่ต้องการบันทึก', true);
                         return;
                     }
 
-                    const updatedRow = { ...list[rowIndex], ...editForm.value };
-                    list.splice(rowIndex, 1, updatedRow);
-                    persistLocalData(sheetName);
-                    closeEditModal();
-                    showToast(`แก้ไขข้อมูล${getSheetLabel(sheetName)}เรียบร้อย`);
-                    await nextTick();
-                    lucide.createIcons();
+                    const rowData = cleanRowForSheet(editForm.value);
+                    isSaving.value = true;
+
+                    try {
+                        if (mode === 'create') {
+                            await writeSheetData('create', sheetName, { data: rowData });
+                            await fetchData(sheetName, true);
+                            isSaving.value = false;
+                            closeEditModal();
+                            showToast(`เพิ่มข้อมูล${getSheetLabel(sheetName)}เรียบร้อย`);
+                        } else {
+                            if (rowIndex < 0 || rowIndex >= list.length) {
+                                throw new Error('ไม่พบรายการที่ต้องการบันทึก');
+                            }
+
+                            await writeSheetData('update', sheetName, {
+                                rowNumber: rowNumber || getRowNumber(list[rowIndex], rowIndex),
+                                rowIndex: rowIndex + 2,
+                                data: rowData
+                            });
+                            await fetchData(sheetName, true);
+                            isSaving.value = false;
+                            closeEditModal();
+                            showToast(`แก้ไขข้อมูล${getSheetLabel(sheetName)}เรียบร้อย`);
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        showToast(error.message || 'บันทึกข้อมูลลง Google Sheet ไม่สำเร็จ', true);
+                    } finally {
+                        isSaving.value = false;
+                        await nextTick();
+                        lucide.createIcons();
+                    }
                 };
 
                 const deleteRow = async (sheetName, row) => {
@@ -727,11 +822,24 @@
                     const confirmed = window.confirm(`ยืนยันลบข้อมูล${getSheetLabel(sheetName)}: ${rowLabel}`);
                     if (!confirmed) return;
 
-                    dataStore.value[sheetName].splice(rowIndex, 1);
-                    persistLocalData(sheetName);
-                    showToast(`ลบข้อมูล${getSheetLabel(sheetName)}เรียบร้อย`);
-                    await nextTick();
-                    lucide.createIcons();
+                    isSaving.value = true;
+
+                    try {
+                        await writeSheetData('delete', sheetName, {
+                            rowNumber: getRowNumber(row, rowIndex),
+                            rowIndex: rowIndex + 2,
+                            data: cleanRowForSheet(row)
+                        });
+                        await fetchData(sheetName, true);
+                        showToast(`ลบข้อมูล${getSheetLabel(sheetName)}เรียบร้อย`);
+                    } catch (error) {
+                        console.error(error);
+                        showToast(error.message || 'ลบข้อมูลใน Google Sheet ไม่สำเร็จ', true);
+                    } finally {
+                        isSaving.value = false;
+                        await nextTick();
+                        lucide.createIcons();
+                    }
                 };
 
                 const isLongField = (value) => {
@@ -746,11 +854,11 @@
                 });
 
                 return {
-                    activeTab, menus, currentMenuName, apiUrl, isSyncing, searchQuery,
+                    activeTab, menus, currentMenuName, apiUrl, isSyncing, isSaving, searchQuery,
                     editModal, editForm, editFields,
                     toast, dashboardStats, filteredData, groupedPersonnel, groupedUnits, groupedVehicles,
                     fetchData, fetchAllData, exportToCSV, getUnitLevel, getManagerName, getActStatus,
-                    getSheetLabel, openEditModal, closeEditModal, saveEdit, deleteRow, isLongField
+                    getSheetLabel, openCreateModal, openEditModal, closeEditModal, saveEdit, deleteRow, isLongField
                 };
             }
         };
