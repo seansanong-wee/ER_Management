@@ -164,6 +164,7 @@
                                                     <th class="px-5 py-3 font-semibold">เลข ปชช. / ติดต่อ</th>
                                                     <th class="px-5 py-3 font-semibold">คุณวุฒิ / สาขา</th>
                                                     <th class="px-5 py-3 font-semibold text-center">สถานะ</th>
+                                                    <th class="px-5 py-3 font-semibold text-center w-28">จัดการ</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-100">
@@ -184,6 +185,18 @@
                                                         <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-green-50 text-green-700 border border-green-200">
                                                             <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> พร้อมปฏิบัติงาน
                                                         </span>
+                                                    </td>
+                                                    <td class="px-5 py-4">
+                                                        <div class="flex justify-center gap-2">
+                                                            <button @click="openEditModal('personnel', p)" title="แก้ไข"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
+                                                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                                                            </button>
+                                                            <button @click="deleteRow('personnel', p)" title="ลบ"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
+                                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             </tbody>
@@ -211,6 +224,7 @@
                                                     <th class="px-6 py-4 font-semibold">เบอร์โทร</th>
                                                     <th class="px-6 py-4 font-semibold">ผู้ดูแล/ผู้บริหารหน่วย</th>
                                                     <th class="px-6 py-4 font-semibold text-center">บุคลากร</th>
+                                                    <th class="px-6 py-4 font-semibold text-center w-28">จัดการ</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-100">
@@ -227,6 +241,18 @@
                                                     <td class="px-6 py-4 font-medium text-gray-700">{{ item.phone || item['เบอร์โทร'] || item['เบอร์โทรศัพท์'] || '-' }}</td>
                                                     <td class="px-6 py-4 text-gray-600">{{ getManagerName(item) }}</td>
                                                     <td class="px-6 py-4 text-center font-bold text-gray-800">{{ item.members || item['จำนวนคน'] || '-' }} คน</td>
+                                                    <td class="px-6 py-4">
+                                                        <div class="flex justify-center gap-2">
+                                                            <button @click="openEditModal('units', item)" title="แก้ไข"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
+                                                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                                                            </button>
+                                                            <button @click="deleteRow('units', item)" title="ลบ"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
+                                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -253,6 +279,7 @@
                                                     <th class="px-6 py-4 font-semibold">ประเภท</th>
                                                     <th class="px-6 py-4 font-semibold">พ.ร.บ.</th>
                                                     <th class="px-6 py-4 font-semibold text-center">สติ๊กเกอร์</th>
+                                                    <th class="px-6 py-4 font-semibold text-center w-28">จัดการ</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-100">
@@ -278,6 +305,18 @@
                                                             {{ item['สติ๊กเกอร์'] || item['สถานะ'] || 'ไม่ระบุ' }}
                                                         </span>
                                                     </td>
+                                                    <td class="px-6 py-4">
+                                                        <div class="flex justify-center gap-2">
+                                                            <button @click="openEditModal('vehicles', item)" title="แก้ไข"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
+                                                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                                                            </button>
+                                                            <button @click="deleteRow('vehicles', item)" title="ลบ"
+                                                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
+                                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -291,8 +330,44 @@
             </main>
         </div>
 
+        <!-- Edit Modal -->
+        <div v-if="editModal.show" class="fixed inset-0 z-40 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="closeEditModal"></div>
+            <div class="relative w-full max-w-3xl max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800">แก้ไขข้อมูล{{ getSheetLabel(editModal.sheetName) }}</h3>
+                    </div>
+                    <button @click="closeEditModal" class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors" title="ปิด">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form @submit.prevent="saveEdit" class="flex flex-col max-h-[calc(90vh-73px)]">
+                    <div class="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 bg-white">
+                        <label v-for="field in editFields" :key="field" class="block">
+                            <span class="block text-xs font-semibold text-gray-600 mb-1.5">{{ field }}</span>
+                            <textarea v-if="isLongField(editForm[field])" v-model="editForm[field]" rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"></textarea>
+                            <input v-else v-model="editForm[field]" type="text"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500">
+                        </label>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                        <button type="button" @click="closeEditModal"
+                            class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 transition-colors font-semibold text-sm">
+                            ยกเลิก
+                        </button>
+                        <button type="submit"
+                            class="inline-flex items-center px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors font-semibold text-sm shadow-sm">
+                            <i data-lucide="save" class="mr-2 w-4 h-4"></i> บันทึก
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Toast Notification -->
-        <div v-if="toast.show" class="fixed bottom-6 right-6 px-5 py-3 rounded-xl shadow-2xl flex items-center z-50 text-white font-semibold text-sm transition-all duration-300" 
+        <div v-if="toast.show" class="fixed bottom-6 right-6 px-5 py-3 rounded-xl shadow-2xl flex items-center z-50 text-white font-semibold text-sm transition-all duration-300"
              :class="toast.isError ? 'bg-red-600' : 'bg-gray-800'">
             <i :data-lucide="toast.isError ? 'alert-triangle' : 'check-circle'" class="mr-3 w-5 h-5" :class="toast.isError ? 'text-white' : 'text-green-400'"></i>
             {{ toast.message }}
@@ -329,6 +404,16 @@
                     vehicles: []
                 });
 
+                const sheetLabels = {
+                    personnel: 'บุคลากร',
+                    units: 'หน่วยกู้ชีพ',
+                    vehicles: 'ยานพาหนะ'
+                };
+                const storagePrefix = 'selaphum_ems_local_';
+                const editModal = ref({ show: false, sheetName: '', rowIndex: -1 });
+                const editForm = ref({});
+                const editFields = computed(() => Object.keys(editForm.value));
+
                 watch(activeTab, async () => {
                     searchQuery.value = '';
                     await nextTick();
@@ -340,19 +425,54 @@
                     setTimeout(() => { toast.value.show = false; }, 4000);
                 };
 
+                const getSheetLabel = (sheetName) => sheetLabels[sheetName] || sheetName || '';
+                const getStorageKey = (sheetName) => `${storagePrefix}${sheetName}`;
+
+                const loadLocalData = (sheetName) => {
+                    try {
+                        const rawData = localStorage.getItem(getStorageKey(sheetName));
+                        if (rawData === null) return false;
+                        const savedData = JSON.parse(rawData);
+                        if (!Array.isArray(savedData)) return false;
+                        dataStore.value[sheetName] = savedData;
+                        return true;
+                    } catch (error) {
+                        console.warn('Cannot load local edits', error);
+                        return false;
+                    }
+                };
+
+                const persistLocalData = (sheetName) => {
+                    try {
+                        localStorage.setItem(getStorageKey(sheetName), JSON.stringify(dataStore.value[sheetName] || []));
+                        return true;
+                    } catch (error) {
+                        console.error(error);
+                        showToast('บันทึกข้อมูลในเครื่องไม่สำเร็จ', true);
+                        return false;
+                    }
+                };
+
                 // Fetch ข้อมูลรายชีท
                 const fetchData = async (sheetName, silent = false) => {
                     try {
                         const response = await fetch(`${apiUrl.value}?sheet=${sheetName}`);
                         const result = await response.json();
-                        
+
                         if (result.error) throw new Error(result.error);
-                        if (Array.isArray(result) && result.length > 0) {
-                            dataStore.value[sheetName] = result;
-                            if(!silent) showToast(`อัปเดตข้อมูล ${sheetName} สำเร็จ`);
+                        if (Array.isArray(result)) {
+                            const hasLocalData = loadLocalData(sheetName);
+                            if (!hasLocalData) dataStore.value[sheetName] = result;
+                            if(!silent) {
+                                showToast(hasLocalData ? `แสดงข้อมูล${getSheetLabel(sheetName)}ที่แก้ไขไว้ในเครื่อง` : `อัปเดตข้อมูล ${getSheetLabel(sheetName)} สำเร็จ`);
+                            }
                         }
                     } catch (error) {
                         console.error(error);
+                        if (loadLocalData(sheetName)) {
+                            if(!silent) showToast(`โหลดข้อมูล${getSheetLabel(sheetName)}ที่บันทึกไว้ในเครื่อง`);
+                            return;
+                        }
                         if(!silent) showToast(`เชื่อมต่อ API ไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Google Apps Script`, true);
                     }
                 };
@@ -366,7 +486,7 @@
                             fetchData('units', true),
                             fetchData('vehicles', true)
                         ]);
-                        showToast('โหลดข้อมูลจากฐานข้อมูลเสร็จสมบูรณ์!');
+                        showToast('โหลดข้อมูลเรียบร้อย!');
                     } catch(err) {
                         showToast('เกิดข้อผิดพลาดในการดึงข้อมูลบางส่วน', true);
                     } finally {
@@ -382,6 +502,11 @@
                     if (!searchQuery.value) return list;
                     const query = searchQuery.value.toLowerCase();
                     return list.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(query)));
+                });
+
+                watch(filteredData, async () => {
+                    await nextTick();
+                    lucide.createIcons();
                 });
 
                 // Group Personnel by Unit
@@ -531,6 +656,89 @@
                     showToast(`ดาวน์โหลดไฟล์สำเร็จ!`);
                 };
 
+                const findRowIndex = (sheetName, row) => {
+                    const list = dataStore.value[sheetName] || [];
+                    let rowIndex = list.findIndex(item => item === row);
+                    if (rowIndex !== -1) return rowIndex;
+
+                    const rowText = JSON.stringify(row);
+                    return list.findIndex(item => JSON.stringify(item) === rowText);
+                };
+
+                const getRowLabel = (sheetName, row) => {
+                    if (!row) return 'รายการนี้';
+                    if (sheetName === 'personnel') {
+                        return [row.prefix || row['คำนำหน้า'], row.firstName || row['ชื่อ'], row.lastName || row['สกุล']]
+                            .filter(Boolean)
+                            .join(' ') || row.idCard || row['เลขประจำตัวประชาชน'] || 'รายการนี้';
+                    }
+                    if (sheetName === 'units') {
+                        return row.name || row['ชื่อหน่วยกู้ชีพ'] || row['ชื่อหน่วย'] || 'รายการนี้';
+                    }
+                    if (sheetName === 'vehicles') {
+                        return row.plate || row['ทะเบียนรถ'] || row['รถคันที่'] || 'รายการนี้';
+                    }
+                    return 'รายการนี้';
+                };
+
+                const openEditModal = async (sheetName, row) => {
+                    const rowIndex = findRowIndex(sheetName, row);
+                    if (rowIndex === -1) {
+                        showToast('ไม่พบรายการที่ต้องการแก้ไข', true);
+                        return;
+                    }
+
+                    editModal.value = { show: true, sheetName, rowIndex };
+                    editForm.value = { ...dataStore.value[sheetName][rowIndex] };
+                    await nextTick();
+                    lucide.createIcons();
+                };
+
+                const closeEditModal = () => {
+                    editModal.value = { show: false, sheetName: '', rowIndex: -1 };
+                    editForm.value = {};
+                };
+
+                const saveEdit = async () => {
+                    const { sheetName, rowIndex } = editModal.value;
+                    const list = dataStore.value[sheetName] || [];
+                    if (!sheetName || rowIndex < 0 || rowIndex >= list.length) {
+                        showToast('ไม่พบรายการที่ต้องการบันทึก', true);
+                        return;
+                    }
+
+                    const updatedRow = { ...list[rowIndex], ...editForm.value };
+                    list.splice(rowIndex, 1, updatedRow);
+                    persistLocalData(sheetName);
+                    closeEditModal();
+                    showToast(`แก้ไขข้อมูล${getSheetLabel(sheetName)}เรียบร้อย`);
+                    await nextTick();
+                    lucide.createIcons();
+                };
+
+                const deleteRow = async (sheetName, row) => {
+                    const rowIndex = findRowIndex(sheetName, row);
+                    if (rowIndex === -1) {
+                        showToast('ไม่พบรายการที่ต้องการลบ', true);
+                        return;
+                    }
+
+                    const rowLabel = getRowLabel(sheetName, row);
+                    const confirmed = window.confirm(`ยืนยันลบข้อมูล${getSheetLabel(sheetName)}: ${rowLabel}`);
+                    if (!confirmed) return;
+
+                    dataStore.value[sheetName].splice(rowIndex, 1);
+                    persistLocalData(sheetName);
+                    showToast(`ลบข้อมูล${getSheetLabel(sheetName)}เรียบร้อย`);
+                    await nextTick();
+                    lucide.createIcons();
+                };
+
+                const isLongField = (value) => {
+                    const text = String(value || '');
+                    return text.length > 90 || text.includes('\n');
+                };
+
                 // เริ่มต้นทำงาน
                 onMounted(() => {
                     lucide.createIcons();
@@ -539,8 +747,10 @@
 
                 return {
                     activeTab, menus, currentMenuName, apiUrl, isSyncing, searchQuery,
+                    editModal, editForm, editFields,
                     toast, dashboardStats, filteredData, groupedPersonnel, groupedUnits, groupedVehicles,
-                    fetchData, fetchAllData, exportToCSV, getUnitLevel, getManagerName, getActStatus
+                    fetchData, fetchAllData, exportToCSV, getUnitLevel, getManagerName, getActStatus,
+                    getSheetLabel, openEditModal, closeEditModal, saveEdit, deleteRow, isLongField
                 };
             }
         };
