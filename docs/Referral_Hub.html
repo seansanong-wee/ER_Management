@@ -183,7 +183,7 @@
                     <div class="bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
                         <h3 class="text-xl font-black text-slate-800 mb-2">เวรปฏิบัติการ</h3>
                         <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Shift Distribution</p>
-                        <div id="chart-shifts" class="flex items-end justify-around h-44 border-b-2 border-slate-100 pb-2"></div>
+                        <div id="chart-shifts" class="grid grid-cols-2 gap-5 h-52 border-b-2 border-slate-100 pb-3"></div>
                     </div>
                     <div class="bg-gradient-to-b from-slate-800 to-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-700 text-white">
                         <h3 class="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2 text-slate-300">
@@ -577,6 +577,14 @@
             return { name: nurseStr, round: 'รอบที่ 1' };
         }
 
+        function normalizeShift(value) {
+            const shift = String(value || '').trim();
+            if (!shift) return '';
+            if (shift.includes('นอก') || shift.toLowerCase().includes('off')) return 'นอกเวลา';
+            if (shift.includes('ใน') || shift.toLowerCase().includes('office')) return 'ในเวลา';
+            return shift;
+        }
+
         function clearFilters() {
             document.getElementById('search-input').value = '';
             document.getElementById('filter-month').value = '';
@@ -613,10 +621,11 @@
             const level1 = state.records.filter(r => r.level && r.level.includes('1')).length;
             
             const deptCount = {};
-            const shiftCount = {};
+            const shiftCount = { 'ในเวลา': 0, 'นอกเวลา': 0 };
             state.records.forEach(r => {
                 if (r.dept) deptCount[r.dept] = (deptCount[r.dept] || 0) + 1;
-                if (r.shift) shiftCount[r.shift] = (shiftCount[r.shift] || 0) + 1;
+                const shift = normalizeShift(r.shift);
+                if (shift) shiftCount[shift] = (shiftCount[shift] || 0) + 1;
             });
 
             document.getElementById('stat-total').innerText = total;
@@ -643,17 +652,27 @@
             }).join('') : `<p class="text-center text-slate-400 py-4 text-sm font-bold uppercase tracking-widest italic opacity-50">Empty Data</p>`;
             document.getElementById('chart-departments').innerHTML = deptHtml;
 
-            const shiftHtml = Object.entries(shiftCount).map(([shift, count]) => {
-                const heightPct = Math.max((count / total) * 100, 10);
+            const orderedShifts = ['ในเวลา', 'นอกเวลา']
+                .map(shift => [shift, shiftCount[shift] || 0])
+                .concat(Object.entries(shiftCount).filter(([shift]) => !['ในเวลา', 'นอกเวลา'].includes(shift)));
+            const maxShiftCount = Math.max(...orderedShifts.map(([, count]) => count), 1);
+            const shiftHtml = orderedShifts.map(([shift, count]) => {
+                const heightPct = count > 0 ? Math.max((count / maxShiftCount) * 100, 14) : 0;
+                const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
                 const bg = shift === 'ในเวลา' ? 'from-orange-500 to-amber-300' : 'from-indigo-600 to-blue-400';
                 return `
-                    <div class="flex flex-col items-center group relative w-1/3">
-                        <div class="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all bg-slate-800 text-white text-[10px] font-bold py-1 px-3 rounded-lg shadow-xl">${count} เคส</div>
-                        <div class="w-full max-w-[48px] rounded-t-xl transition-all shadow-md bg-gradient-to-t ${bg}" style="height: ${heightPct}%"></div>
-                        <span class="mt-4 text-xs font-black text-slate-600">${shift}</span>
+                    <div class="flex h-full min-w-0 flex-col items-center justify-end group relative">
+                        <div class="mb-2 text-center">
+                            <div class="text-2xl font-black text-slate-800 leading-none">${count}</div>
+                            <div class="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">${percentage}%</div>
+                        </div>
+                        <div class="flex h-28 w-full items-end justify-center">
+                            <div class="w-full max-w-[54px] rounded-t-xl transition-all duration-700 shadow-md bg-gradient-to-t ${bg}" style="height: ${heightPct}%"></div>
+                        </div>
+                        <span class="mt-3 text-xs font-black text-slate-600 truncate max-w-full">${shift}</span>
                     </div>
                 `;
-            }).join('');
+            }).join('') || `<p class="col-span-2 text-center text-slate-400 py-4 text-sm font-bold uppercase tracking-widest italic opacity-50">Empty Data</p>`;
             document.getElementById('chart-shifts').innerHTML = shiftHtml;
 
             const recentHtml = state.records.slice(0, 3).map(r => {
