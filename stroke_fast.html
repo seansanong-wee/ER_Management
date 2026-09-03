@@ -492,6 +492,21 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
         return String(value || '').trim();
     }
 
+    function normalizeFieldKey(value) {
+        return normalizeText(value)
+            .toLowerCase()
+            .replace(/[\s_\-:()/.]+/g, '');
+    }
+
+    function escapeHtml(value) {
+        return normalizeText(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function getFirstFilledValue(record, keys, fallback = '') {
         if (!record || typeof record !== 'object') return fallback;
 
@@ -499,6 +514,21 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
             if (!Object.prototype.hasOwnProperty.call(record, key)) continue;
 
             const value = record[key];
+            if (value !== undefined && value !== null && String(value).trim() !== '') {
+                return value;
+            }
+        }
+
+        const normalizedRecordKeys = Object.keys(record).reduce((map, key) => {
+            map[normalizeFieldKey(key)] = key;
+            return map;
+        }, {});
+
+        for (const key of keys) {
+            const actualKey = normalizedRecordKeys[normalizeFieldKey(key)];
+            if (!actualKey) continue;
+
+            const value = record[actualKey];
             if (value !== undefined && value !== null && String(value).trim() !== '') {
                 return value;
             }
@@ -631,8 +661,13 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
     function setupPeriodControls() {
         const currentDate = new Date();
         const currentYear = String(currentDate.getFullYear());
-        latestMonth = getMonthKey(currentDate);
-        latestYear = REPORT_YEARS.includes(currentYear) ? currentYear : REPORT_YEARS[REPORT_YEARS.length - 1];
+        const latestDatedRow = allData.find(row => row.parsedDate);
+        latestMonth = latestDatedRow ? latestDatedRow.monthKey : getMonthKey(currentDate);
+        latestYear = latestDatedRow
+            ? latestDatedRow.yearKey
+            : REPORT_YEARS.includes(currentYear)
+                ? currentYear
+                : REPORT_YEARS[REPORT_YEARS.length - 1];
 
         const monthPicker = document.getElementById('monthPicker');
         const yearPicker = document.getElementById('yearPicker');
@@ -640,7 +675,10 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
         monthPicker.value = latestMonth;
         yearPicker.innerHTML = '';
 
-        REPORT_YEARS.forEach(year => {
+        const availableYears = [...new Set([...REPORT_YEARS, latestYear].filter(Boolean))]
+            .sort((a, b) => Number(a) - Number(b));
+
+        availableYears.forEach(year => {
             const option = document.createElement('option');
             option.value = year;
             option.textContent = Number(year) + 543;
@@ -780,21 +818,21 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
             const tr = document.createElement('tr');
             tr.className = 'transition hover:bg-cyan-50/45';
             tr.innerHTML = `
-                <td class="p-4 whitespace-nowrap font-medium text-slate-800">${row.date}</td>
-                <td class="p-4 font-bold text-slate-950">${row.hn || '-'}</td>
+                <td class="p-4 whitespace-nowrap font-medium text-slate-800">${escapeHtml(row.date)}</td>
+                <td class="p-4 font-bold text-slate-950">${escapeHtml(row.hn || '-')}</td>
                 <td class="p-4">
                     <span class="inline-flex max-w-xs items-center rounded-full border px-3 py-1 text-xs font-semibold ${rtpaBadgeClass}">
-                        ${row.rtpa || '-'}
+                        ${escapeHtml(row.rtpa || '-')}
                     </span>
                 </td>
                 <td class="p-4">
                     <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${outcomeBadgeClass}">
-                        ${row.outcome || '-'}
+                        ${escapeHtml(row.outcome || '-')}
                     </span>
                 </td>
-                <td class="p-4 text-slate-600">${row.shift_transport || '-'}</td>
-                <td class="p-4 text-slate-600">${row.incharge || '-'}</td>
-                <td class="p-4 text-slate-600">${row.oxygen || '-'}</td>
+                <td class="p-4 text-slate-600">${escapeHtml(row.shift_transport || '-')}</td>
+                <td class="p-4 text-slate-600">${escapeHtml(row.incharge || '-')}</td>
+                <td class="p-4 text-slate-600">${escapeHtml(row.oxygen || '-')}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -1029,17 +1067,55 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
         });
     }
 
-    async function fetchDataFromGAS(url) {
-        const tbody = document.getElementById('dataTableBody');
+    function addQueryParam(url, key, value) {
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+    }
+
+    function parseJsonMaybe(text) {
+        const cleanText = String(text || '').trim();
+        if (!cleanText) {
+            throw new Error('API ส่งข้อมูลว่างกลับมา');
+        }
+
+        return JSON.parse(cleanText.replace(/^\uFEFF/, ''));
+    }
+
+    function fetchJsonp(url) {
+        return new Promise((resolve, reject) => {
+            const callbackName = `strokeFastCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+            const script = document.createElement('script');
+            const timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error('โหลดข้อมูลแบบ JSONP ไม่สำเร็จ'));
+            }, GAS_FETCH_TIMEOUT_MS);
+
+            function cleanup() {
+                clearTimeout(timeoutId);
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+            }
+
+            window[callbackName] = payload => {
+                cleanup();
+                resolve(payload);
+            };
+
+            script.onerror = () => {
+                cleanup();
+                reject(new Error('ไม่สามารถโหลดสคริปต์ JSONP จาก Apps Script ได้'));
+            };
+            script.src = addQueryParam(addQueryParam(url, 'callback', callbackName), '_', Date.now());
+            document.head.appendChild(script);
+        });
+    }
+
+    async function fetchGasPayload(url) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), GAS_FETCH_TIMEOUT_MS);
 
         try {
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2 text-cyan-600"></i>กำลังโหลดข้อมูลจาก Google Sheet...</td></tr>`;
-            }
-
-            const response = await fetch(url, {
+            const response = await fetch(addQueryParam(url, '_', Date.now()), {
                 method: 'GET',
                 cache: 'no-store',
                 signal: controller.signal
@@ -1051,60 +1127,106 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const jsonData = await response.json();
-            const rows = Array.isArray(jsonData)
-                ? jsonData
-                : jsonData && Array.isArray(jsonData.data)
-                    ? jsonData.data
-                    : jsonData && Array.isArray(jsonData.records)
-                        ? jsonData.records
-                        : [];
+            return parseJsonMaybe(await response.text());
+        } catch (error) {
+            clearTimeout(timeoutId);
+            console.warn('Fetch ตรงไม่สำเร็จ กำลังลอง JSONP:', error.message);
+            return fetchJsonp(url);
+        }
+    }
+
+    function tableValuesToObjects(values) {
+        if (!Array.isArray(values) || values.length < 2) return [];
+
+        const headers = values[0].map(header => normalizeText(header));
+        return values.slice(1).map(row => {
+            const item = {};
+            headers.forEach((header, index) => {
+                if (header) item[header] = Array.isArray(row) ? row[index] : '';
+            });
+            return item;
+        });
+    }
+
+    function extractRowsFromGasPayload(payload) {
+        if (Array.isArray(payload)) {
+            return Array.isArray(payload[0]) ? tableValuesToObjects(payload) : payload;
+        }
+
+        if (!payload || typeof payload !== 'object') return [];
+
+        if (payload.ok === false) {
+            throw new Error(payload.error || 'Apps Script ส่งสถานะไม่สำเร็จกลับมา');
+        }
+
+        const candidates = [payload.rows, payload.records, payload.data, payload.items, payload.values];
+        for (const candidate of candidates) {
+            if (!Array.isArray(candidate)) continue;
+            return Array.isArray(candidate[0]) ? tableValuesToObjects(candidate) : candidate;
+        }
+
+        return [];
+    }
+
+    function mapStrokeApiRow(item) {
+        const rawDate = getFirstFilledValue(item, [
+            'วัน/เดือน/ปี ที่มา รพ',
+            'วันที่มา รพ',
+            'วันที่มาโรงพยาบาล',
+            'วันที่',
+            'วันเดือนปี',
+            'Date',
+            'date',
+            'ประทับเวลา',
+            'Timestamp',
+            'timestamp'
+        ]);
+        const hn = getFirstFilledValue(item, ['HN', 'hn', 'เลข HN', 'เลขที่ HN', 'Hospital Number']);
+        const rtpa = getFirstFilledValue(item, ['rt-PA(ยา)', 'rt-PA', 'rtpa', 'rt_pa', 'ได้รับ rt-PA', 'ยา rt-PA']);
+        const outcome = getFirstFilledValue(item, ['Outcome', 'outcome', 'ผลลัพธ์', 'จำหน่าย', 'Fast track', 'Non Fast']);
+        const shiftTransport = [
+            getFirstFilledValue(item, ['เวร', 'Shift', 'shift']),
+            getFirstFilledValue(item, ['มาโรงพยาบาลโดย', 'เวรมาโรงพยาบาลโดย', 'Transport', 'transport', 'การมาโรงพยาบาล']),
+            getFirstFilledValue(item, ['รับรีเฟอลูกข่าย', 'รับ refer ลูกข่าย', 'ลูกข่าย', 'รพ.ลูกข่าย']),
+            getFirstFilledValue(item, ['Refer จาก', 'refer_from', 'Refer from']),
+            getFirstFilledValue(item, ['โรงพยาบาลต้นทาง', 'หน่วยส่งต่อ', 'สถานพยาบาลต้นทาง'])
+        ].filter(Boolean).join(' ');
+        const incharge = getFirstFilledValue(item, ['ชื่อ Incharge', 'Incharge', 'incharge', 'ผู้รับผิดชอบ'], '-');
+        const oxygen = getFirstFilledValue(item, ['Oxygen support', 'Oxygen', 'oxygen', 'ออกซิเจน'], '-');
+
+        return parseMockRow({
+            date: rawDate,
+            hn,
+            rtpa,
+            outcome,
+            shift_transport: shiftTransport,
+            incharge,
+            oxygen
+        });
+    }
+
+    async function fetchDataFromGAS(url) {
+        const tbody = document.getElementById('dataTableBody');
+
+        try {
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2 text-cyan-600"></i>กำลังโหลดข้อมูลจาก Google Sheet...</td></tr>`;
+            }
+
+            const jsonData = await fetchGasPayload(url);
+            const rows = extractRowsFromGasPayload(jsonData);
 
             if (!rows.length) {
                 throw new Error('ไม่พบข้อมูลจาก API');
             }
 
-            const processedData = rows.map(item => {
-                const rawDate = getFirstFilledValue(item, [
-                    'วัน/เดือน/ปี ที่มา รพ',
-                    'วันที่มา รพ',
-                    'วันที่มาโรงพยาบาล',
-                    'วันที่',
-                    'Date',
-                    'date',
-                    'ประทับเวลา',
-                    'Timestamp'
-                ]);
-                const hn = getFirstFilledValue(item, ['HN', 'hn']);
-                const rtpa = getFirstFilledValue(item, ['rt-PA(ยา)', 'rt-PA', 'rtpa', 'rt_pa']);
-                const outcome = getFirstFilledValue(item, ['Fast track', 'Non Fast', 'Outcome', 'outcome']);
-                const shiftTransport = [
-                    getFirstFilledValue(item, ['เวร']),
-                    getFirstFilledValue(item, ['มาโรงพยาบาลโดย', 'เวรมาโรงพยาบาลโดย', 'Transport', 'transport']),
-                    getFirstFilledValue(item, ['รับรีเฟอลูกข่าย', 'รับ refer ลูกข่าย', 'ลูกข่าย', 'รพ.ลูกข่าย']),
-                    getFirstFilledValue(item, ['Refer จาก', 'refer_from', 'Refer from']),
-                    getFirstFilledValue(item, ['โรงพยาบาลต้นทาง', 'หน่วยส่งต่อ', 'สถานพยาบาลต้นทาง'])
-                ].filter(Boolean).join(' ');
-                const incharge = getFirstFilledValue(item, ['ชื่อ Incharge', 'Incharge', 'incharge'], '-');
-                const oxygen = getFirstFilledValue(item, ['Oxygen support', 'Oxygen', 'oxygen'], '-');
-
-                return parseMockRow({
-                    date: rawDate,
-                    hn,
-                    rtpa,
-                    outcome,
-                    shift_transport: shiftTransport,
-                    incharge,
-                    oxygen
-                });
-            });
+            const processedData = rows.map(mapStrokeApiRow);
 
             const existingError = document.getElementById('gas-error-banner');
             if (existingError) existingError.remove();
 
             loadDashboardData(processedData.length ? processedData : rawData.map(parseMockRow));
         } catch (error) {
-            clearTimeout(timeoutId);
             console.warn('ไม่สามารถดึงข้อมูลจาก Google Sheet ได้:', error.message);
             showGasError(error);
             loadDashboardData(rawData.map(parseMockRow));
@@ -1116,7 +1238,7 @@ const GAS_API_URL = 'วางลิงก์ Web App URL ตรงนี้';</
 
         const message = error.name === 'AbortError'
             ? `หมดเวลาการเชื่อมต่อ (${Math.round(GAS_FETCH_TIMEOUT_MS / 1000)} วินาที)`
-            : 'อาจติดปัญหา CORS หรือสิทธิ์การเข้าถึง';
+            : escapeHtml(error.message || 'อาจติดปัญหา CORS หรือสิทธิ์การเข้าถึง');
 
         const errorDiv = document.createElement('div');
         errorDiv.id = 'gas-error-banner';

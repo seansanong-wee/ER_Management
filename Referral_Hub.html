@@ -139,7 +139,10 @@
                     <div class="flex justify-between items-start mb-4">
                         <div>
                             <h3 class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">CRITICAL LEVEL 1</h3>
-                            <p class="text-slate-800 font-bold text-sm md:text-base">Resuscitation</p>
+                            <p class="text-slate-800 font-bold text-sm md:text-base">
+                                <span id="stat-resuscitation-label">1 Resuscitation</span>
+                                <span id="stat-resuscitation-inline" class="ml-2 text-rose-600 font-black">0</span> เคส
+                            </p>
                         </div>
                         <div class="p-3 rounded-2xl bg-rose-50 text-rose-500 group-hover:scale-110 transition-transform duration-300 shadow-inner">
                             <i data-lucide="heart-pulse" class="w-6 h-6"></i>
@@ -204,6 +207,79 @@
                         </div>
                     </div>
                     <p id="stat-refer-receive" class="text-4xl md:text-5xl font-black text-slate-800 tracking-tighter">0</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+                    <div>
+                        <h3 class="text-xl font-black text-slate-800 flex items-center gap-3">
+                            <span class="p-2 bg-blue-100 text-blue-600 rounded-lg"><i data-lucide="bar-chart-3" class="w-5 h-5"></i></span>
+                            กราฟ Refer In / Out / Receive
+                        </h3>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Referral Action Distribution</p>
+                    </div>
+                    <div class="text-left sm:text-right">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Actions</p>
+                        <p id="stat-refer-action-total" class="text-3xl font-black text-slate-800 leading-none">0</p>
+                    </div>
+                </div>
+                <div id="chart-refer-actions" class="grid grid-cols-1 sm:grid-cols-3 gap-4 min-h-[260px]"></div>
+            </div>
+
+            <div class="relative overflow-hidden rounded-[2rem] border border-red-100 bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-red-600 to-rose-400"></div>
+                <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <h3 class="flex items-center gap-3 text-xl font-black text-slate-800">
+                            <span class="rounded-lg bg-red-100 p-2 text-red-600"><i data-lucide="send" class="w-5 h-5"></i></span>
+                            กราฟแสดงส่งกลับ101ทันทีอาการเปลี่ยนแปลง
+                        </h3>
+                        <p class="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">ส่งกลับ 101 ทันทีเมื่อมีอาการเปลี่ยนแปลง</p>
+                    </div>
+                    <div class="rounded-2xl bg-red-50 px-4 py-3 text-left sm:text-right">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-red-600">ส่งกลับ101</p>
+                        <p id="stat-return101-total" class="text-3xl font-black leading-none text-slate-800">0</p>
+                    </div>
+                </div>
+                <div id="chart-return101"></div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div class="relative overflow-hidden rounded-[2rem] border border-blue-100 bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                    <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-blue-600 to-cyan-400"></div>
+                    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <h3 class="flex items-center gap-3 text-xl font-black text-slate-800">
+                                <span class="rounded-lg bg-blue-100 p-2 text-blue-600"><i data-lucide="log-in" class="w-5 h-5"></i></span>
+                                Refer In แยกตาม รพ.
+                            </h3>
+                            <p class="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">Inbound Hospital Distribution</p>
+                        </div>
+                        <div class="rounded-2xl bg-blue-50 px-4 py-3 text-right">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Total</p>
+                            <p id="stat-hospital-refer-in-total" class="text-3xl font-black leading-none text-blue-700">0</p>
+                        </div>
+                    </div>
+                    <div id="chart-hospital-refer-in" class="max-h-[420px] space-y-4 overflow-y-auto pr-2"></div>
+                </div>
+
+                <div class="relative overflow-hidden rounded-[2rem] border border-emerald-100 bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                    <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-emerald-600 to-teal-300"></div>
+                    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <h3 class="flex items-center gap-3 text-xl font-black text-slate-800">
+                                <span class="rounded-lg bg-emerald-100 p-2 text-emerald-600"><i data-lucide="inbox" class="w-5 h-5"></i></span>
+                                Receive แยกตาม รพ.
+                            </h3>
+                            <p class="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">Receive Hospital Distribution</p>
+                        </div>
+                        <div class="rounded-2xl bg-emerald-50 px-4 py-3 text-right">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-emerald-500">Total</p>
+                            <p id="stat-hospital-receive-total" class="text-3xl font-black leading-none text-emerald-700">0</p>
+                        </div>
+                    </div>
+                    <div id="chart-hospital-receive" class="max-h-[420px] space-y-4 overflow-y-auto pr-2"></div>
                 </div>
             </div>
 
@@ -328,7 +404,8 @@
                     <div class="flex flex-col space-y-1">
                         <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">รับกลับ/Referกลับใน24 ชม.</label>
                         <select id="field-returnRefer" name="returnRefer" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
-                            <option value="ไม่ใช่">ไม่ใช่</option><option value="ใช่">ใช่</option>
+                            <option value="ไม่ใช่">ไม่ใช่</option>
+                            <option value="ใช่">ใช่</option>
                         </select>
                     </div>
                     <div class="flex flex-col space-y-1">
@@ -340,7 +417,7 @@
                     <div class="flex flex-col space-y-1">
                         <label class="text-xs md:text-sm font-black text-slate-500 uppercase ml-1 tracking-widest">ระดับความรุนแรง</label>
                         <select id="field-level" name="level" class="p-3 bg-slate-50 rounded-xl border-2 border-slate-100 focus:border-red-500 outline-none font-bold cursor-pointer shadow-inner text-sm md:text-base">
-                            <option value="1 Resuscition">1 Resuscition</option><option value="2 Emergency">2 Emergency</option><option value="3 Urgent">3 Urgent</option><option value="4 Semi-Urgent">4 Semi-Urgent</option><option value="5 Non-Urgent">5 Non-Urgent</option>
+                            <option value="1 Resuscitation">1 Resuscitation</option><option value="2 Emergency">2 Emergency</option><option value="3 Urgent">3 Urgent</option><option value="4 Semi-Urgent">4 Semi-Urgent</option><option value="5 Non-Urgent">5 Non-Urgent</option>
                         </select>
                     </div>
                     <div class="flex flex-col space-y-1">
@@ -399,7 +476,7 @@
                         </select>
                         <select id="filter-level" class="p-2 rounded-lg border border-slate-200 text-xs font-bold outline-none text-slate-600 cursor-pointer bg-white">
                             <option value="">ทุกระดับความรุนแรง</option>
-                            <option value="1 Resuscition">1 Resuscition</option><option value="2 Emergency">2 Emergency</option><option value="3 Urgent">3 Urgent</option><option value="4 Semi-Urgent">4 Semi-Urgent</option><option value="5 Non-Urgent">5 Non-Urgent</option>
+                            <option value="1 Resuscitation">1 Resuscitation</option><option value="2 Emergency">2 Emergency</option><option value="3 Urgent">3 Urgent</option><option value="4 Semi-Urgent">4 Semi-Urgent</option><option value="5 Non-Urgent">5 Non-Urgent</option>
                         </select>
                         <button onclick="clearFilters()" class="text-xs font-bold text-red-500 hover:underline px-2">Clear Filters</button>
                     </div>
@@ -570,6 +647,142 @@
             }, 3000);
         }
 
+        function addQueryParam(url, key, value) {
+            const separator = url.includes('?') ? '&' : '?';
+            return `${url}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+        }
+
+        function parseJsonText(text) {
+            const cleanText = String(text || '').trim().replace(/^\uFEFF/, '');
+            if (!cleanText) throw new Error('เซิร์ฟเวอร์ส่งข้อมูลว่างกลับมา');
+            return JSON.parse(cleanText);
+        }
+
+        function fetchJsonp(url) {
+            return new Promise((resolve, reject) => {
+                const callbackName = `referralHubCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+                const script = document.createElement('script');
+                const timeoutId = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('โหลดข้อมูลแบบ JSONP ไม่สำเร็จ'));
+                }, 45000);
+
+                function cleanup() {
+                    clearTimeout(timeoutId);
+                    delete window[callbackName];
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                }
+
+                window[callbackName] = payload => {
+                    cleanup();
+                    resolve(payload);
+                };
+
+                script.onerror = () => {
+                    cleanup();
+                    reject(new Error('ไม่สามารถโหลดข้อมูลจาก Apps Script ได้'));
+                };
+
+                script.src = addQueryParam(addQueryParam(url, 'callback', callbackName), '_', Date.now());
+                document.head.appendChild(script);
+            });
+        }
+
+        async function fetchReferralPayload(url) {
+            try {
+                const response = await fetch(addQueryParam(url, '_', Date.now()), { cache: 'no-store', redirect: 'follow' });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return parseJsonText(await response.text());
+            } catch (error) {
+                console.warn('Fetch ตรงไม่สำเร็จ กำลังลอง JSONP:', error.message);
+                return fetchJsonp(url);
+            }
+        }
+
+        function normalizeFieldKey(value) {
+            return String(value || '').trim().toLowerCase().replace(/[\s_\-:()/.]+/g, '');
+        }
+
+        function getFirstFilledValue(record, keys, fallback = '') {
+            if (!record || typeof record !== 'object') return fallback;
+
+            for (const key of keys) {
+                if (!Object.prototype.hasOwnProperty.call(record, key)) continue;
+                const value = record[key];
+                if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+            }
+
+            const normalizedKeys = Object.keys(record).reduce((map, key) => {
+                map[normalizeFieldKey(key)] = key;
+                return map;
+            }, {});
+
+            for (const key of keys) {
+                const actualKey = normalizedKeys[normalizeFieldKey(key)];
+                if (!actualKey) continue;
+                const value = record[actualKey];
+                if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+            }
+
+            return fallback;
+        }
+
+        function tableValuesToRecords(values) {
+            if (!Array.isArray(values) || values.length < 2) return [];
+
+            const headers = values[0].map(header => String(header || '').trim());
+            return values.slice(1).map((row, rowIndex) => {
+                const record = { id: rowIndex + 1 };
+                headers.forEach((header, columnIndex) => {
+                    if (header) record[header] = Array.isArray(row) ? row[columnIndex] : '';
+                });
+                return record;
+            });
+        }
+
+        function extractReferralRecords(result) {
+            if (Array.isArray(result)) {
+                return Array.isArray(result[0]) ? tableValuesToRecords(result) : result;
+            }
+
+            if (!result || typeof result !== 'object') return [];
+            if (result.status && result.status !== 'success') throw new Error(result.message || 'เซิร์ฟเวอร์ส่งสถานะไม่สำเร็จกลับมา');
+            if (result.ok === false) throw new Error(result.error || 'Apps Script ส่งสถานะไม่สำเร็จกลับมา');
+
+            const candidates = [result.data, result.records, result.rows, result.items, result.values];
+            for (const candidate of candidates) {
+                if (!Array.isArray(candidate)) continue;
+                return Array.isArray(candidate[0]) ? tableValuesToRecords(candidate) : candidate;
+            }
+
+            return [];
+        }
+
+        function normalizeReferralRecord(record, index) {
+            const id = Number(getFirstFilledValue(record, ['id', 'ID', 'ลำดับ', '__rowNumber'], index + 1)) || index + 1;
+            return {
+                ...record,
+                id,
+                date: getFirstFilledValue(record, ['date', 'Date', 'วันที่', 'วันที่ส่งต่อ'], ''),
+                timeOut: getFirstFilledValue(record, ['timeOut', 'time_out', 'เวลา', 'เวลาส่งออก'], ''),
+                name: getFirstFilledValue(record, ['name', 'ชื่อ-นามสกุล', 'ชื่อผู้ป่วย', 'ผู้ป่วย'], ''),
+                age: getFirstFilledValue(record, ['age', 'อายุ'], ''),
+                hn: getFirstFilledValue(record, ['hn', 'HN', 'เลข HN', 'เลขที่ HN'], ''),
+                diagnosis: getFirstFilledValue(record, ['diagnosis', 'Diagnosis', 'Dx', 'การวินิจฉัย'], ''),
+                hospital: getFirstFilledValue(record, ['hospital', 'รพ.ปลายทาง/ต้นทาง', 'โรงพยาบาล', 'รพ.ปลายทาง', 'รพ.ต้นทาง'], ''),
+                outcome: getFirstFilledValue(record, ['outcome', 'สถานะหลังส่ง', 'ผลลัพธ์'], 'อยู่ระหว่างนำส่ง'),
+                referAction: getFirstFilledValue(record, ['referAction', 'ดำเนินการ', 'ประเภท Refer', 'Refer Action'], ''),
+                returnRefer: getFirstFilledValue(record, ['returnRefer', 'รับ/Referกลับ', 'Refer กลับ', 'ส่งกลับ 101'], ''),
+                dept: getFirstFilledValue(record, ['dept', 'แผนก', 'department'], ''),
+                level: getFirstFilledValue(record, ['level', 'Level', 'ระดับ'], ''),
+                airway: getFirstFilledValue(record, ['airway', 'Airway'], ''),
+                type: getFirstFilledValue(record, ['type', 'ประเภท'], ''),
+                shift: getFirstFilledValue(record, ['shift', 'เวร'], ''),
+                nurse1: getFirstFilledValue(record, ['nurse1', 'พยาบาล 1', 'พยาบาลคนที่ 1'], ''),
+                nurse2: getFirstFilledValue(record, ['nurse2', 'พยาบาล 2', 'พยาบาลคนที่ 2'], '')
+            };
+        }
+
         // --- Date Utils ---
         function getThailandDate() {
             const d = new Date();
@@ -596,7 +809,9 @@
 
         function formatThaiDate(dateStr) {
             if (!dateStr || !dateStr.includes('-')) return dateStr;
-            const [y, m, d] = dateStr.split('-');
+            const dateOnly = String(dateStr).split('T')[0];
+            const [y, m, d] = dateOnly.split('-');
+            if (!y || !m || !d || Number.isNaN(parseInt(y))) return dateStr;
             return `${d}/${m}/${parseInt(y) + 543}`;
         }
 
@@ -629,14 +844,33 @@
             return shift;
         }
 
+        function isResuscitationLevel(value) {
+            const level = String(value || '').trim().toLowerCase();
+            return level.startsWith('1') || level.includes('resuscitation') || level.includes('resuscition');
+        }
+
+        function getResuscitationLevelLabel() {
+            const savedLevel = state.records.find(r => isResuscitationLevel(r.level))?.level;
+            return String(savedLevel || '1 Resuscitation').trim();
+        }
+
         function normalizeReferAction(value) {
             const action = String(value || '').trim();
             const lowerAction = action.toLowerCase();
             if (!action) return '';
-            if (lowerAction.includes('receive') || lowerAction.includes('back') || action.includes('รับกลับ')) return 'receive';
+            if (lowerAction.includes('receive') || lowerAction.includes('back') || action.includes('รับกลับ') || action.includes('รับเคส')) return 'receive';
             if (lowerAction.includes('out') || action.includes('ส่งต่อ')) return 'out';
-            if (lowerAction.includes('in')) return 'in';
+            if (lowerAction.includes('in') || (action.includes('รับ') && action.includes('เข้า'))) return 'in';
             return lowerAction;
+        }
+
+        function normalizeReturnRefer(value) {
+            const action = String(value || '').trim();
+            const compactAction = action.replace(/\s+/g, '');
+            const lowerAction = compactAction.toLowerCase();
+            if (!action || action === 'ไม่ใช่') return '';
+            if (action === 'ใช่' || (compactAction.includes('ส่งกลับ') && compactAction.includes('101')) || lowerAction.includes('sendback101')) return 'sendBack101';
+            return '';
         }
 
         function clearFilters() {
@@ -655,14 +889,15 @@
             if (!WEB_APP_URL) return;
             document.getElementById('loading-overlay').classList.remove('hidden');
             try {
-                const response = await fetch(WEB_APP_URL);
-                const result = await response.json();
-                if (result.status === 'success') {
-                    state.records = result.data.sort((a, b) => b.id - a.id);
-                    renderDashboard();
-                    renderTable();
-                }
+                const result = await fetchReferralPayload(WEB_APP_URL);
+                const records = extractReferralRecords(result);
+                state.records = records
+                    .map(normalizeReferralRecord)
+                    .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+                renderDashboard();
+                renderTable();
             } catch (error) {
+                console.warn('ไม่สามารถโหลดข้อมูล Referral Hub ได้:', error.message);
                 showToast("ไม่สามารถโหลดข้อมูลจากเซิร์ฟเวอร์ได้", "error");
             } finally {
                 document.getElementById('loading-overlay').classList.add('hidden');
@@ -672,8 +907,10 @@
         function renderDashboard() {
             const total = state.records.length;
             const trauma = state.records.filter(r => r.type === 'Trauma').length;
-            const level1 = state.records.filter(r => r.level && r.level.includes('1')).length;
+            const level1 = state.records.filter(r => isResuscitationLevel(r.level)).length;
             const referStats = { in: 0, out: 0, receive: 0 };
+            const returnReferStats = { sendBack101: 0 };
+            const hospitalReferStats = {};
 
             const deptCount = {};
             const shiftCount = { 'ในเวลา': 0, 'นอกเวลา': 0 };
@@ -683,16 +920,126 @@
                 if (shift) shiftCount[shift] = (shiftCount[shift] || 0) + 1;
                 const referAction = normalizeReferAction(r.referAction);
                 if (referStats[referAction] !== undefined) referStats[referAction] += 1;
+                const returnReferAction = normalizeReturnRefer(r.returnRefer);
+                if (returnReferStats[returnReferAction] !== undefined) returnReferStats[returnReferAction] += 1;
+                if (referAction === 'in' || referAction === 'receive') {
+                    const hospital = String(r.hospital || '').trim() || 'ไม่ระบุ รพ.';
+                    if (!hospitalReferStats[hospital]) hospitalReferStats[hospital] = { in: 0, receive: 0 };
+                    hospitalReferStats[hospital][referAction] += 1;
+                }
             });
 
             document.getElementById('stat-total').innerText = total;
             document.getElementById('stat-trauma').innerText = trauma;
             document.getElementById('stat-level1').innerText = level1;
+            document.getElementById('stat-resuscitation-label').innerText = getResuscitationLevelLabel();
+            document.getElementById('stat-resuscitation-inline').innerText = level1;
             document.getElementById('stat-offhours').innerText = shiftCount['นอกเวลา'] || 0;
             document.getElementById('stat-refer-in').innerText = referStats.in;
             document.getElementById('stat-refer-out').innerText = referStats.out;
             document.getElementById('stat-refer-receive').innerText = referStats.receive;
             document.getElementById('stat-last-update').innerText = total > 0 ? formatThaiDate(state.records[0].date) : '-';
+            document.getElementById('stat-refer-action-total').innerText = referStats.in + referStats.out + referStats.receive;
+
+            const referActionItems = [
+                { label: 'Refer In', subLabel: 'รับเข้า', count: referStats.in, icon: 'log-in', color: 'from-blue-600 to-cyan-400', text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+                { label: 'Refer Out', subLabel: 'ส่งต่อออก', count: referStats.out, icon: 'log-out', color: 'from-red-600 to-rose-400', text: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
+                { label: 'Receive', subLabel: 'รับกลับ / รับเคส', count: referStats.receive, icon: 'inbox', color: 'from-emerald-600 to-teal-300', text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' }
+            ];
+            const maxReferActionCount = Math.max(...referActionItems.map(item => item.count), 1);
+            const referActionHtml = referActionItems.map(item => {
+                const heightPct = item.count > 0 ? Math.max((item.count / maxReferActionCount) * 100, 12) : 0;
+                const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
+                return `
+                    <div class="flex h-full min-h-[260px] min-w-0 flex-col justify-end rounded-2xl border ${item.border} ${item.bg} p-4">
+                        <div class="mb-4 text-center">
+                            <div class="text-3xl font-black text-slate-800 leading-none">${item.count}</div>
+                            <div class="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">${percentage}%</div>
+                        </div>
+                        <div class="flex h-36 w-full items-end justify-center border-b-2 border-white/80 px-3">
+                            <div class="w-full max-w-[72px] rounded-t-2xl bg-gradient-to-t ${item.color} shadow-lg transition-all duration-700 ease-out" style="height: ${heightPct}%"></div>
+                        </div>
+                        <div class="mt-4 flex min-w-0 items-center justify-center gap-2">
+                            <span class="shrink-0 rounded-xl bg-white p-2 ${item.text} shadow-sm"><i data-lucide="${item.icon}" class="w-4 h-4"></i></span>
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-black text-slate-800">${item.label}</p>
+                                <p class="truncate text-[10px] font-bold text-slate-500">${item.subLabel}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            const referActionChart = document.getElementById('chart-refer-actions');
+            referActionChart.innerHTML = referActionHtml;
+            lucide.createIcons({ root: referActionChart });
+
+            const returnReferTotal = returnReferStats.sendBack101;
+            document.getElementById('stat-return101-total').innerText = returnReferTotal;
+            const returnReferWidth = returnReferTotal > 0 ? 100 : 0;
+            const returnReferHtml = `
+                <div class="rounded-2xl border border-red-100 bg-red-50 p-5">
+                    <div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="flex min-w-0 items-center gap-3">
+                            <span class="shrink-0 rounded-xl bg-white p-3 text-red-600 shadow-sm"><i data-lucide="send" class="w-5 h-5"></i></span>
+                            <div class="min-w-0">
+                                <h4 class="truncate text-base font-black text-slate-800">ส่งกลับ 101</h4>
+                                <p class="truncate text-xs font-bold text-slate-500">นับจาก returnRefer = ใช่</p>
+                            </div>
+                        </div>
+                        <div class="shrink-0 text-left sm:text-right">
+                            <p class="text-4xl font-black leading-none text-slate-800">${returnReferTotal}</p>
+                            <p class="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">เคส</p>
+                        </div>
+                    </div>
+                    <div class="h-6 overflow-hidden rounded-full bg-white shadow-inner">
+                        <div class="h-full rounded-full bg-gradient-to-r from-red-600 to-rose-400 transition-all duration-700 ease-out" style="width: ${returnReferWidth}%"></div>
+                    </div>
+                </div>
+            `;
+            const returnReferChart = document.getElementById('chart-return101');
+            returnReferChart.innerHTML = returnReferHtml;
+            lucide.createIcons({ root: returnReferChart });
+
+            const buildHospitalItems = (actionKey) => Object.entries(hospitalReferStats)
+                .map(([hospital, stats]) => ({ hospital, count: stats[actionKey] || 0 }))
+                .filter(item => item.count > 0)
+                .sort((a, b) => b.count - a.count || a.hospital.localeCompare(b.hospital, 'th'));
+            const hospitalReferInItems = buildHospitalItems('in');
+            const hospitalReceiveItems = buildHospitalItems('receive');
+
+            const renderHospitalBarList = (items, maxCount, color, textColor) => {
+                if (items.length === 0) {
+                    return `<p class="text-center text-slate-400 py-8 text-sm font-bold uppercase tracking-widest italic opacity-50">Empty Data</p>`;
+                }
+
+                return items.map((item, index) => {
+                    const width = Math.max((item.count / maxCount) * 100, 6);
+                    return `
+                        <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+                            <div class="mb-3 flex items-center justify-between gap-3">
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-xs font-black ${textColor} shadow-sm">${index + 1}</span>
+                                    <h4 class="min-w-0 truncate text-sm font-black text-slate-800">${item.hospital}</h4>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                    <span class="text-xl font-black leading-none text-slate-800">${item.count}</span>
+                                    <span class="ml-1 text-[10px] font-bold text-slate-400">เคส</span>
+                                </div>
+                            </div>
+                            <div class="h-4 overflow-hidden rounded-full bg-white shadow-inner">
+                                <div class="h-full rounded-full bg-gradient-to-r ${color} transition-all duration-700 ease-out" style="width: ${width}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            };
+
+            const maxHospitalReferInCount = Math.max(...hospitalReferInItems.map(item => item.count), 1);
+            const maxHospitalReceiveCount = Math.max(...hospitalReceiveItems.map(item => item.count), 1);
+            document.getElementById('stat-hospital-refer-in-total').innerText = referStats.in;
+            document.getElementById('stat-hospital-receive-total').innerText = referStats.receive;
+            document.getElementById('chart-hospital-refer-in').innerHTML = renderHospitalBarList(hospitalReferInItems, maxHospitalReferInCount, 'from-blue-600 to-cyan-400', 'text-blue-600');
+            document.getElementById('chart-hospital-receive').innerHTML = renderHospitalBarList(hospitalReceiveItems, maxHospitalReceiveCount, 'from-emerald-600 to-teal-300', 'text-emerald-600');
 
             const sortedDepts = Object.entries(deptCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
             const deptHtml = sortedDepts.length > 0 ? sortedDepts.map(([dept, count], idx) => {
@@ -760,7 +1107,9 @@
                 const matchSearch = (r.name && r.name.toLowerCase().includes(term)) || (r.hn && r.hn.includes(term)) || (r.diagnosis && r.diagnosis.toLowerCase().includes(term));
                 const matchMonth = state.filters.month ? r.date.startsWith(state.filters.month) : true;
                 const matchDept = state.filters.dept ? r.dept === state.filters.dept : true;
-                const matchLevel = state.filters.level ? r.level === state.filters.level : true;
+                const matchLevel = state.filters.level
+                    ? (isResuscitationLevel(state.filters.level) ? isResuscitationLevel(r.level) : r.level === state.filters.level)
+                    : true;
                 return matchSearch && matchMonth && matchDept && matchLevel;
             });
 
@@ -977,8 +1326,8 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action: state.isEditing ? 'edit' : 'add', data: payloadData })
                 });
-                const result = await response.json();
-                
+                const result = parseJsonText(await response.text());
+
                 if (result.status === 'success') {
                     showToast(result.message);
                     cancelEdit();
@@ -1009,9 +1358,9 @@
             document.getElementById('field-hospital').value = record.hospital || '';
             document.getElementById('field-outcome').value = record.outcome || 'อยู่ระหว่างนำส่ง';
             document.getElementById('field-referAction').value = record.referAction;
-            document.getElementById('field-returnRefer').value = record.returnRefer || 'ไม่ใช่';
+            document.getElementById('field-returnRefer').value = normalizeReturnRefer(record.returnRefer) === 'sendBack101' ? 'ใช่' : 'ไม่ใช่';
             document.getElementById('field-dept').value = record.dept;
-            document.getElementById('field-level').value = record.level;
+            document.getElementById('field-level').value = isResuscitationLevel(record.level) ? '1 Resuscitation' : record.level;
             document.getElementById('field-airway').value = record.airway;
             document.getElementById('field-type').value = record.type;
             document.getElementById('field-shift').value = record.shift;
@@ -1064,8 +1413,8 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action: 'delete', data: { id: state.deleteTargetId } })
                 });
-                const result = await response.json();
-                
+                const result = parseJsonText(await response.text());
+
                 if (result.status === 'success') {
                     showToast(result.message);
                     state.deleteTargetId = null;
