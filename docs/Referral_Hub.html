@@ -828,7 +828,7 @@
 
         function normalizeReferralRecord(record, index) {
             const id = Number(getFirstFilledValue(record, ['id', 'ID', 'ลำดับ', '__rowNumber'], index + 1)) || index + 1;
-            return {
+            const normalizedRecord = {
                 ...record,
                 id,
                 date: getFirstFilledValue(record, ['date', 'Date', 'วันที่', 'วันที่ส่งต่อ'], ''),
@@ -849,6 +849,8 @@
                 nurse1: getFirstFilledValue(record, ['nurse1', 'พยาบาล 1', 'พยาบาลคนที่ 1'], ''),
                 nurse2: getFirstFilledValue(record, ['nurse2', 'พยาบาล 2', 'พยาบาลคนที่ 2'], '')
             };
+            normalizedRecord.__dateParts = getRecordDateParts(normalizedRecord);
+            return normalizedRecord;
         }
 
         // --- Date Utils ---
@@ -911,6 +913,8 @@
         }
 
         function getRecordDateParts(record) {
+            if (record && record.__dateParts) return record.__dateParts;
+
             const parsedDate = parseReferralDate(record.date);
             if (!parsedDate) return null;
 
