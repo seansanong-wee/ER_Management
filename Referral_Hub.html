@@ -104,6 +104,48 @@
                 </div>
             </div>
 
+            <div class="bg-white rounded-[2rem] p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                        <h3 class="text-lg font-black text-slate-800 flex items-center gap-3">
+                            <span class="p-2 bg-red-100 text-red-600 rounded-lg"><i data-lucide="calendar-days" class="w-5 h-5"></i></span>
+                            ช่วงข้อมูลแดชบอร์ด
+                        </h3>
+                        <p id="dashboard-period-label" class="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">-</p>
+                    </div>
+
+                    <div class="flex flex-col gap-3 md:flex-row md:items-end">
+                        <div class="grid grid-cols-3 gap-1 rounded-2xl bg-slate-100 p-1">
+                            <button type="button" id="dashboard-mode-year" data-dashboard-mode="year" class="dashboard-mode-btn rounded-xl px-4 py-2 text-sm font-black transition-all bg-white text-red-600 shadow-md">รายปี</button>
+                            <button type="button" id="dashboard-mode-month" data-dashboard-mode="month" class="dashboard-mode-btn rounded-xl px-4 py-2 text-sm font-black transition-all text-slate-500 hover:text-slate-800">รายเดือน</button>
+                            <button type="button" id="dashboard-mode-day" data-dashboard-mode="day" class="dashboard-mode-btn rounded-xl px-4 py-2 text-sm font-black transition-all text-slate-500 hover:text-slate-800">รายวัน</button>
+                        </div>
+
+                        <label id="dashboard-year-control" class="block">
+                            <span class="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Year</span>
+                            <select id="dashboard-year" class="h-11 min-w-[120px] rounded-xl border-2 border-slate-100 bg-slate-50 px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-red-500"></select>
+                        </label>
+                        <label id="dashboard-month-control" class="hidden">
+                            <span class="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Month</span>
+                            <input id="dashboard-month" type="month" class="h-11 rounded-xl border-2 border-slate-100 bg-slate-50 px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-red-500">
+                        </label>
+                        <div id="dashboard-day-control" class="hidden grid gap-2 sm:grid-cols-2">
+                            <label>
+                                <span class="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">จากวันที่</span>
+                                <input id="dashboard-day-start" type="date" class="h-11 rounded-xl border-2 border-slate-100 bg-slate-50 px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-red-500">
+                            </label>
+                            <label>
+                                <span class="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">ถึงวันที่</span>
+                                <input id="dashboard-day-end" type="date" class="h-11 rounded-xl border-2 border-slate-100 bg-slate-50 px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-red-500">
+                            </label>
+                        </div>
+                        <button type="button" onclick="resetDashboardPeriod()" class="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600" title="กลับไปช่วงล่าสุด">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <!-- Total -->
                 <div class="group relative bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 overflow-hidden">
@@ -594,6 +636,12 @@
     <script>
         // CONFIG - นำ URL ปัจจุบันของคุณมาใส่ที่นี่
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz9RxCbGKpLItg_eALmGU1alj6ipOADkvxGWbHSuySn_rjZbRu2oU26X48mBJPgcZUKLA/exec";
+        const DASHBOARD_YEAR_START = 2025; // พ.ศ. 2568
+        const DASHBOARD_YEAR_END = 2029; // พ.ศ. 2572
+        const DASHBOARD_YEARS = Array.from(
+            { length: DASHBOARD_YEAR_END - DASHBOARD_YEAR_START + 1 },
+            (_, index) => String(DASHBOARD_YEAR_START + index)
+        );
 
         // STATE
         let state = {
@@ -604,6 +652,7 @@
             deleteTargetId: null,
             searchTerm: '',
             filters: { month: '', dept: '', level: '' },
+            dashboardPeriod: { mode: 'year', year: '', month: '', dayStart: '', dayEnd: '' },
             pagination: { currentPage: 1, itemsPerPage: 10 }
         };
 
@@ -611,6 +660,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             initFormDates();
+            setupDashboardPeriodControls();
+            renderDashboard();
             fetchData();
             
             // Event Listeners (Search & Filters & Pagination)
@@ -619,6 +670,23 @@
             document.getElementById('filter-dept').addEventListener('change', (e) => { state.filters.dept = e.target.value; state.pagination.currentPage = 1; renderTable(); });
             document.getElementById('filter-level').addEventListener('change', (e) => { state.filters.level = e.target.value; state.pagination.currentPage = 1; renderTable(); });
             document.getElementById('items-per-page').addEventListener('change', (e) => { state.pagination.itemsPerPage = parseInt(e.target.value); state.pagination.currentPage = 1; renderTable(); });
+            document.querySelectorAll('[data-dashboard-mode]').forEach(button => {
+                button.addEventListener('click', () => setDashboardPeriodMode(button.dataset.dashboardMode));
+            });
+            document.getElementById('dashboard-year').addEventListener('change', (e) => { state.dashboardPeriod.year = e.target.value; renderDashboard(); });
+            document.getElementById('dashboard-month').addEventListener('input', (e) => { state.dashboardPeriod.month = e.target.value; renderDashboard(); });
+            document.getElementById('dashboard-day-start').addEventListener('input', (e) => {
+                state.dashboardPeriod.dayStart = e.target.value;
+                normalizeDashboardDayRange('start');
+                updateDashboardPeriodControls();
+                renderDashboard();
+            });
+            document.getElementById('dashboard-day-end').addEventListener('input', (e) => {
+                state.dashboardPeriod.dayEnd = e.target.value;
+                normalizeDashboardDayRange('end');
+                updateDashboardPeriodControls();
+                renderDashboard();
+            });
 
             document.getElementById('login-form').addEventListener('submit', handleLogin);
             document.getElementById('referral-form').addEventListener('submit', handleFormSubmit);
@@ -815,6 +883,208 @@
             return `${d}/${m}/${parseInt(y) + 543}`;
         }
 
+        function pad2(value) {
+            return String(value).padStart(2, '0');
+        }
+
+        function parseReferralDate(value) {
+            if (!value) return null;
+            if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+
+            const text = String(value).trim();
+            if (!text) return null;
+
+            const isoMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (isoMatch) {
+                return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+            }
+
+            const slashMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (slashMatch) {
+                let year = Number(slashMatch[3]);
+                if (year > 2400) year -= 543;
+                return new Date(year, Number(slashMatch[2]) - 1, Number(slashMatch[1]));
+            }
+
+            const parsed = new Date(text);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function getRecordDateParts(record) {
+            const parsedDate = parseReferralDate(record.date);
+            if (!parsedDate) return null;
+
+            const year = String(parsedDate.getFullYear());
+            const month = `${year}-${pad2(parsedDate.getMonth() + 1)}`;
+            const day = `${month}-${pad2(parsedDate.getDate())}`;
+            return { year, month, day, date: parsedDate };
+        }
+
+        function getLatestRecordDateParts() {
+            return state.records
+                .map(getRecordDateParts)
+                .filter(Boolean)
+                .sort((a, b) => b.date.getTime() - a.date.getTime())[0] || null;
+        }
+
+        function setupDashboardPeriodControls() {
+            const latest = getLatestRecordDateParts();
+            const today = getThailandDate();
+            const fallbackYear = String(today.getFullYear());
+            const fallbackMonth = `${fallbackYear}-${pad2(today.getMonth() + 1)}`;
+            const fallbackDay = `${fallbackMonth}-${pad2(today.getDate())}`;
+            const years = [...DASHBOARD_YEARS];
+            const latestYearInRange = latest && DASHBOARD_YEARS.includes(latest.year) ? latest.year : '';
+            const fallbackYearInRange = DASHBOARD_YEARS.includes(fallbackYear) ? fallbackYear : DASHBOARD_YEARS[0];
+
+            const selectedYear = state.dashboardPeriod.year && years.includes(state.dashboardPeriod.year)
+                ? state.dashboardPeriod.year
+                : (latestYearInRange || fallbackYearInRange);
+
+            state.dashboardPeriod.year = selectedYear;
+            state.dashboardPeriod.month = clampDashboardMonth(state.dashboardPeriod.month || latest?.month || fallbackMonth);
+            state.dashboardPeriod.dayStart = clampDashboardDay(state.dashboardPeriod.dayStart || latest?.day || fallbackDay);
+            state.dashboardPeriod.dayEnd = clampDashboardDay(state.dashboardPeriod.dayEnd || state.dashboardPeriod.dayStart);
+            normalizeDashboardDayRange();
+
+            const yearSelect = document.getElementById('dashboard-year');
+            yearSelect.innerHTML = years.map(year => `<option value="${year}">${Number(year) + 543}</option>`).join('');
+            yearSelect.value = selectedYear;
+            const monthInput = document.getElementById('dashboard-month');
+            const dayStartInput = document.getElementById('dashboard-day-start');
+            const dayEndInput = document.getElementById('dashboard-day-end');
+            monthInput.min = `${DASHBOARD_YEAR_START}-01`;
+            monthInput.max = `${DASHBOARD_YEAR_END}-12`;
+            monthInput.value = state.dashboardPeriod.month;
+            [dayStartInput, dayEndInput].forEach(input => {
+                input.min = `${DASHBOARD_YEAR_START}-01-01`;
+                input.max = `${DASHBOARD_YEAR_END}-12-31`;
+            });
+            dayStartInput.value = state.dashboardPeriod.dayStart;
+            dayEndInput.value = state.dashboardPeriod.dayEnd;
+            updateDashboardPeriodControls();
+        }
+
+        function setDashboardPeriodMode(mode) {
+            state.dashboardPeriod.mode = mode;
+            const latest = getLatestRecordDateParts();
+            if (mode === 'year' && !state.dashboardPeriod.year) {
+                state.dashboardPeriod.year = DASHBOARD_YEARS.includes(latest?.year) ? latest.year : DASHBOARD_YEARS[0];
+            }
+            if (mode === 'month') {
+                state.dashboardPeriod.month = clampDashboardMonth(state.dashboardPeriod.month || latest?.month || '');
+            }
+            if (mode === 'day') {
+                const fallbackDay = latest?.day || '';
+                state.dashboardPeriod.dayStart = clampDashboardDay(state.dashboardPeriod.dayStart || fallbackDay);
+                state.dashboardPeriod.dayEnd = clampDashboardDay(state.dashboardPeriod.dayEnd || state.dashboardPeriod.dayStart);
+                normalizeDashboardDayRange();
+            }
+            updateDashboardPeriodControls();
+            renderDashboard();
+        }
+
+        function resetDashboardPeriod() {
+            const latest = getLatestRecordDateParts();
+            const today = getThailandDate();
+            const fallbackYear = String(today.getFullYear());
+            const fallbackMonth = `${fallbackYear}-${pad2(today.getMonth() + 1)}`;
+            const fallbackDay = `${fallbackMonth}-${pad2(today.getDate())}`;
+
+            state.dashboardPeriod.year = DASHBOARD_YEARS.includes(latest?.year)
+                ? latest.year
+                : DASHBOARD_YEARS.includes(fallbackYear)
+                    ? fallbackYear
+                    : DASHBOARD_YEARS[0];
+            state.dashboardPeriod.month = clampDashboardMonth(latest?.month || fallbackMonth);
+            state.dashboardPeriod.dayStart = clampDashboardDay(latest?.day || fallbackDay);
+            state.dashboardPeriod.dayEnd = state.dashboardPeriod.dayStart;
+            updateDashboardPeriodControls();
+            renderDashboard();
+        }
+
+        function clampDashboardMonth(monthValue) {
+            const minMonth = `${DASHBOARD_YEAR_START}-01`;
+            const maxMonth = `${DASHBOARD_YEAR_END}-12`;
+            const value = String(monthValue || '').match(/^\d{4}-\d{2}$/) ? monthValue : minMonth;
+            if (value < minMonth) return minMonth;
+            if (value > maxMonth) return maxMonth;
+            return value;
+        }
+
+        function clampDashboardDay(dayValue) {
+            const minDay = `${DASHBOARD_YEAR_START}-01-01`;
+            const maxDay = `${DASHBOARD_YEAR_END}-12-31`;
+            const value = String(dayValue || '').match(/^\d{4}-\d{2}-\d{2}$/) ? dayValue : minDay;
+            if (value < minDay) return minDay;
+            if (value > maxDay) return maxDay;
+            return value;
+        }
+
+        function normalizeDashboardDayRange(changedSide = '') {
+            state.dashboardPeriod.dayStart = clampDashboardDay(state.dashboardPeriod.dayStart);
+            state.dashboardPeriod.dayEnd = clampDashboardDay(state.dashboardPeriod.dayEnd || state.dashboardPeriod.dayStart);
+
+            if (state.dashboardPeriod.dayStart <= state.dashboardPeriod.dayEnd) return;
+
+            if (changedSide === 'start') {
+                state.dashboardPeriod.dayEnd = state.dashboardPeriod.dayStart;
+            } else {
+                state.dashboardPeriod.dayStart = state.dashboardPeriod.dayEnd;
+            }
+        }
+
+        function updateDashboardPeriodControls() {
+            const mode = state.dashboardPeriod.mode;
+            document.querySelectorAll('.dashboard-mode-btn').forEach(button => {
+                const active = button.dataset.dashboardMode === mode;
+                button.className = `dashboard-mode-btn rounded-xl px-4 py-2 text-sm font-black transition-all ${active ? 'bg-white text-red-600 shadow-md' : 'text-slate-500 hover:text-slate-800'}`;
+            });
+            document.getElementById('dashboard-year-control').classList.toggle('hidden', mode !== 'year');
+            document.getElementById('dashboard-month-control').classList.toggle('hidden', mode !== 'month');
+            document.getElementById('dashboard-day-control').classList.toggle('hidden', mode !== 'day');
+            document.getElementById('dashboard-year').value = state.dashboardPeriod.year;
+            state.dashboardPeriod.month = clampDashboardMonth(state.dashboardPeriod.month);
+            normalizeDashboardDayRange();
+            document.getElementById('dashboard-month').value = state.dashboardPeriod.month;
+            document.getElementById('dashboard-day-start').value = state.dashboardPeriod.dayStart;
+            document.getElementById('dashboard-day-end').value = state.dashboardPeriod.dayEnd;
+        }
+
+        function getDashboardRecords() {
+            const mode = state.dashboardPeriod.mode;
+            if (mode === 'day') normalizeDashboardDayRange();
+
+            return state.records
+                .map(record => ({ record, parts: getRecordDateParts(record) }))
+                .filter(item => {
+                    if (!item.parts) return false;
+                    if (mode === 'day') {
+                        return item.parts.day >= state.dashboardPeriod.dayStart && item.parts.day <= state.dashboardPeriod.dayEnd;
+                    }
+                    if (mode === 'month') return item.parts.month === state.dashboardPeriod.month;
+                    return item.parts.year === state.dashboardPeriod.year;
+                })
+                .sort((a, b) => b.parts.date.getTime() - a.parts.date.getTime() || (Number(b.record.id) || 0) - (Number(a.record.id) || 0))
+                .map(item => item.record);
+        }
+
+        function getDashboardPeriodText(total) {
+            const mode = state.dashboardPeriod.mode;
+            if (mode === 'day') {
+                const startText = formatThaiDate(state.dashboardPeriod.dayStart);
+                const endText = formatThaiDate(state.dashboardPeriod.dayEnd);
+                return startText === endText
+                    ? `รายวัน: ${startText} · ${total} รายการ`
+                    : `รายวัน: ${startText} ถึง ${endText} · ${total} รายการ`;
+            }
+            if (mode === 'month') {
+                const [year, month] = String(state.dashboardPeriod.month || '').split('-');
+                return year && month ? `รายเดือน: ${month}/${Number(year) + 543} · ${total} รายการ` : `รายเดือน · ${total} รายการ`;
+            }
+            return state.dashboardPeriod.year ? `รายปี: ${Number(state.dashboardPeriod.year) + 543} · ${total} รายการ` : `รายปี · ${total} รายการ`;
+        }
+
         // --- เพิ่มเงื่อนไขตรวจสอบการล็อกอินเพื่อแสดงชื่อเต็ม ---
         function maskPatientName(fullName) {
             if (!fullName) return '';
@@ -849,8 +1119,8 @@
             return level.startsWith('1') || level.includes('resuscitation') || level.includes('resuscition');
         }
 
-        function getResuscitationLevelLabel() {
-            const savedLevel = state.records.find(r => isResuscitationLevel(r.level))?.level;
+        function getResuscitationLevelLabel(records = state.records) {
+            const savedLevel = records.find(r => isResuscitationLevel(r.level))?.level;
             return String(savedLevel || '1 Resuscitation').trim();
         }
 
@@ -894,6 +1164,7 @@
                 state.records = records
                     .map(normalizeReferralRecord)
                     .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+                setupDashboardPeriodControls();
                 renderDashboard();
                 renderTable();
             } catch (error) {
@@ -905,16 +1176,17 @@
         }
 
         function renderDashboard() {
-            const total = state.records.length;
-            const trauma = state.records.filter(r => r.type === 'Trauma').length;
-            const level1 = state.records.filter(r => isResuscitationLevel(r.level)).length;
+            const dashboardRecords = getDashboardRecords();
+            const total = dashboardRecords.length;
+            const trauma = dashboardRecords.filter(r => r.type === 'Trauma').length;
+            const level1 = dashboardRecords.filter(r => isResuscitationLevel(r.level)).length;
             const referStats = { in: 0, out: 0, receive: 0 };
             const returnReferStats = { sendBack101: 0 };
             const hospitalReferStats = {};
 
             const deptCount = {};
             const shiftCount = { 'ในเวลา': 0, 'นอกเวลา': 0 };
-            state.records.forEach(r => {
+            dashboardRecords.forEach(r => {
                 if (r.dept) deptCount[r.dept] = (deptCount[r.dept] || 0) + 1;
                 const shift = normalizeShift(r.shift);
                 if (shift) shiftCount[shift] = (shiftCount[shift] || 0) + 1;
@@ -932,13 +1204,14 @@
             document.getElementById('stat-total').innerText = total;
             document.getElementById('stat-trauma').innerText = trauma;
             document.getElementById('stat-level1').innerText = level1;
-            document.getElementById('stat-resuscitation-label').innerText = getResuscitationLevelLabel();
+            document.getElementById('stat-resuscitation-label').innerText = getResuscitationLevelLabel(dashboardRecords);
             document.getElementById('stat-resuscitation-inline').innerText = level1;
             document.getElementById('stat-offhours').innerText = shiftCount['นอกเวลา'] || 0;
             document.getElementById('stat-refer-in').innerText = referStats.in;
             document.getElementById('stat-refer-out').innerText = referStats.out;
             document.getElementById('stat-refer-receive').innerText = referStats.receive;
-            document.getElementById('stat-last-update').innerText = total > 0 ? formatThaiDate(state.records[0].date) : '-';
+            document.getElementById('stat-last-update').innerText = total > 0 ? formatThaiDate(dashboardRecords[0].date) : '-';
+            document.getElementById('dashboard-period-label').innerText = getDashboardPeriodText(total);
             document.getElementById('stat-refer-action-total').innerText = referStats.in + referStats.out + referStats.receive;
 
             const referActionItems = [
@@ -1082,7 +1355,7 @@
             }).join('') || `<p class="col-span-2 text-center text-slate-400 py-4 text-sm font-bold uppercase tracking-widest italic opacity-50">Empty Data</p>`;
             document.getElementById('chart-shifts').innerHTML = shiftHtml;
 
-            const recentHtml = state.records.slice(0, 3).map(r => {
+            const recentHtml = dashboardRecords.slice(0, 3).map(r => {
                 const tagColor = r.referAction === 'ส่งต่อ' ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-emerald-900/50 text-emerald-300 border-emerald-800';
                 return `
                     <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700 flex justify-between items-center">
